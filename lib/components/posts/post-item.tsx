@@ -12,7 +12,7 @@ const options: Intl.DateTimeFormatOptions = {
 const getDateString = (date: string = ''): string => {
   const d = new Date(date)
   if (`${d}` === 'Invalid Date') return ''
-  return new Date(date).toLocaleString('zh-cn', options).replace('日', '日, &nbsp;')
+  return new Date(date).toLocaleString('ja', options).replace('日', '日, &nbsp;')
 }
 
 export interface PostItemProps {

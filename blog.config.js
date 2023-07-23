@@ -1,24 +1,24 @@
 const BLOG = {
-  author: 'Witt',
-  title: 'Witt - unix.bio',
+  author: 'Moldspoon Inc. blog',
+  title: 'MoldSpoon Inc. blog',
   description:
-    "Hi, I'm Witt. A JavaScript full stack engineer, I'm creating apps and libs to help improve the developer experience.",
-  summary: 'JavaScript 工程师，对开发者体验感兴趣。',
-  language: 'zh-cn',
+    "Web開発を得意とするMoldSpoon Inc.の公式ブログです",
+  summary: 'スマートフォン・Webサイトの開発なら弊社にお任せくださいませ。',
+  language: 'ja',
   latestLimit: 5,
 
   labels: {
-    default: '所有文章',
-    latest: '最近',
-    list: '所有',
+    default: 'HOME',
+    latest: '最新のポスト',
+    list: '一覧',
   },
 
-  email: 'unix.bio@gmail.com',
-  github: 'unix',
-  twitter: 'echo_witt',
-  domain: 'unix.bio',
+  email: 'info@moldspoon.jp',
+  github: 'yutav',
+  twitter: 'yuku_tas',
+  domain: 'moldspoon.jp',
 
-  googleAnalytics: 'UA-110371817-3',
+  googleAnalytics: 'UA-51495358-1',
   cn: true,
   enableViews: true,
 

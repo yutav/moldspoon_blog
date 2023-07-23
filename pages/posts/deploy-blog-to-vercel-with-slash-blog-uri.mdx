@@ -1,0 +1,39 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+
+export const meta = {
+  title: 'ドメインの/blogにブログをデプロイし、next.jsプロジェクトをVercel経由で配信する',
+  date: '2023-07-24T00:00:00.000Z',
+}
+
+[Next.js公式のマルチゾーン解説](https://nextjs-ja-translation-docs.vercel.app/docs/advanced-features/multi-zones)によると、
+Vercelにデプロイする際にサブディレクトリに別のNext.jsをデプロイするには、
+blog.config.jsに設定を簡単するくらいで簡単とのこと。
+
+特に、以下の部分
+
+>ページと静的ファイルのコンフリクトを避けるために、basePath を設定してください。
+
+basePathの記事は[こちら](https://nextjs-ja-translation-docs.vercel.app/docs/api-reference/next.config.js/basepath)
+
+書かれている通り、`next.config.js`に以下のように設定する
+
+```
+module.exports = {
+  basePath: '/blog',
+}
+```
+
+ローカルで `yarn run dev` でプロジェクトを立ち上げて、 `localhost:3000`などから確認→
+コミットしてVercelにデプロイ。無事このブログが反映された。
+
+## まとめ
+
+`next.config.js` の `basePath` に配信したいサブディレクトリのパスを設定するだけ。超簡単。
+
+
+<Button auto scale={2 / 3} onClick={() => alert('done')}>
+  シェアする
+</Button>
+
+export default ({ children }) => <Layout meta={meta}>{children}</Layout>

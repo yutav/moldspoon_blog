@@ -18,14 +18,14 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date }) => {
   if (`${d}` === 'Invalid Date') return null
 
   const time = Date.now() - d.getTime()
-  const locale = Configs.isCN() ? 'zh-cn' : 'en-us'
+  const locale = Configs.isJa() ? 'ja' : 'en-us'
   const showViews = useMemo(() => Configs.enableViews && countUpdated, [countUpdated])
-  const views = useMemo(() => `${count} ${Configs.isCN() ? '阅读' : 'views'}`, [count])
+  const views = useMemo(() => `${count} ${Configs.isJa() ? 'PV' : 'views'}`, [count])
 
   return (
     <p>
       <span className="dot">﹥</span>
-      {d.toLocaleString(locale).replace(/\//g, '-')}
+      {d.toLocaleString(locale)}
       <span className="split"> / </span>
       {msToString(time)}
       {showViews && (

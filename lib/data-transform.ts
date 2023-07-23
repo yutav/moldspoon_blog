@@ -4,16 +4,16 @@ import { Configs } from './utils'
 export const msToString = (time: number | unknown): string => {
   if (!time) return ''
   const str = ms(time as number, { long: true })
-  if (!Configs.isCN()) return `${str} ago`
+  if (!Configs.isJa()) return `${str} ago`
   return (
     str
-      .replace('days', '天')
-      .replace('day', '天')
-      .replace('minutes', '分钟')
-      .replace('minute', '分钟')
-      .replace('hours', '小时')
-      .replace('hour', '小时')
-      .replace('seconds', '秒') + '之前'
+      .replace('days', '日')
+      .replace('day', '日')
+      .replace('minutes', '分')
+      .replace('minute', '分')
+      .replace('hours', '時間')
+      .replace('hour', '時間')
+      .replace('seconds', '秒') + '前'
   )
 }
 
