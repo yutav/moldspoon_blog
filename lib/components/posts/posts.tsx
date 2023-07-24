@@ -9,7 +9,7 @@ import { useTheme, Link } from '@geist-ui/core'
 const getMoreLink = (len: number): React.ReactNode => {
   if (len < Configs.latestLimit) return null
   return (
-    <NextLink href="/blog" passHref>
+    <NextLink href="#" passHref>
       <Link title="More">...</Link>
     </NextLink>
   )
