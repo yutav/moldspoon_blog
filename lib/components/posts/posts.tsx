@@ -9,7 +9,7 @@ import { useTheme, Link } from '@geist-ui/core'
 const getMoreLink = (len: number): React.ReactNode => {
   if (len < Configs.latestLimit) return null
   return (
-    <NextLink href="#" passHref>
+    <NextLink href="/blog" passHref>
       <Link title="More">...</Link>
     </NextLink>
   )
@@ -32,60 +32,10 @@ export interface PostsProps {
 }
 
 const Posts: React.FC<PostsProps> = ({ isLatest = false }) => {
-  const theme = useTheme()
-  const posts = useMemo(() => getLatest(metadata, isLatest), [])
-  const title = useMemo(() => getTitle(isLatest), [])
 
   return (
     <section>
-      <Head>
-        {!isLatest && (
-          <title>
-            {getTitle(false)} - {Configs.title}
-          </title>
-        )}
-      </Head>
-      <h2>{title}</h2>
-      <div className="content">
-        {posts.map((post, index) => (
-          <PostItem post={post} key={`${post.url}-${index}`} />
-        ))}
-        {isLatest && <span className="more">{getMoreLink(posts.length)}</span>}
-      </div>
-      <style jsx>{`
-        section {
-          margin-top: calc(${theme.layout.gap} * 2);
-        }
-
-        section h2 {
-          font-size: 0.8rem;
-          color: ${theme.palette.accents_6};
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          border-bottom: 2px solid ${theme.palette.accents_6};
-          padding: 2px ${theme.layout.gapQuarter} 0 0;
-          display: inline-block;
-          margin: 0;
-        }
-
-        .content {
-          margin: ${theme.layout.gap} 0;
-        }
-
-        .more {
-          display: block;
-        }
-
-        @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
-          section {
-            margin-top: ${theme.layout.gapQuarter};
-          }
-
-          section h2 {
-            margin-top: calc(1.5 * ${theme.layout.gap});
-          }
-        }
-      `}</style>
+      hogehoge
     </section>
   )
 }
