@@ -15,9 +15,7 @@ const getMoreLink = (len: number): React.ReactNode => {
   )
 }
 
-const getLatest = (data: typeof metadata, _isLatest?: boolean) => {
-  console.log(_isLatest)
-  const isLatest = false
+const getLatest = (data: typeof metadata, isLatest?: boolean) => {
   const postNode = data.find(item => item.name === 'posts')
   const posts = (postNode || {}).children || []
   if (!isLatest) return posts
