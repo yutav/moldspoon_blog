@@ -10,7 +10,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
   const [showText, setShowText] = useState(theme.type === 'dark')
 
-  const avatarUrl = process.env.NODE_ENV == 'production' ? '/img/avatar.png' : '/assets/avatar.png'
+  const logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/assets/moldspoonblog_short.png"
   useEffect(() => {
     const show = theme.type === 'dark'
     if (showText !== show) {
@@ -24,7 +24,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
         <NextLink href="/" passHref>
           <Link>
             <div className="">
-              <h1><Image src="/assets/moldspoonblog_short.png" width="400" height="50" alt={BLOG.title} /></h1>
+              <h1><Image src={logoUrl} width="400" height="50" alt={BLOG.title} /></h1>
               <div className="text-gray-500 text-xs" dangerouslySetInnerHTML={{ __html: Configs.summary }} />
             </div>
           </Link>
