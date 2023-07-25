@@ -3,8 +3,8 @@ import { useTheme, Link } from '@geist-ui/core'
 import NextLink from 'next/link'
 import ProfileLinks from './profile-links'
 import { Configs } from '../utils'
-import Image from "next/image"
 import BLOG from '../../blog.config'
+import Image from 'next/image'
 
 const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
