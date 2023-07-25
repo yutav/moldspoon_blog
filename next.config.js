@@ -28,23 +28,7 @@ const nextConfig = {
   },
 
   redirects() {
-    return [
-      {
-        source: '/blog/others/:path*',
-        permanent: true,
-        destination: '/posts/:path*',
-      },
-      {
-        source: '/blog/js/:path*',
-        permanent: true,
-        destination: '/posts/:path*',
-      },
-      {
-        source: '/blog/proxy/:path*',
-        permanent: true,
-        destination: '/posts/:path*',
-      },
-    ];
+    return [];
   },
 }
 
