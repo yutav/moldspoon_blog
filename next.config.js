@@ -13,7 +13,6 @@ const withMDX = require('@next/mdx')({
 })
 
 const nextConfig = {
-  basePath: '/blog',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
 
