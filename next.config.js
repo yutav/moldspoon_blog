@@ -2,7 +2,7 @@ const isProd = process.env.NODE_ENV === 'production'
 const cdnPrefix = process.env.CDN_PREFIX || ''
 
 if (isProd && cdnPrefix) {
-  console.log(`> [unix.bio] You have customized the CDN prefix: ${cdnPrefix}.\n`)
+  console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`)
 }
 
 const withMDX = require('@next/mdx')({

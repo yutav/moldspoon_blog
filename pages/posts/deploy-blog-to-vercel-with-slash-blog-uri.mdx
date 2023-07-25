@@ -1,5 +1,8 @@
 import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
+import ShareButton from "../../lib/components/original/parts/ShareButtons"
+
+import { useRouter } from 'next/router'
 
 export const meta = {
   title: 'Next.jsで作ったブログを、別プロジェクトのNext.jsと同じドメインでVercel配信したい。',
@@ -66,8 +69,16 @@ https://moldspoon.jp/blog => https://子プロジェクトの識別子-vercel.ap
 - 子プロジェクトのnext.config.jsに `assetPrefix`を追加
 - 両方のプロジェクトをデプロイ
 
-<Button auto scale={2 / 3} onClick={() => alert('done')}>
-  シェアする
-</Button>
-
-export default ({ children }) => <Layout meta={meta}>{children}</Layout>
+export default function Page({ children }) {
+  const router = useRouter();
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const title = typeof document !== 'undefined' ? document.title : '';
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+        <ShareButton url={currentUrl} title={title} />
+      </>
+    </Layout>
+  )
+}

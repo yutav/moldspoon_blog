@@ -7,6 +7,8 @@ import { Configs } from '../utils'
 const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
   const [showText, setShowText] = useState(theme.type === 'dark')
+
+  const avatarUrl = process.env.NODE_ENV == 'production' ? '/img/avatar.png' : '/assets/avatar.png'
   useEffect(() => {
     const show = theme.type === 'dark'
     if (showText !== show) {
@@ -19,7 +21,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
       <div className="user">
         <NextLink href="/" passHref>
           <Link>
-            <User src="/img/avatar.png" name={Configs.author} altText="avatar">
+            <User src={avatarUrl} name={Configs.author} altText="avatar">
               {Configs.summary}
             </User>
           </Link>
@@ -27,6 +29,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
       </div>
       <ProfileLinks />
       <style jsx>{`
+       
         .profile {
           padding: ${theme.layout.gap} 0;
         }
@@ -36,6 +39,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
           margin-bottom: ${theme.layout.gapQuarter};
           max-width: 100%;
           overflow: hidden;
+        }
+
+        .names .name {
+          font-size: 3rem !important;
         }
 
         @media only screen and (max-width: ${theme.layout.breakpointMobile}) {

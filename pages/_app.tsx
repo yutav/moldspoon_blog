@@ -11,6 +11,9 @@ import { getDNSPrefetchValue } from 'lib/data-transform'
 import { BlogConfigsProvider } from 'lib/components'
 import { HybridLink, HybridCode } from 'lib/components/mdx'
 
+import '../styles/globals.css'
+import 'tailwindcss/tailwind.css'
+
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   const [themeType, setThemeType] = useState('light')
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
