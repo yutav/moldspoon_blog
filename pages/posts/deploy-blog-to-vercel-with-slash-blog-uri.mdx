@@ -2,35 +2,69 @@ import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
 
 export const meta = {
-  title: 'ドメインの/blogにブログをデプロイし、next.jsプロジェクトをVercel経由で配信する',
+  title: 'Next.jsで作ったブログを、別プロジェクトのNext.jsと同じドメインでVercel配信したい。',
   date: '2023-07-24T00:00:00.000Z',
 }
 
-[Next.js公式のマルチゾーン解説](https://nextjs-ja-translation-docs.vercel.app/docs/advanced-features/multi-zones)によると、
-Vercelにデプロイする際にサブディレクトリに別のNext.jsをデプロイするには、
-blog.config.jsに設定を簡単するくらいで簡単とのこと。
+こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
 
-特に、以下の部分
+### 本記事のゴール
 
->ページと静的ファイルのコンフリクトを避けるために、basePath を設定してください。
+元々[MoldSpoon Inc. のWebサイト](https://moldspoon.jp/)が動いていたNext.jsプロジェクトの下に、
+さらにNext.jsプロジェクトのブログを作って配信したいと思いました。
 
-basePathの記事は[こちら](https://nextjs-ja-translation-docs.vercel.app/docs/api-reference/next.config.js/basepath)
+* https://moldspoon.jp/blog 以下の全てのリクエストは子プロジェクト（ブログ）で補足
+* https://moldspoon.jp/ 以下の全てのリクエストは親プロジェクトで補足
 
-書かれている通り、`next.config.js`に以下のように設定する
+
+#### 対応方法
+
+公式ドキュメントをあたったところ、[rewrite](https://vercel.com/docs/concepts/edge-network/rewrites)という方法があるようです。
+
+以下のように、**別途Vercelにデプロイしているプロジェクトの固定ドメインにもリンクが貼れる**ようです。
 
 ```
-module.exports = {
-  basePath: '/blog',
+{
+  "rewrites": [
+    {
+      "source": "/blog/:path*",
+      "destination": "https://xxxx-vercel.app/:path*"
+    }
+  ]
 }
 ```
 
-ローカルで `yarn run dev` でプロジェクトを立ち上げて、 `localhost:3000`などから確認→
-コミットしてVercelにデプロイ。無事このブログが反映された。
+こちらを親プロジェクトに `vercel.json`というファイル名でプロジェクトルート直下に作成。
 
-## まとめ
+続いて、子プロジェクトの `next.config.js`に以下の設定を追加します。
 
-`next.config.js` の `basePath` に配信したいサブディレクトリのパスを設定するだけ。超簡単。
+（私は/blog以下にデプロイしたいのでそうしました）
+```
+const nextConfig = {
+...
++  assetPrefix: '/blog',
+...
+}
 
+module.exports = withMDX(nextConfig)
+```
+
+この設定がないと、https://xxx.com/blog　にリクエストした途端リダイレクトループ(308ステータス)に陥るので必ず設定が必要です。
+今回はここがハマりポイントでした...
+
+これで、
+```
+https://moldspoon.jp/blog => https://子プロジェクトの識別子-vercel.app/
+```
+にリダイレクトができるようになりました。
+
+/blogで子プロジェクトを開いたときに真っ白になってしまう場合は、javascriptのパスの疎通を疑ってconsoleを開いてデバッグした方がいいです。
+
+### まとめ
+
+- 親プロジェクトのvercel.jsonに `rewrite`設定を追加
+- 子プロジェクトのnext.config.jsに `assetPrefix`を追加
+- 両方のプロジェクトをデプロイ
 
 <Button auto scale={2 / 3} onClick={() => alert('done')}>
   シェアする

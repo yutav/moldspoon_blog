@@ -20,7 +20,7 @@ const nextConfig = {
 
   poweredByHeader: false,
 
-  assetPrefix: isProd ? cdnPrefix : '',
+  assetPrefix: isProd ? cdnPrefix : '/',
 
   env: {
     VERSION: require('./package.json').version,

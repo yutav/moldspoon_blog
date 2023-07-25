@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "npm run collect && next dev",
-    "dev": "npm run collect && next dev",
+    "dev": "export NODE_ENV=dev && npm run collect && next dev",
     "now-build": "npm run collect && next build",
     "post": "node scripts/create.js",
     "prettier": "prettier --write .",
