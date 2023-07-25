@@ -6,7 +6,7 @@ const layouts = BLOG.layouts || {}
 export const Configs = {
   author: BLOG.author || 'Anonymous',
   summary: BLOG.summary || 'This is my favorite blog.',
-  title: BLOG.title || 'unix-bio',
+  title: BLOG.title || 'moldspoon inc.',
 
   //  email: BLOG.email ? `mailto:${BLOG.email}` : null,
   email: BLOG.email ? `https://moldspoon.jp#contact` : null,

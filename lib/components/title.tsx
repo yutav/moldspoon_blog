@@ -83,7 +83,7 @@ const Title: React.FC<TitleProps> = ({ title, date }) => {
 
   return (
     <div className="title">
-      <h1>{title}</h1>
+      <h1><Image src="/img/moldspoonblog_jp2.png" width="200" height="60" alt={title} /></h1>
       <div className="date-box">
         <DateDisplay date={date} />
       </div>

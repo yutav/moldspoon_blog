@@ -2,6 +2,10 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+h1 {
+  margin-bottom: 0px !important;
+}
+
 .container h3 {
   padding-top: 1.5rem;
 }

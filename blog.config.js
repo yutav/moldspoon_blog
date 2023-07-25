@@ -3,12 +3,12 @@ const BLOG = {
   title: 'MoldSpoon Inc. blog',
   description:
     "Web開発を得意とするMoldSpoon Inc.の公式ブログです",
-  summary: 'スマートフォン・Webサイトの開発なら弊社にお任せくださいませ。',
+  summary: 'iOS/Androidスマートフォン・Next.js/LaravelをはじめとしたWeb開発ならば、ぜひ弊社にお任せください。お問合せは<a href="https://moldspoon.jp/contact" target="_blank">こちら</a>から😃',
   language: 'ja',
   latestLimit: 5,
 
   labels: {
-    default: 'HOME',
+    default: 'Cooporate Page',
     latest: '最新のポスト',
     list: '一覧',
   },

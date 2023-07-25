@@ -31,7 +31,7 @@ const ProfileLinks: React.FC<unknown> = () => {
   const links = useMemo(() => getFixes(metadata), [])
   return (
     <div className="link">
-      {makeLink({ url: '/blog', name: Configs.labels.default })}
+      {makeLink({ url: 'https://moldspoon.jp/', name: Configs.labels.default })}
       {links.map(link => makeLink(link))}
 
       <style jsx>{`

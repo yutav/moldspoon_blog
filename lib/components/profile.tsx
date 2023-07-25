@@ -3,6 +3,8 @@ import { useTheme, User, Link } from '@geist-ui/core'
 import NextLink from 'next/link'
 import ProfileLinks from './profile-links'
 import { Configs } from '../utils'
+import Image from "next/image"
+import BLOG from '../../blog.config'
 
 const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
@@ -21,9 +23,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
       <div className="user">
         <NextLink href="/" passHref>
           <Link>
-            <User src={avatarUrl} name={Configs.author} altText="avatar">
-              {Configs.summary}
-            </User>
+            <div className="">
+              <h1><Image src="/assets/moldspoonblog_short.png" width="400" height="50" alt={BLOG.title} /></h1>
+              <div className="text-gray-500 text-xs" dangerouslySetInnerHTML={{ __html: Configs.summary }} />
+            </div>
           </Link>
         </NextLink>
       </div>
