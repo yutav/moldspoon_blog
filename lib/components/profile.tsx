@@ -19,7 +19,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
       <div className="user">
         <NextLink href="/" passHref>
           <Link>
-            <User src="/assets/avatar.png" name={Configs.author} altText="avatar">
+            <User src="/img/avatar.png" name={Configs.author} altText="avatar">
               {Configs.summary}
             </User>
           </Link>
