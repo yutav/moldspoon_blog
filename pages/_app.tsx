@@ -37,18 +37,18 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
         <meta property="og:site_name" content={BLOG.title} />
         <meta property="og:description" content={BLOG.description} />
         <meta property="og:type" content="website" />
-        <meta name="generator" content="unix.bio" />
+        <meta name="generator" content="yuku_tas" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="author" content={BLOG.author} />
         <meta name="twitter:creator" content={`@${BLOG.twitter}`} />
         <meta property="og:title" content={BLOG.title} />
         <meta property="og:url" content={BLOG.domain} />
-        <meta property="og:image" content={`https:${domain}/assets/og-main.png`} />
-        <meta property="twitter:image" content={`https:${domain}/assets/og-main.png`} />
+        <meta property="og:image" content={`https:${domain}/img/ogp.png`} />
+        <meta property="twitter:image" content={`https:${domain}/img/ogp.png`} />
         <meta
           itemProp="image"
           property="og:image"
-          content={`https:${domain}/assets/og-main.png`}
+          content={`https:${domain}/img/ogp.png`}
         />
         <meta
           name="viewport"
