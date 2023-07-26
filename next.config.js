@@ -19,16 +19,16 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/:path*",
-        destination: "/blog/api/:path*",
+        source: "/blog/api/:path*",
+        destination: "/api/:path*",
       },
       {
-        source: "/images/:query*",
-        destination: '/blog/_next/image/:query*'
+        source: "/blog/images/:query*",
+        destination: '/_next/image/:query*'
       },
       {
-        source: "/_next/:path*",
-        destination: "/blog/_next/:path*",
+        source: "/blog/_next/:path*",
+        destination: "/_next/:path*",
       },
     ]
   },
