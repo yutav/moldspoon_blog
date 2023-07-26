@@ -13,7 +13,7 @@ const withMDX = require('@next/mdx')({
 })
 
 const nextConfig = {
-  basePath: isProd ? cdnPrefix : '/',
+  basePath: '/blog',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
 
@@ -21,7 +21,7 @@ const nextConfig = {
 
   poweredByHeader: false,
 
-  assetPrefix: cdnPrefix,
+  assetPrefix: '/blog',
 
   env: {
     VERSION: require('./package.json').version,
