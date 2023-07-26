@@ -13,6 +13,7 @@ const withMDX = require('@next/mdx')({
 })
 
 const nextConfig = {
+  basePath: isProd ? cdnPrefix : '/',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
 
