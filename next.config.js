@@ -1,5 +1,5 @@
 const isProd = process.env.NODE_ENV === 'production'
-const cdnPrefix = process.env.CDN_PREFIX || ''
+const cdnPrefix = isProd ? 'https://moldspoon-blog.vercel.app' : ''; // 親プロジェクトのデプロイ先URLに合わせる
 
 if (isProd && cdnPrefix) {
   console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`)
@@ -21,7 +21,7 @@ const nextConfig = {
 
   poweredByHeader: false,
 
-  assetPrefix: isProd ? cdnPrefix : '/',
+  assetPrefix: cdnPrefix,
 
   env: {
     VERSION: require('./package.json').version,
