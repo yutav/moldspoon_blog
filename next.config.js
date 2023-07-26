@@ -16,7 +16,22 @@ const withMDX = require('@next/mdx')({
 const nextConfig = {
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
-  reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: "/blog/api/:path*",
+        destination: "/api/:path*",
+      },
+      {
+        source: "/blog/images/:query*",
+        destination: '/_next/image/:query*'
+      },
+      {
+        source: "/blog/_next/:path*",
+        destination: "/_next/:path*",
+      },
+    ]
+  },
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
   generateEtags: false,
