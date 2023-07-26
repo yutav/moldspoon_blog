@@ -12,9 +12,11 @@ const withMDX = require('@next/mdx')({
   },
 });
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
+  reactStrictMode: true,
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
   generateEtags: false,
