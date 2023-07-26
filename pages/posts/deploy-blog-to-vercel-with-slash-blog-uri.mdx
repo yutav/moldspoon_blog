@@ -5,7 +5,7 @@ import ShareButton from "../../lib/components/original/parts/ShareButtons"
 import { useRouter } from 'next/router'
 
 export const meta = {
-  title: 'Next.jsで作ったブログを、別プロジェクトのNext.jsと同じドメインでVercel配信したい。',
+  title: 'Next.js製ブログをメインプロジェクトの下の/blogでVercelに配信したい',
   date: '2023-07-24T00:00:00.000Z',
 }
 
@@ -13,8 +13,8 @@ export const meta = {
 
 ### 本記事のゴール
 
-元々[MoldSpoon Inc. のWebサイト](https://moldspoon.jp/)が動いていたNext.jsプロジェクトの下に、
-さらにNext.jsプロジェクトのブログを作って配信したいと思いました。
+元々[MoldSpoon Inc. のWebサイト](https://moldspoon.jp/)が動いているNext.jsプロジェクトの下に、
+**さらにもう一つ、Next.jsプロジェクトを作ってブログとして配信したい**と考えました。
 
 * moldspoon.jp/blog 以下の全てのリクエストは子プロジェクト（ブログ）で補足
 * moldspoon.jp/ 以下の全てのリクエストは親プロジェクトで補足
@@ -113,8 +113,8 @@ https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
 ```
 に転送ができるようになりました。リダイレクトでないので、遷移が1つ増えるとかもないはず...。
 
-ポイントとしては、*子プロジェクトのvercelドメインで、サブディレクトリのパスがついた状態で
-遷移できるかをチェックする*ことが肝要です。上記例だと、
+ポイントとしては、**子プロジェクトのvercelドメインで、サブディレクトリのパスがついた状態で
+遷移できるか否かをチェックする**ことが肝要です。上記例だと、
 
 - https://moldspoon-blog.vercel.app/blog 以下で全URLが見れるか（TOPしか`rewrite`が効いていない可能性がある）
 - react routerで遷移ができていても、URLの転送が効くかは別なので、その観点でも各ページでリロードして確認する
@@ -123,20 +123,26 @@ https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
 
 ### まとめ
 
-- 親プロジェクトのvercel.jsonに `rewrite`設定を追加
-- 子プロジェクトのnext.config.jsに `assetPrefix`を追加
+大体の流れは以下でした。
+nginxやapacheのproxyと一緒で、リダイレクト系はどうしてもハマる時はハマっちゃいますね...
+
+- 親プロジェクトのvercel.jsonに `rewrite()`設定を追加
+- 子プロジェクトのnext.config.jsに `basePath` `assetPrefix` `rewrite()`を追加
 - 両方のプロジェクトをデプロイ
+
+monorepoで管理するという方法もあったのですが、今回は大きなプロジェクトではないのであまり難しく考えずに
+簡単な方を選んでいます。
 
 export default function Page({ children }) {
   const router = useRouter();
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const title = typeof document !== 'undefined' ? document.title : '';
   return (
     <Layout meta={meta}>
       <>
         {children}
-        <ShareButton url={currentUrl} title={title} />
+        <ShareButton url={currentUrl} title={meta.title} />
       </>
     </Layout>
   )
 }
+

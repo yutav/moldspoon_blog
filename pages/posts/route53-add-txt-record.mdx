@@ -62,12 +62,11 @@ txtレコードを押して編集画面に行ってみました。
 export default function Page({ children }) {
   const router = useRouter();
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const title = typeof document !== 'undefined' ? document.title : '';
   return (
     <Layout meta={meta}>
       <>
         {children}
-        <ShareButton url={currentUrl} title={title} />
+        <ShareButton url={currentUrl} title={meta.title} />
       </>
     </Layout>
   )

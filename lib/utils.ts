@@ -29,3 +29,8 @@ export const Configs = {
     pageWidthMobile: layouts.pageWidthMobile || '88vw',
   },
 }
+
+
+export const changeTitle = ({ title }: { title: string }) => {
+  return title + "-" + Configs.title
+}

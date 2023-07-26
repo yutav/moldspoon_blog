@@ -4,7 +4,7 @@ import Profile from './profile'
 import Contacts from './contacts'
 import Title from './title'
 import { Spacer } from '@geist-ui/core'
-import { Configs } from '../utils'
+import { Configs, changeTitle } from '../utils'
 
 export type PostMetadata = {
   title: string
@@ -17,20 +17,25 @@ export type LayoutHeader = {
   meta: PostMetadata
 }
 
-const LayoutHeader: React.FC<LayoutHeader> = ({ meta }) => (
-  <Head>
-    {meta.title && (
-      <title>
-        {meta.title} - {Configs.title}
-      </title>
-    )}
-    {meta.description && <meta name="description" content={meta.description} />}
-    {meta.description && <meta property="og:description" content={meta.description} />}
-    {meta.title && <meta property="og:title" content={meta.title} />}
-    {meta.image && <meta property="og:image" content={meta.image} />}
-    {meta.image && <meta property="twitter:image" content={meta.image} />}
-  </Head>
-)
+const LayoutHeader: React.FC<LayoutHeader> = ({ meta }) => {
+  return (
+
+    <Head>
+      {
+        meta.title && (
+          <title>
+            {changeTitle({ title: meta.title })}
+          </title>
+        )
+      }
+      {meta.description && <meta name="description" content={meta.description} />}
+      {meta.description && <meta property="og:description" content={meta.description} />}
+      {meta.title && <meta property="og:title" content={meta.title} />}
+      {meta.image && <meta property="og:image" content={meta.image} />}
+      {meta.image && <meta property="twitter:image" content={meta.image} />}
+    </Head >
+  )
+}
 
 export type Props = {
   meta?: PostMetadata
@@ -73,8 +78,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         <Spacer />
         <Profile />
         {inDetailPage && <Title title={meta.title} date={meta.date} />}
-      
-
         <div className="dynamic-content">{children}</div>
         <Spacer h={5} />
         <Contacts isDetailPage={!!inDetailPage} />
