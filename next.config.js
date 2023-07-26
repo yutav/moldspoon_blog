@@ -14,8 +14,7 @@ const withMDX = require('@next/mdx')({
 
 const nextConfig = {
   basePath: '', // basePathを空に設定
-  // basePathが空に設定された場合、assetPrefixも空に設定する
-  assetPrefix: isProd ? (cdnPrefix ? cdnPrefix : '') : '',
+  assetPrefix: '/blog',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
   generateEtags: false,
