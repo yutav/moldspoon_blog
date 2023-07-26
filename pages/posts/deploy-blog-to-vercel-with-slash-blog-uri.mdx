@@ -57,14 +57,14 @@ const nextConfig = {
 module.exports = withMDX(nextConfig)
 ```
 
-`assetPrefix`がないと、https://xxx.com/blog　にリクエストした途端リダイレクトループ(308ステータス)に陥るので必ず設定が必要です。
+`assetPrefix`がないと、https://moldspoon-blog.vercel.app/blog　にリクエストした途端リダイレクトループ(308ステータス)に陥るので必ず設定が必要です。
 今回はここがハマりポイントでした...
 
 これで、
 ```
-https://moldspoon.jp/blog => https://子プロジェクトの識別子-vercel.app/
+https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
 ```
-にリダイレクトができるようになりました。
+に転送ができるようになりました。（リダイレクトでないので、遷移が1つ増えるとかもないはず...）
 
 /blogで子プロジェクトを開いたときに真っ白になってしまう場合は、javascriptのパスの疎通を疑ってconsoleを開いてデバッグした方がいいです。
 
