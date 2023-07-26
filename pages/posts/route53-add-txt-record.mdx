@@ -1,0 +1,74 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+import ShareButton from "../../lib/components/original/parts/ShareButtons"
+
+import { useRouter } from 'next/router'
+
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'Route53のtxtレコードに追記する',
+  date: '2023-07-26T14:55:18.000Z',
+}
+
+こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
+
+### 本記事のゴール
+
+このブログのURLを[Google Search Console](https://search.google.com/search-console)の走査対象にして、Googleに引っかかるように設定したい
+
+### 作業
+
+#### 素直に追加しようとしても、txtレコードが追加できない
+
+本ブログを[Google Search Console](https://search.google.com/search-console)に追加したいと思ったのですが、
+DNSのtxtレコードに、認証用の文字列の追加が必要なのでした。
+
+AWSの提供するDNSサービス[Route53](https://aws.amazon.com/jp/route53/)ですが、
+すでにレコードが存在するとこのようにエラーが出ます。
+
+<MdxImage month="202307" image="txt-record-exists.png" month="202307" />
+
+確認すると、以前に自分が使っている[さくらのメールボックス](https://rs.sakura.ad.jp/mail/)のtxtレコードをすでに設定済みでした。
+両者を共存させるためには...
+
+#### 試しに編集してみよう
+
+公式のドキュメントで「route53 txt record multiple」といったキーワードで検索してもパッと答えが出てこなかったので
+txtレコードを押して編集画面に行ってみました。
+
+すると、なんということでしょう。**「複数の値を個別の行に入力します。」** との記入があるではないですか。
+
+<MdxImage month="202307" image="txt-record-add-multiple.png" month="202307" />
+
+あっさり解決、今回追加する**サチコン**のtxtレコードも改行して追加。
+
+- さくらのメールボックス
+- Google Search Console
+
+の両方が正常に動くかを動作確認して、作業完了です。
+
+### まとめ
+
+ドキュメントに当たるのはとても重要ですが、先に動かしてみた方が答えが出ることもあります。
+最も今回は弊社のコーポレートサイトという比較的優先順位が低いものの設定だから許されることであり、
+**クライアント様のDNS設定の場合は軽はずみに動かせないでしょう。**
+
+何か別のドメインでテスト的に実行してみるか、DNS詳しい人に聞く、といったアクションが求められると思いました。
+
+この記事が何かのお役に立てれば幸いです。
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  const router = useRouter();
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const title = typeof document !== 'undefined' ? document.title : '';
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+        <ShareButton url={currentUrl} title={title} />
+      </>
+    </Layout>
+  )
+}
