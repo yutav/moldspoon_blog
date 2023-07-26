@@ -10,7 +10,13 @@ const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
   const [showText, setShowText] = useState(theme.type === 'dark')
 
-  const logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/assets/moldspoonblog_short.png"
+  let logoUrl
+  if (theme.type === 'dark') {
+    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/assets/moldspoonblog_short_white.png"
+  }
+  else {
+    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/assets/moldspoonblog_short.png"
+  }
   useEffect(() => {
     const show = theme.type === 'dark'
     if (showText !== show) {
