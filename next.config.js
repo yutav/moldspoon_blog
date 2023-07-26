@@ -1,8 +1,8 @@
-const isProd = process.env.NODE_ENV === 'production'
-const cdnPrefix = isProd ? '/blog' : ''; // 親プロジェクトのデプロイ先URLに合わせる
+const isProd = process.env.NODE_ENV === 'production';
+const cdnPrefix = isProd ? '/blog' : '';
 
 if (isProd && cdnPrefix) {
-  console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`)
+  console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`);
 }
 
 const withMDX = require('@next/mdx')({
@@ -10,19 +10,16 @@ const withMDX = require('@next/mdx')({
   options: {
     rehypePlugins: [require('@mapbox/rehype-prism'), require('rehype-join-line')],
   },
-})
+});
 
 const nextConfig = {
-  basePath: '/blog',
+  basePath: '', // basePathを空に設定
+  // basePathが空に設定された場合、assetPrefixも空に設定する
+  assetPrefix: isProd ? (cdnPrefix ? cdnPrefix : '') : '',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
-
   generateEtags: false,
-
   poweredByHeader: false,
-
-  assetPrefix: '/blog',
-
   env: {
     VERSION: require('./package.json').version,
   },
@@ -30,6 +27,6 @@ const nextConfig = {
   redirects() {
     return [];
   },
-}
+};
 
-module.exports = withMDX(nextConfig)
+module.exports = withMDX(nextConfig);
