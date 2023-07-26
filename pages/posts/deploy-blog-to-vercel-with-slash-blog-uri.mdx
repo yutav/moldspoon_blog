@@ -46,27 +46,80 @@ export const meta = {
 続いて、子プロジェクトの `next.config.js`に以下の設定を追加します。
 
 （私は/blog以下にデプロイしたいのでそうしました）
+
 ```
-const nextConfig = {
-...
-+  basePath: '/blog',
-+  assetPrefix: '/blog',
-...
+const isProd = process.env.NODE_ENV === 'production';
+const cdnPrefix = isProd ? '/blog' : '';
+
+if (isProd && cdnPrefix) {
+  console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`);
 }
 
-module.exports = withMDX(nextConfig)
+const withMDX = require('@next/mdx')({
+  extension: /\.(md|mdx)?$/,
+  options: {
+    rehypePlugins: [require('@mapbox/rehype-prism'), require('rehype-join-line')],
+  },
+});
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  basePath: '/blog',
+  assetPrefix: '/blog',
+  async rewrites() {
+    return [
+      {
+        source: "/blog",
+        destination: "/blog/blog",
+      },
+      {
+        source: "/blog/api/:path*",
+        destination: "/api/:path*",
+      },
+      {
+        source: "/blog/images/:query*",
+        destination: '/_next/image/:query*'
+      },
+      {
+        source: "/blog/_next/:path*",
+        destination: "/_next/:path*",
+      },
+    ]
+  },
+
+  pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
+  generateEtags: false,
+  poweredByHeader: false,
+  env: {
+    VERSION: require('./package.json').version,
+  },
+
+  redirects() {
+    return [];
+  },
+};
+
+module.exports = withMDX(nextConfig);
 ```
 
-`assetPrefix`がないと、https://moldspoon-blog.vercel.app/blog　にリクエストした途端リダイレクトループ(308ステータス)に陥るので必ず設定が必要です。
-今回はここがハマりポイントでした...
+`rewrites`の各設定がないと、
+- https://moldspoon-blog.vercel.app/blog　にリクエストした途端リダイレクトループ(308ステータス)に陥る (/blog => /blog/ => /blog とループする)
+- Javascriptファイルへのパスが疎通せず、画面が真っ白になる（UIの描画がされない）
+ので注意してください。
 
 これで、
 ```
 https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
 ```
-に転送ができるようになりました。（リダイレクトでないので、遷移が1つ増えるとかもないはず...）
+に転送ができるようになりました。リダイレクトでないので、遷移が1つ増えるとかもないはず...。
 
-/blogで子プロジェクトを開いたときに真っ白になってしまう場合は、javascriptのパスの疎通を疑ってconsoleを開いてデバッグした方がいいです。
+ポイントとしては、*子プロジェクトのvercelドメインで、サブディレクトリのパスがついた状態で
+遷移できるかをチェックする*ことが肝要です。上記例だと、
+
+- https://moldspoon-blog.vercel.app/blog 以下で全URLが見れるか（TOPしか`rewrite`が効いていない可能性がある）
+- react routerで遷移ができていても、URLの転送が効くかは別なので、その観点でも各ページでリロードして確認する
+
+が作業完了までに必要になると思いました。
 
 ### まとめ
 
