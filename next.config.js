@@ -13,7 +13,7 @@ const withMDX = require('@next/mdx')({
 });
 
 const nextConfig = {
-  basePath: '', // basePathを空に設定
+  basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
