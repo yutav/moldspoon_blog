@@ -8,6 +8,13 @@ h1 {
 
 .container h3 {
   padding-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 5px dotted #f0f0f0;
+}
+
+.container h4 {
+  padding-top: 1.5rem;
+  border-bottom: 2px groove #f8f8f8;
 }
 
 .names .name {

@@ -1,0 +1,9 @@
+.imageContainer>span {
+  position: unset !important;
+}
+
+.image {
+  position: relative !important;
+  width: 100% !important;
+  height: unset !important;
+}

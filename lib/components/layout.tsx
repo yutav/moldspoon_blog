@@ -73,6 +73,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         <Spacer />
         <Profile />
         {inDetailPage && <Title title={meta.title} date={meta.date} />}
+      
+
         <div className="dynamic-content">{children}</div>
         <Spacer h={5} />
         <Contacts isDetailPage={!!inDetailPage} />

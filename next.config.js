@@ -40,8 +40,12 @@ const nextConfig = {
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
   generateEtags: false,
   poweredByHeader: false,
+  images: {
+    domains: ['localhost', 'moldspoon.jp'],
+  },
   env: {
     VERSION: require('./package.json').version,
+    baseUrl: isProd ? 'https://moldspoon.jp/blog' : 'http://localhost:3001/blog'
   },
 
   redirects() {
