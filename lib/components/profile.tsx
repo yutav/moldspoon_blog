@@ -12,10 +12,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
 
   let logoUrl
   if (theme.type === 'dark') {
-    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/assets/moldspoonblog_short_white.png"
+    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/blog/assets/moldspoonblog_short_white.png"
   }
   else {
-    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/assets/moldspoonblog_short.png"
+    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/blog/assets/moldspoonblog_short.png"
   }
   useEffect(() => {
     const show = theme.type === 'dark'

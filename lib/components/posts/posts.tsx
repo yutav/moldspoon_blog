@@ -16,6 +16,7 @@ const getMoreLink = (len: number): React.ReactNode => {
 }
 
 const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
+
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 
@@ -37,13 +38,6 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
   return filteredPosts.slice(0, Configs.latestLimit);
 };
 
-
-const getTitle = (isLatest?: boolean, tag?: string): string => {
-  if (tag) return `「${tag}」 の記事一覧`
-  if (!isLatest) return Configs.labels.list
-  return Configs.labels.latest
-}
-
 export interface PostsProps {
   isLatest?: boolean
   tag?: string
@@ -51,11 +45,24 @@ export interface PostsProps {
 
 const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
 
-  console.log(tag)
-
   const theme = useTheme()
-  const posts = useMemo(() => tag ? getPosts(metadata, isLatest, tag) : [], [tag, isLatest]);
-  const title = useMemo(() => getTitle(isLatest, tag), [])
+  let posts = []
+  let title = ""
+  if (tag) {
+    posts = useMemo(() => tag !== undefined ? getPosts(metadata, isLatest, tag) : [], [tag]);
+    title = `「${tag}」 の記事一覧`
+    console.log(title)
+  }
+  else if (isLatest) {
+    posts = useMemo(() => isLatest !== undefined ? getPosts(metadata, isLatest, tag) : [], [isLatest]);
+    title = Configs.labels.latest
+  }
+  else {
+    posts = useMemo(() => getPosts(metadata, isLatest, tag), []);
+    title = Configs.labels.list
+  }
+
+
 
   return (
     <section>
@@ -64,7 +71,7 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
           {title} - {Configs.title}
         </title>
       </Head>
-      <h2>{title} - {Configs.title}</h2>
+      {!isLatest && <h2>{title} - {Configs.title}</h2>}
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />
