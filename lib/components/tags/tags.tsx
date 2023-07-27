@@ -4,14 +4,12 @@ import { Configs } from 'lib/utils'
 //import NextLink from 'next/link'
 import metadata from 'lib/data/metadata.json'
 import { useTheme } from '@geist-ui/core'
-import TagItem from './tag-item'
 import Link from 'next/link'
-
 const getTags = (data: typeof metadata) => {
   const postsNode = data.find(item => item.name === 'posts'); // Find the node with name 'posts'
   const posts = (postsNode || {}).children || []; // Get the children of the 'posts' node
 
-  const tagsCountArray = {}; // Object to store tag counts as key-value pairs
+  const tagsCountArray: { [key: string]: number } = {}; // Object to store tag counts as key-value pairs
 
   // Loop through each post and count the tags
   posts.forEach(post => {
@@ -24,6 +22,7 @@ const getTags = (data: typeof metadata) => {
 
   return tagsCountArray;
 };
+
 const getTitle = (): string => {
   return Configs.labels.tags
 }
@@ -36,7 +35,6 @@ const Tags: React.FC<PostsProps> = () => {
   const tags = useMemo(() => getTags(metadata), [])
   const title = useMemo(() => getTitle(), [])
 
-  console.log(tags)
 
   return (
     <section>

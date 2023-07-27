@@ -1,6 +1,5 @@
 import React from 'react'
 import { Layout, Posts } from 'lib/components'
-import Tags from 'lib/components/tags/tags'
 import { useRouter } from "next/router"
 
 const Page: React.FC<unknown> = () => {

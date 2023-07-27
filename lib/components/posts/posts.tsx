@@ -19,9 +19,6 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 
-  console.log(data)
-  console.log(tag)
-
   if (!tag) {
     // tagが指定されていない場合、全てのポストを返す
     if (!isLatest) return posts;
@@ -64,10 +61,10 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
     <section>
       <Head>
         <title>
-          {getTitle(isLatest, tag)} - {Configs.title}
+          {title} - {Configs.title}
         </title>
       </Head>
-      <h2>{getTitle(isLatest, tag)}</h2>
+      <h2>{title} - {Configs.title}</h2>
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />

@@ -1,13 +1,7 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import NextLink from 'next/link'
 import { useTheme, Link } from '@geist-ui/core'
-import metadata from '../data/metadata.json'
 import { Configs } from '../utils'
-
-const getFixes = (metas: typeof metadata) => {
-  const data = metas.find(item => item.name === 'fixed')
-  return (data || {}).children || []
-}
 
 const fillSpace = (name: string): string => {
   return name.replace(/ /g, '-')
@@ -28,7 +22,7 @@ const makeLink = (data: ProfileLinkItem): React.ReactNode => {
 
 const ProfileLinks: React.FC<unknown> = () => {
   const theme = useTheme()
-  const links = useMemo(() => getFixes(metadata), [])
+  {/*const links = useMemo(() => getFixes(metadata), [])*/ }
   return (
     <div className="link">
       {makeLink({ url: 'https://moldspoon.jp/', name: Configs.labels.default })}
