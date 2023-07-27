@@ -8,9 +8,10 @@ const BLOG = {
   latestLimit: 5,
 
   labels: {
-    default: 'Cooporate Page',
+    default: 'Webページ',
     latest: '最新のポスト',
     list: '一覧',
+    tags: 'タグ'
   },
 
   email: 'info@moldspoon.jp',

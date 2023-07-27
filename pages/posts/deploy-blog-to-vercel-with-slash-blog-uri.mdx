@@ -1,13 +1,22 @@
 import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
 import ShareButton from "../../lib/components/original/parts/ShareButtons"
+import TagLinks from "../../lib/components/original/parts/TagLinks"
 
 import { useRouter } from 'next/router'
 
 export const meta = {
   title: 'Next.js製ブログをメインプロジェクトの下の/blogでVercelに配信したい',
   date: '2023-07-24T00:00:00.000Z',
+  tags: [
+    'Next.js',
+    'Blog',
+    'Vercel',
+    'プログラミング'
+  ]
 }
+
+<TagLinks tags={meta.tags} />
 
 こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
 

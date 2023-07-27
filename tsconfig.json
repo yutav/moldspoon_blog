@@ -34,5 +34,5 @@
     "**/*.ts",
     "**/*.tsx",
     "lib/**/*.tsx"
-  ]
+, "pages/tags/[code].tsx", "pages/posts/[code].jsx"  ]
 }

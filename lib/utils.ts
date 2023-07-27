@@ -22,6 +22,7 @@ export const Configs = {
     default: labels.default || 'posts',
     latest: labels.latest || 'latest',
     list: labels.list || 'all posts',
+    tags: labels.tags || 'tags'
   },
 
   layouts: {
@@ -33,4 +34,11 @@ export const Configs = {
 
 export const changeTitle = ({ title }: { title: string }) => {
   return title + "-" + Configs.title
+}
+
+export const fixedEncodeURIComponent = (
+  { str }: { str: string }) => {
+  return encodeURIComponent(str).replace(/[.-]/g, function (c) {
+    return '%' + c.charCodeAt(0).toString(16);
+  });
 }

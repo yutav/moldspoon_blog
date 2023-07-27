@@ -32,14 +32,15 @@ const ProfileLinks: React.FC<unknown> = () => {
   return (
     <div className="link">
       {makeLink({ url: 'https://moldspoon.jp/', name: Configs.labels.default })}
-      {links.map(link => makeLink(link))}
+      {makeLink({ url: '/tags', name: Configs.labels.tags })}
+      {/*links.map(link => makeLink(link)) */}
 
       <style jsx>{`
         .link :global(a) {
-          color: ${theme.palette.accents_6};
-          text-transform: uppercase;
           font-size: 0.8rem;
           padding: ${theme.layout.gapQuarter};
+          text-decoration: underline;
+          color: rgb(107 114 128);
         }
 
         .link :global(a:hover) {

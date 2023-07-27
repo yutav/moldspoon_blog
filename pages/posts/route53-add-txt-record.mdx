@@ -1,6 +1,7 @@
 import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
 import ShareButton from "../../lib/components/original/parts/ShareButtons"
+import TagLinks from "../../lib/components/original/parts/TagLinks"
 
 import { useRouter } from 'next/router'
 
@@ -9,7 +10,16 @@ import MdxImage from "../../lib/components/original/parts/MdxImage"
 export const meta = {
   title: 'Route53のtxtレコードに追記する',
   date: '2023-07-26T14:55:18.000Z',
+  tags: [
+    'Next.js',
+    'Blog',
+    'AWS',
+    'Route53',
+    'プログラミング'
+  ]
 }
+
+<TagLinks tags={meta.tags} />
 
 こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
 

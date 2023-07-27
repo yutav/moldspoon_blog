@@ -15,37 +15,59 @@ const getMoreLink = (len: number): React.ReactNode => {
   )
 }
 
-const getLatest = (data: typeof metadata, isLatest?: boolean) => {
-  const postNode = data.find(item => item.name === 'posts')
-  const posts = (postNode || {}).children || []
-  if (!isLatest) return posts
-  return posts.slice(0, Configs.latestLimit)
-}
+const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
+  const postNode = data.find(item => item.name === 'posts');
+  const posts = (postNode || {}).children || [];
 
-const getTitle = (isLatest?: boolean): string => {
+  console.log(data)
+  console.log(tag)
+
+  if (!tag) {
+    // tagが指定されていない場合、全てのポストを返す
+    if (!isLatest) return posts;
+    return posts.slice(0, Configs.latestLimit);
+  }
+
+  // tagが指定されている場合、tagが含まれているポストのみをフィルタリングして返す
+  const filteredPosts = posts.filter(post => {
+    const tags = (post.meta || {}).tags || [];
+    return tags.includes(tag);
+  });
+
+  console.log(filteredPosts)
+
+  if (!isLatest) return filteredPosts;
+  return filteredPosts.slice(0, Configs.latestLimit);
+};
+
+
+const getTitle = (isLatest?: boolean, tag?: string): string => {
+  if (tag) return `「${tag}」 の記事一覧`
   if (!isLatest) return Configs.labels.list
   return Configs.labels.latest
 }
 
 export interface PostsProps {
   isLatest?: boolean
+  tag?: string
 }
 
-const Posts: React.FC<PostsProps> = ({ isLatest = false }) => {
+const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
+
+  console.log(tag)
+
   const theme = useTheme()
-  const posts = useMemo(() => getLatest(metadata, isLatest), [])
-  const title = useMemo(() => getTitle(isLatest), [])
+  const posts = useMemo(() => tag ? getPosts(metadata, isLatest, tag) : [], [tag, isLatest]);
+  const title = useMemo(() => getTitle(isLatest, tag), [])
 
   return (
     <section>
       <Head>
-        {!isLatest && (
-          <title>
-            {getTitle(false)} - {Configs.title}
-          </title>
-        )}
+        <title>
+          {getTitle(isLatest, tag)} - {Configs.title}
+        </title>
       </Head>
-      <h2>{title}</h2>
+      <h2>{getTitle(isLatest, tag)}</h2>
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />
