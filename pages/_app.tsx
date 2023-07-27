@@ -46,12 +46,12 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
         <meta name="twitter:creator" content={`@${BLOG.twitter}`} />
         <meta property="og:title" content={BLOG.title} />
         <meta property="og:url" content={BLOG.domain} />
-        <meta property="og:image" content={`https:${domain}/img/ogp.png`} />
-        <meta property="twitter:image" content={`https:${domain}/img/ogp.png`} />
+        <meta property="og:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
+        <meta property="twitter:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
         <meta
           itemProp="image"
           property="og:image"
-          content={`https:${domain}/img/ogp.png`}
+          content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`}
         />
         <meta
           name="viewport"

@@ -10,7 +10,7 @@ const getFixes = (metas: typeof metadata) => {
 }
 
 const fillSpace = (name: string): string => {
-  return name.replace(/ /g, '_')
+  return name.replace(/ /g, '-')
 }
 
 export type ProfileLinkItem = {
