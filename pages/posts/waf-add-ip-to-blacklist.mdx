@@ -1,0 +1,76 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+import ShareButton from "../../lib/components/original/parts/ShareButtons"
+import TagLinks from "../../lib/components/original/parts/TagLinks"
+
+import { useRouter } from 'next/router'
+
+export const meta = {
+  title: 'IPをAWS WAFのブラックリストに手動追加したい',
+  date: '2023-07-31T00:00:00.000Z',
+  tags: [
+    'Blog',
+    'プログラミング',
+    'AWS WAF',
+    'AWS WAF Classic'
+  ]
+}
+
+<TagLinks tags={meta.tags} />
+
+こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
+
+### 本記事のゴール
+
+**fail2ban**　が諸事情により入れられないWebサーバがありますが、定期的に不正なアタックがあります。
+
+ex)
+.env
+/phpinfo/phpinfo.phpinfo
+等へアトランダムにリクエスト
+
+防止策として、Webサーバに一切手を触れず使えるAWS WAFをWebサーバの前段に立てて使っているわけですが、手動でIPをメンテして追加するようなことをしています。
+
+最終的には特定のリクエストパターンに合致したIPを自動的にブラックリストに投げ込みたいですが、基本的には手動運用でとお客様と握っているのでまずは
+「スクリプト.sh + IP」を叩くとかんたんにConditionに追加されるようにしようかなと思いました。
+
+### 作業
+
+#### CLIとそれに必要なプロフィールの準備
+**awsコマンドがインストールされていれば、そのまま利用できます**
+
+今回は既にawsコマンドが利用中のlinuxサーバに追加されており、既にWAF(Classic)にルールが追加されているので、
+以下のようにうちます。
+
+awsコマンドから利用するシークレットが、WAFにも権限の面で対応できているかどうかはIAMをチェックして確認してください！
+（対応していない場合は、新たにuserを追加する必要があると思います。）
+
+私の場合は、あらたに[こちら](https://qiita.com/noid11/items/bdc2dc15213da43a10a7)の方法でuserを追加しました。
+```
+aws configure --profile waf
+# Access Key ID, Secret Access Keyの順番で打つ
+```
+
+#### IP追加の実施
+
+
+```
+aws waf 
+```
+
+### まとめ
+
+
+export default function Page({ children }) {
+  const router = useRouter();
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+        <ShareButton url={currentUrl} title={meta.title} />
+      </>
+    </Layout>
+  )
+}
+
