@@ -1,0 +1,98 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+import ShareButton from "lib/components/original/parts/ShareButtons"
+import TagLinks from "lib/components/original/parts/TagLinks"
+
+import { useRouter } from 'next/router'
+
+import MdxImage from "lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'Next.jsで、プロジェクトルートからの呼び出しに記述変更するとVSCodeでエラー。その治し方',
+  date: '2023-07-31T20:33:18.000Z',
+  tags: [
+    'Next.js',
+    'Blog',
+    'Vercel',
+    'VSCode',
+    'プログラミング'
+  ]
+}
+
+<TagLinks tags={meta.tags} />
+
+こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
+
+### 本記事のゴール
+
+VSCodeで、
+
+```
+相対パス（ファイルの位置から）呼び出し
+```
+
+を
+
+```
+相対パス（プロジェクトルートから）呼び出し
+```
+
+に変更するとエラーが出るので、それを治したい。
+
+### 作業
+
+前もプロジェクトをスクラッチで立ち上げる時に、同様の事例が発生して治したのですが、すぐ忘れるので備忘録も兼ねて書きます。
+
+**ts.config.json**
+
+の
+
+`include`に記述を追加すれば一発です
+
+```
+{
+  // ... 略 ...
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+  ]
+}
+```
+
+自分のプロジェクトの場合は、.ts / .tsx ファイルが少ないのでいいですが、大量に傘下にある場合は
+ビルド時のパフォーマンスに影響出るようです！（もしかするとVSCodeの挙動にも問題出るかも）
+
+なので、下記のように構成に応じて、指定するパスを明示してあげたほうがいいのかもしれません。
+
+```
+{
+  // src,lib以下の全てのts/tsxファイルを読み込み対象とする
+  "include": [
+    "src/**/*.ts",
+    "lib/**/*.ts",
+    "src/**/*.tsx",
+    "lib/**/*.tsx",
+  ]
+}
+```
+
+### まとめ
+
+こういうのってその言語・フレームワークばっかり使ってると手癖で覚えていくもんだよなーと思います。
+そうじゃないと、いちいちググんないとダメですね...
+
+この記事が何かのお役に立てれば幸いです。
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  const router = useRouter();
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+        <ShareButton url={currentUrl} title={meta.title} />
+      </>
+    </Layout>
+  )
+}

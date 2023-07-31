@@ -30,9 +30,10 @@
     ".vercel"
   ],
   "include": [
-    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "lib/**/*.tsx"
-, "pages/tags/[code].tsx", "pages/posts/[code].jsx"  ]
+    "lib/**/*.tsx",
+    "pages/tags/[code].tsx",
+    "pages/posts/[code].jsx"
+  ]
 }
