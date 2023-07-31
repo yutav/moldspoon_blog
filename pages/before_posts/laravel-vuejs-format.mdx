@@ -1,7 +1,18 @@
 
 
+import { Layout } from 'lib/components'
+
+export const meta = {
+  title: 'About me',
+  date: '',
+  tags: []
+}
 
 これでフォーマット
 ```
 yarn add --dev prettier eslint-config-prettier eslint-plugin-prettier
 ```
+
+export default ({ children }) => <Layout meta={meta}>{children}</Layout>
+
+
