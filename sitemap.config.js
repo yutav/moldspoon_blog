@@ -13,7 +13,7 @@ module.exports = {
       {
         userAgent: '*',
         allow: '/',
-        disallow: [''], // クローリングしたくないパスがある場合はここに指定します
+        disallow: ['before_posts'], // クローリングしたくないパスがある場合はここに指定します
       },
     ],
   },

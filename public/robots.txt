@@ -1,7 +1,7 @@
 # *
 User-agent: *
 Allow: /
-Disallow: 
+Disallow: tools
 
 # Host
 Host: http://localhost:3001/blog/
