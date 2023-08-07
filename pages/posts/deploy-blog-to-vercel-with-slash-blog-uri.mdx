@@ -16,8 +16,6 @@ export const meta = {
   ]
 }
 
-<TagLinks tags={meta.tags} />
-
 こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
 
 ### 本記事のゴール
@@ -143,13 +141,10 @@ monorepoで管理するという方法もあったのですが、今回は大き
 簡単な方を選んでいます。
 
 export default function Page({ children }) {
-  const router = useRouter();
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   return (
     <Layout meta={meta}>
       <>
         {children}
-        <ShareButton url={currentUrl} title={meta.title} />
       </>
     </Layout>
   )

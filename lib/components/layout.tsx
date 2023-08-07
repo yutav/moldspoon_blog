@@ -5,10 +5,13 @@ import Contacts from './contacts'
 import Title from './title'
 import { Spacer } from '@geist-ui/core'
 import { Configs, changeTitle } from '../utils'
+import ShareButtons from './original/parts/ShareButtons'
+import TagLinks from './original/parts/TagLinks'
 
 export type PostMetadata = {
   title: string
   date: string
+  tags?: Array<string>
   description?: string
   image?: string
 }
@@ -44,6 +47,7 @@ const defaultProps = {
   meta: {
     title: '',
     date: new Date().toISOString(),
+    tags: []
   },
 }
 
@@ -54,6 +58,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   children,
   meta,
 }: LayoutProps & typeof defaultProps) => {
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
   const [showAfterRender, setShowAfterRender] = useState(false)
   const inDetailPage = useMemo(() => meta && meta.title, [])
   useEffect(() => setShowAfterRender(true), [])
@@ -71,17 +77,29 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         `}</style>
       </div>
     )
+
   return (
     <section>
       <LayoutHeader meta={meta} />
       <div className="container">
         <Spacer />
         <Profile />
-        {inDetailPage && <Title title={meta.title} date={meta.date} />}
-        <div className="dynamic-content">{children}</div>
+        {inDetailPage &&
+          <>
+            <Title title={meta.title} date={meta.date} />
+            <TagLinks tags={meta.tags} />
+          </>
+        }
+        <div className="dynamic-content">
+          {children}
+        </div>
+        {inDetailPage &&
+          <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+        }
         <Spacer h={5} />
         <Contacts isDetailPage={!!inDetailPage} />
       </div>
+
 
       <style jsx>{`
         section {

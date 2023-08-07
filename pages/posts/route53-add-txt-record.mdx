@@ -19,8 +19,6 @@ export const meta = {
   ]
 }
 
-<TagLinks tags={meta.tags} />
-
 こんにちは、[yuku_tas](https://twitter.com/yuku_tas)です。
 
 ### 本記事のゴール
@@ -70,13 +68,10 @@ txtレコードを押して編集画面に行ってみました。
 最後までお読みいただきありがとうございました！
 
 export default function Page({ children }) {
-  const router = useRouter();
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   return (
     <Layout meta={meta}>
       <>
         {children}
-        <ShareButton url={currentUrl} title={meta.title} />
       </>
     </Layout>
   )
