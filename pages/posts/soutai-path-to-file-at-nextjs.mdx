@@ -1,11 +1,10 @@
 import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
-import ShareButton from "lib/components/original/parts/ShareButtons"
-import TagLinks from "lib/components/original/parts/TagLinks"
 
 import { useRouter } from 'next/router'
 
 import MdxImage from "lib/components/original/parts/MdxImage"
+import CodeBlockTitle from '../../lib/components/original/parts/CodeBlockTitle'
 
 export const meta = {
   title: 'Next.jsで、プロジェクトルートからの呼び出しに記述変更するとVSCodeでエラー。その修正方法。',
@@ -25,15 +24,11 @@ export const meta = {
 
 VSCodeで、
 
-```
-相対パス（ファイルの位置から）呼び出し
-```
+> 相対パス（ファイルの位置から）呼び出し
 
 を
 
-```
-相対パス（プロジェクトルートから）呼び出し
-```
+> 相対パス（プロジェクトルートから）呼び出し
 
 に変更するとエラーが出るので、それを治したい。
 
@@ -49,7 +44,9 @@ VSCodeで、
 
 `basePath`に記述を追加すれば一発です
 
-```
+<CodeBlockTitle title="ts.config.json" />
+
+```json
 {
   "basePath": "./"
   // 攻略
@@ -59,7 +56,10 @@ VSCodeで、
 #### 別のケース
 
 で解決したというケースもあるようです。このパターンは、同じところで警告が出るとはいえ、別の内容かもしれませんね。
-```
+
+<CodeBlockTitle title="ts.config.json" />
+
+```json
 {
   "include": [
     "**/*.ts",
@@ -73,7 +73,9 @@ VSCodeで、
 
 なので、下記のように構成に応じて、指定するパスを明示してあげたほうがいいのかもしれません。
 
-```
+<CodeBlockTitle title="ts.config.json" />
+
+```json
 {
   // src,lib以下の全てのts/tsxファイルを読み込み対象とする　（指定するパスはこの限りではない）
   "include": [

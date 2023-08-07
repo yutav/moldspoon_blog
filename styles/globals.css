@@ -7,7 +7,7 @@ h1 {
 }
 
 .container h3 {
-  margin-top: 1.5rem;
+  margin-top: 3rem;
   padding-left: 0.25rem;
   padding-bottom: 0.5rem;
   border-bottom: 5px dotted #f0f0f0;
@@ -29,4 +29,27 @@ h1 {
 
 .names .name {
   font-size: 1.5rem !important;
+}
+
+div.pre {
+  margin-top: 0px !important;
+  margin-bottom: 30px !important;
+  border: none !important;
+  border-top-left-radius: 0px !important;
+  border-top-right-radius: 0px !important;
+  background: black !important;
+}
+
+div.pre pre code {
+  color: white !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  div.pre {
+    background: white !important;
+  }
+
+  div.pre pre code {
+    color: black !important;
+  }
 }

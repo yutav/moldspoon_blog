@@ -1,9 +1,9 @@
 import { Layout } from 'lib/components'
 import { Button } from '@geist-ui/core'
-import ShareButton from "../../lib/components/original/parts/ShareButtons"
-import TagLinks from "../../lib/components/original/parts/TagLinks"
 
 import { useRouter } from 'next/router'
+
+import CodeBlockTitle from '../../lib/components/original/parts/CodeBlockTitle'
 
 export const meta = {
   title: 'Next.js製ブログをメインプロジェクトの下の/blogでVercelに配信したい',
@@ -33,7 +33,9 @@ export const meta = {
 
 以下のように、**別途Vercelにデプロイしているプロジェクトの固定ドメインにもリンクが貼れる**ようです。
 
-```
+<CodeBlockTitle title="vercel.json" />
+
+```json
 {
   "rewrites": [
     {
@@ -54,7 +56,9 @@ export const meta = {
 
 （私は/blog以下にデプロイしたいのでそうしました）
 
-```
+<CodeBlockTitle title="next.config.js" />
+
+```typescript
 const isProd = process.env.NODE_ENV === 'production';
 const cdnPrefix = isProd ? '/blog' : '';
 
@@ -115,9 +119,11 @@ module.exports = withMDX(nextConfig);
 ので注意してください。
 
 これで、
-```
-https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
-```
+
+<CodeBlockTitle title="" />
+
+> https://moldspoon.jp/blog => https://moldspoon-blog.vercel.app/blog
+
 に転送ができるようになりました。リダイレクトでないので、遷移が1つ増えるとかもないはず...。
 
 ポイントとしては、**子プロジェクトのvercelドメインで、サブディレクトリのパスがついた状態で

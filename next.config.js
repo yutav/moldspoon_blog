@@ -8,7 +8,15 @@ if (isProd && cdnPrefix) {
 const withMDX = require('@next/mdx')({
   extension: /\.(md|mdx)?$/,
   options: {
-    rehypePlugins: [require('@mapbox/rehype-prism'), require('rehype-join-line')],
+    rehypePlugins: [
+      require('@mapbox/rehype-prism'),
+      require('rehype-join-line'),
+      require('rehype-pretty-code'),
+      /** @type {Partial<import("rehype-pretty-code").Options>} */
+      ({
+        theme: "github-light",
+        getHighlighter: require('shiki').getHighlighter,
+      })],
   },
 });
 
@@ -47,7 +55,9 @@ const nextConfig = {
     VERSION: require('./package.json').version,
     baseUrl: isProd ? 'https://moldspoon.jp/blog' : 'http://localhost:3001/blog'
   },
-
+  experimental: {
+    appDir: true,
+  },
   redirects() {
     return [];
   },
