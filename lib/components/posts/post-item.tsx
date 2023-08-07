@@ -20,7 +20,9 @@ export interface PostItemProps {
     url: string
     name: string
     meta?: {
-      date: string
+      date?: string
+      title?: string
+      tags?: Array<string>
     }
   }
 }

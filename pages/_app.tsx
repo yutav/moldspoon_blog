@@ -17,7 +17,7 @@ import 'tailwindcss/tailwind.css'
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   const [themeType, setThemeType] = useState('light')
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
-  const changeHandle = useCallback(isDark => {
+  const changeHandle = useCallback((isDark: boolean) => {
     const next = isDark ? 'light' : 'dark'
     setThemeType(next)
   }, [])
@@ -28,6 +28,12 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   }, [])
   useEffect(() => localStorage.setItem('theme', themeType), [themeType])
   useDomClean()
+
+  const components = {
+    a: HybridLink,
+    img: Image,
+    pre: HybridCode,
+  };
 
   return (
     <>
@@ -62,11 +68,7 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
         <CssBaseline />
         <PrismBaseline />
         <MDXProvider
-          components={{
-            a: HybridLink,
-            img: Image,
-            pre: HybridCode,
-          }}>
+          components={components} >
           <BlogConfigsProvider onChange={changeHandle}>
             <Component {...pageProps} />
           </BlogConfigsProvider>
@@ -78,7 +80,7 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
             }
           }
         `}</style>
-      </GeistProvider>
+      </GeistProvider >
     </>
   )
 }

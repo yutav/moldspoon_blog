@@ -1,4 +1,4 @@
-import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHightlight';
+import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
 import type { MDXComponents } from 'mdx/types';
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {

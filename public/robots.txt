@@ -1,7 +1,7 @@
 # *
 User-agent: *
 Allow: /
-Disallow: tools
+Disallow: before_posts
 
 # Host
 Host: http://localhost:3001/blog/
