@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useTheme } from '@geist-ui/core'
+import { useTheme } from '@geist-ui/core'
 import NextLink from 'next/link'
 
 const options: Intl.DateTimeFormatOptions = {
@@ -33,13 +33,11 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
   return (
     <div className="item">
       <NextLink href={post.url} as={post.url} passHref>
-        <Link>
-          {post.name}
-          <span
-            className="date"
-            dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
-          />
-        </Link>
+        <span className="text-black">{post.name}</span>
+        <span
+          className="date"
+          dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
+        />
       </NextLink>
       <style jsx>{`
         .item {

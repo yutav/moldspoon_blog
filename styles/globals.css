@@ -31,30 +31,12 @@ h1 {
   font-size: 1.5rem !important;
 }
 
-div.pre {
+pre.language-json,
+pre.language-typescript {
   margin-top: 0px !important;
   margin-bottom: 30px !important;
   border: none !important;
   border-top-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
-}
-
-@media (prefers-color-scheme: light) {
-  div.pre {
-    background: black !important;
-  }
-
-  div.pre pre code {
-    color: white !important;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  div.pre {
-    background: white !important;
-  }
-
-  div.pre pre code {
-    color: black !important;
-  }
+  padding: 0px;
 }
