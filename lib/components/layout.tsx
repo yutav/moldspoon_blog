@@ -17,12 +17,13 @@ export type PostMetadata = {
 }
 
 export type LayoutHeader = {
+  currentUrl?: string
   meta: PostMetadata
 }
 
-const LayoutHeader: React.FC<LayoutHeader> = ({ meta }) => {
-  return (
+const LayoutHeader: React.FC<LayoutHeader> = ({ currentUrl, meta }) => {
 
+  return (
     <Head>
       {
         meta.title && (
@@ -31,11 +32,12 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ meta }) => {
           </title>
         )
       }
+      {currentUrl && <meta property="og:url" content={currentUrl} />}
+      {meta.title && <meta property="og:title" content={meta.title} />}
       {meta.description && <meta name="description" content={meta.description} />}
       {meta.description && <meta property="og:description" content={meta.description} />}
-      {meta.title && <meta property="og:title" content={meta.title} />}
-      {meta.image && <meta property="og:image" content={meta.image} />}
-      {meta.image && <meta property="twitter:image" content={meta.image} />}
+      {meta.title && <meta property="og:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
+      {meta.title && <meta property="twitter:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
     </Head >
   )
 }
@@ -67,7 +69,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   if (!showAfterRender)
     return (
       <div className="article-content">
-        <LayoutHeader meta={meta} />
+        <LayoutHeader currentUrl={currentUrl} meta={meta} />
         {children}
         <style jsx>{`
           .article-content {

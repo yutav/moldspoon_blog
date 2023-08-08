@@ -10,12 +10,15 @@ import { useCallback, useState, useEffect, useMemo } from 'react'
 import { getDNSPrefetchValue } from 'lib/data-transform'
 import { BlogConfigsProvider } from 'lib/components'
 import { HybridLink, HybridCode } from 'lib/components/mdx'
-
+import { useRouter } from "next/router"
 import '../styles/globals.css'
 import 'tailwindcss/tailwind.css'
 
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
+  const router = useRouter()
+  console.log(router)
   const [themeType, setThemeType] = useState('light')
+  const [isNotDetail, setIsNotDetail] = useState(false)
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
   const changeHandle = useCallback((isDark: boolean) => {
     const next = isDark ? 'light' : 'dark'
@@ -25,6 +28,8 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   useEffect(() => {
     if (typeof localStorage !== 'object') return
     setThemeType(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')
+    const _isNotDetail = router.pathname.match("/posts/(.*?)$") ? false : true
+    setIsNotDetail(_isNotDetail)
   }, [])
   useEffect(() => localStorage.setItem('theme', themeType), [themeType])
   useDomClean()
@@ -42,23 +47,22 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
         {domain && <link rel="dns-prefetch" href={domain} />}
         <meta name="google" content="notranslate" />
         <meta name="referrer" content="strict-origin" />
-        <meta name="description" content={BLOG.description} />
         <meta property="og:site_name" content={BLOG.title} />
-        <meta property="og:description" content={BLOG.description} />
         <meta property="og:type" content="website" />
         <meta name="generator" content="yuku_tas" />
-        <meta name="twitter:card" content="summary_large_image" />
         <meta name="author" content={BLOG.author} />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:creator" content={`@${BLOG.twitter}`} />
-        <meta property="og:title" content={BLOG.title} />
-        <meta property="og:url" content={BLOG.domain} />
-        <meta property="og:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
-        <meta property="twitter:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
-        <meta
-          itemProp="image"
-          property="og:image"
-          content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`}
-        />
+        {isNotDetail && (
+          <>
+            <meta property="og:url" content={BLOG.domain} />
+            <meta property="og:title" content={BLOG.title} />
+            <meta name="description" content={BLOG.description} />
+            <meta property="og:description" content={BLOG.description} />
+            <meta property="og:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
+            <meta property="twitter:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
+          </>
+        )}
         <meta
           name="viewport"
           content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
