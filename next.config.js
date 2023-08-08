@@ -22,6 +22,10 @@ const withMDX = require('@next/mdx')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    ...require(`./env/${process.env.APP_ENV || 'local'}.json`),
+    TZ: 'Asia/Tokyo',
+  },
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
   async rewrites() {

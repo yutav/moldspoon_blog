@@ -37,11 +37,16 @@ div.pre {
   border: none !important;
   border-top-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
-  background: black !important;
 }
 
-div.pre pre code {
-  color: white !important;
+@media (prefers-color-scheme: light) {
+  div.pre {
+    background: black !important;
+  }
+
+  div.pre pre code {
+    color: white !important;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
