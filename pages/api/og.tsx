@@ -5,10 +5,10 @@ export const config = {
   runtime: "edge",
 };
 
-console.log(process.env.baseUrl + "/assets/GenJyuuGothic-P-ExtraLight.ttf")
+console.log(process.env.baseUrl + "/assets/GenJyuuGothic-P-Hevy.ttf")
 
 const font = fetch(
-  process.env.baseUrl + "/assets/GenJyuuGothic-P-ExtraLight.ttf"
+  process.env.baseUrl + "/assets/GenJyuuGothic-P-Hevy.ttf"
 ).then((res) => res.arrayBuffer());
 
 export default async function handler(req: NextRequest) {
