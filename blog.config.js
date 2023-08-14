@@ -10,7 +10,7 @@ const BLOG = {
   labels: {
     default: 'Webページ',
     latest: '最新のポスト',
-    list: '一覧',
+    list: '記事一覧',
     tags: 'タグ'
   },
 
