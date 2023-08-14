@@ -5,10 +5,10 @@ export const config = {
   runtime: "edge",
 };
 
-console.log(process.env.baseUrl + "/assets/NotoSansJP-Bold-Subset.ttf")
+console.log(process.env.baseUrl + "/assets/GenJyuuGothic-P-ExtraLight.ttf")
 
 const font = fetch(
-  process.env.baseUrl + "/assets/NotoSansJP-Bold-Subset.ttf"
+  process.env.baseUrl + "/assets/GenJyuuGothic-P-ExtraLight.ttf"
 ).then((res) => res.arrayBuffer());
 
 export default async function handler(req: NextRequest) {
@@ -30,33 +30,53 @@ export default async function handler(req: NextRequest) {
       (
         <div
           style={{
-            backgroundImage: "url(" + process.env.baseUrl + "/assets/moldspoonblog_whitebg_ogp_base.png)",
+            backgroundImage: "url(" + process.env.baseUrl + "/assets/moldspoonblog_bg_ogp_base.png)",
             width: '100%',
             height: '100%',
-            background: 'black',
+            background: '#FFA500',
             backgroundSize: '100% 100%',
             display: 'flex',
             textAlign: 'center',
             alignItems: 'center',
             justifyContent: 'center',
             flexDirection: 'column',
-            flexWrap: 'nowrap'
+            flexWrap: 'nowrap',
+            border: '20px solid #FFA500',
           }}
+
         >
           <div
             style={{
-              padding: '0 40px',
+              backgroundImage: "url(" + process.env.baseUrl + "/assets/moldspoonblog_bg_ogp_base.png)",
+              width: '100%',
+              height: '100%',
+              background: 'white',
+              backgroundSize: '100% 100%',
               display: 'flex',
+              textAlign: 'center',
               alignItems: 'center',
               justifyContent: 'center',
-              justifyItems: 'center',
-              wordWrap: "break-word",
-              fontSize: '4rem',
-              fontWeight: 'bold',
-              lineHeight: '5rem'
+              flexDirection: 'column',
+              flexWrap: 'nowrap',
+              border: '20px solid #FF6600',
+              borderRadius: '80px'
             }}
           >
-            {options.title}
+            <div
+              style={{
+                padding: '0 40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                justifyItems: 'center',
+                wordWrap: "break-word",
+                fontSize: '4rem',
+                fontWeight: 'bold',
+                lineHeight: '5rem'
+              }}
+            >
+              {options.title}
+            </div>
           </div>
         </div>
       ),
@@ -65,7 +85,7 @@ export default async function handler(req: NextRequest) {
         height: options.height,
         fonts: [
           {
-            name: "NotoSansJP",
+            name: "GenJyuuGothic",
             data: fontData,
             style: "normal",
           },

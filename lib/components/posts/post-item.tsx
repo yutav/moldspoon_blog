@@ -35,13 +35,13 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
     <div className="item">
       <NextLink href={post.url} as={post.url} passHref>
         <div className="flex">
-          <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="120" height="63" alt={post.name} style={{
-            border: '1px solid #eee'
+          <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="200" height="120" alt={post.name} style={{
+            borderRadius: '15px'
           }} className='hidden sm:block' />
           <div className="p-3">
-            <span className="text-black">{post.name}</span>
+            <span className="text-black text-2xl font-bold">{post.name}</span>
             <span
-              className="date"
+              className="text-black text-sm leading-loose block"
               dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
             />
           </div>
