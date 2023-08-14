@@ -26,7 +26,7 @@
   },
   "exclude": [
     "node_modules",
-    ".next",
+    ".next.bak",
     ".vercel"
   ],
   "include": [

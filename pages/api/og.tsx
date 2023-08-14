@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { ImageResponse } from "@vercel/og"
+
 export const config = {
   runtime: "edge",
 };
@@ -15,49 +16,53 @@ export default async function handler(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const fontData = await font;
 
-    const hasTitle = searchParams.has("title");
-    const title = hasTitle
-      ? searchParams.get("title")?.slice(0, 100)
-      : "My default title";
+    const options = {
+      title: searchParams.get("title")?.slice(0, 100) || "My default title",
+      width: Number(searchParams.get("width")) || 1200,
+      height: Number(searchParams.get("height")) || 630,
+      //      backgroundColor: searchParams.get("backgroundColor") || " bg-white",
+      //      textColor: searchParams.get("textColor") || " text-black",
+    };
+
+    console.log(options)
 
     return new ImageResponse(
       (
         <div
           style={{
             backgroundImage: "url(" + process.env.baseUrl + "/assets/moldspoonblog_whitebg_ogp_base.png)",
-            backgroundColor: "#fff",
-            backgroundSize: "100% 100%",
-            height: "100%",
-            width: "100%",
-            display: "flex",
-            textAlign: "left",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            flexDirection: "column",
-            flexWrap: "nowrap",
+            width: '100%',
+            height: '100%',
+            background: 'black',
+            backgroundSize: '100% 100%',
+            display: 'flex',
+            textAlign: 'center',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            flexWrap: 'nowrap'
           }}
         >
           <div
             style={{
-              width: "100%",
-              fontSize: 60,
-              fontStyle: "normal",
-              fontWeight: "bold",
-              color: "#000",
-              padding: "0 120px",
-              lineHeight: 1.3,
-              marginBottom: "30px",
+              padding: '0 40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              justifyItems: 'center',
               wordWrap: "break-word",
+              fontSize: '4rem',
+              fontWeight: 'bold',
+              lineHeight: '5rem'
             }}
           >
-            {title}
+            {options.title}
           </div>
-
         </div>
       ),
       {
-        width: 1200,
-        height: 630,
+        width: options.width,
+        height: options.height,
         fonts: [
           {
             name: "NotoSansJP",
