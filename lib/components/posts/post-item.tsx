@@ -35,7 +35,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
     <div className="item">
       <NextLink href={post.url} as={post.url} passHref>
         <div className="flex">
-          <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="200" height="120" alt={post.name} style={{
+          <Image src={process.env.baseUrl + "/api/og?v=1&title=" + encodeURI(post.name)} width="200" height="120" alt={post.name} style={{
             borderRadius: '15px'
           }} className='hidden sm:block' />
           <div className="p-3">
