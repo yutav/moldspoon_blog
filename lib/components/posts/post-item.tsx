@@ -1,6 +1,7 @@
 import React from 'react'
 import { useTheme } from '@geist-ui/core'
 import NextLink from 'next/link'
+import Image from "next/image"
 
 const options: Intl.DateTimeFormatOptions = {
   weekday: 'short',
@@ -33,11 +34,18 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
   return (
     <div className="item">
       <NextLink href={post.url} as={post.url} passHref>
-        <span className="text-black">{post.name}</span>
-        <span
-          className="date"
-          dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
-        />
+        <div className="flex">
+          <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="120" height="63" alt={post.name} style={{
+            border: '1px solid #eee'
+          }} className='hidden sm:block' />
+          <div className="p-3">
+            <span className="text-black">{post.name}</span>
+            <span
+              className="date"
+              dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
+            />
+          </div>
+        </div>
       </NextLink>
       <style jsx>{`
         .item {
