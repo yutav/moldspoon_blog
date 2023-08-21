@@ -8,14 +8,6 @@ module.exports = {
   exclude: [
     '/thanks'
   ],
-  robotsTxtOptions: {
-    policies: [
-      {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['before_posts'], // クローリングしたくないパスがある場合はここに指定します
-      },
-    ],
-  },
+
 
 };
