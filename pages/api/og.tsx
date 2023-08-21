@@ -11,6 +11,7 @@ const font = fetch(
   process.env.baseUrl + "/assets/GenJyuuGothic-P-Hevy.ttf"
 ).then((res) => res.arrayBuffer());
 
+
 export default async function handler(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
