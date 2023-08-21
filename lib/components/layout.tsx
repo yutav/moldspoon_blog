@@ -7,6 +7,7 @@ import { Spacer } from '@geist-ui/core'
 import { Configs, changeTitle } from '../utils'
 import ShareButtons from './original/parts/ShareButtons'
 import TagLinks from './original/parts/TagLinks'
+import "remixicon/fonts/remixicon.css"
 
 export type PostMetadata = {
   title: string
