@@ -7,6 +7,7 @@ import { Spacer } from '@geist-ui/core'
 import { Configs, changeTitle } from '../utils'
 import ShareButtons from './original/parts/ShareButtons'
 import TagLinks from './original/parts/TagLinks'
+import IntroduceMyself from './original/parts/IntroduceMyself'
 import "remixicon/fonts/remixicon.css"
 
 export type PostMetadata = {
@@ -84,7 +85,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   return (
     <section>
       <LayoutHeader meta={meta} />
-      <div className="container">
+      <div className="container p-0 md:px-5 lg:px-0">
         <Spacer />
         <Profile />
         {inDetailPage &&
@@ -94,6 +95,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           </>
         }
         <div className="dynamic-content">
+          <IntroduceMyself />
           {children}
         </div>
         {inDetailPage &&
