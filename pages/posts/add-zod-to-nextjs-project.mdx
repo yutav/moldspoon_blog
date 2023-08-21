@@ -1,0 +1,86 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+
+export const meta = {
+  title: 'Next.jsプロジェクトで、Zodを使って楽々バリデーション',
+  date: '2023-08-21T08:30:00.000Z',
+  tags: [
+    'Next.js',
+    'Blog',
+    'Vercel',
+    'Zod',
+    'バリデーション',
+    'フロントエンド',
+    'プログラミング'
+  ]
+}
+
+### 本記事のゴール
+
+Next.jsプロジェクトに、サクッとバリデーション処理を追加したい。
+でき上がりのサンプルプロジェクトは下記にあります。
+
+<RichLink 
+url="https://github.com/moldspoon/demo-nextjs-zod-sample" 
+icon='ri-github-fill'
+title="demo-nextjs-zod-sample" 
+subtitle="githubのサンプルプロジェクト"
+targetBlank={true}
+ />
+
+### 作業
+
+今回は友人から [zod](https://zod.dev/)がいいぞ、という話を聞いていたので迷わず試してみようと思いました。
+
+今回は、
+- price という項目に、**入力有無**と**整数値**のバリデーションを追加し、
+- 入力が失敗するときはエラーメッセージを出す
+- 入力が失敗するときは送信ボタンを押せなくしたい。
+- **これ単体ではフォームバリデーションができない**ので、一番採用事例の多く`A first-party Zod resolver for React Hook Form.
+`とzodのドキュメントにも書かれている[React Hook Form](https://github.com/react-hook-form/resolvers#zod)を使う。
+
+という条件で進めてみます。
+zodのドキュメント[Basic Usage](https://zod.dev/?id=basic-usage)あたりをヒントに使います。
+
+#### zodをinstall
+
+まず、Next.jsのプロジェクトルートで以下を打ちます。
+```
+yarn add zod react-hook-form
+```
+
+インストールが完了したら、
+1. 対象のComponentでライブラリをインポート。
+2. バリデーション定義を`zod`で書く。
+3. フォーム管理を`react-hook-form`に一任する処理を書く。
+4. Next.jsのjsxで書かれたフォーム処理に、`react-hook-form`のバリデーション処理、エラー表示処理を追加していく。
+
+という流れとなります。
+
+完成したソースコードのサンプルを以下に書きます（前述の1〜４の手順をコメントで追加していきます。）
+
+
+##### 1.対象のComponentでライブラリをインポート。
+```
+
+```
+
+### まとめ
+
+こういうのってその言語・フレームワークばっかり使ってると手癖で覚えていくもんだよなーと思います。
+そうじゃないと、いちいちググんないとダメですね...
+
+この記事が何かのお役に立てれば幸いです。
+最後までお読みいただきありがとうございました！
+
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
