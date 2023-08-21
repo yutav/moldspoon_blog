@@ -1,5 +1,6 @@
 import { Layout } from 'lib/components'
 import RichLink from "lib/components/original/parts/RichLink"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
 
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使って楽々バリデーション',
@@ -42,14 +43,34 @@ targetBlank={true}
 という条件で進めてみます。
 zodのドキュメント[Basic Usage](https://zod.dev/?id=basic-usage)あたりをヒントに使います。
 
+今回のサンプルプロジェクトは**Next.js 13**で作られていまして、エントリーポイントは`src/apps/page.tsx`です。
+こちらにゴリゴリフロントエンドに相当する処理を作っていきます。
+
 #### zodをinstall
 
+以下はcleanインストールから作成する時のみの手順です。
 まず、Next.jsのプロジェクトルートで以下を打ちます。
-```
-yarn add zod react-hook-form
-```
 
-インストールが完了したら、
+```
+yarn add zod react-hook-form @hookform/resolvers
+```
+最後の`@hookform/resolvers`は、react-hook-formでzodを利用するために必ず必要なのでもれなくインストールしてください。
+
+<RichLink 
+url="https://github.com/react-hook-form/resolvers#zod" 
+icon='ri-github-fill'
+title="react-hook-form/resolvers#zod" 
+subtitle="ここでzodでの用法を確認できます。"
+targetBlank={true}
+ />
+
+インストールが完了したら、ルートで
+```
+yarn run dev
+```
+を実行し、開発環境を立ち上げます。
+
+
 1. 対象のComponentでライブラリをインポート。
 2. バリデーション定義を`zod`で書く。
 3. フォーム管理を`react-hook-form`に一任する処理を書く。
@@ -61,18 +82,206 @@ yarn add zod react-hook-form
 
 
 ##### 1.対象のComponentでライブラリをインポート。
+
+<CodeBlockTitle title="src/apps/page.tsx" />
+
+```typescript
+"use client";
+
+import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useState } from 'react';
 ```
 
+##### 2.バリデーション定義を`zod`で書く。
+
+下記は、
+- パスワードは8文字以上、20文字以下のみ受け付ける
+- パスワードと、パスワード（確認）の一致を確認する
+
+を行なっていますが、要件に合わせて改変してください。
+
+PHP系フレームワーク（バックエンドで私がよく使う）のこういうバリデーション処理って、`retype_password`のバリデーション定義で一致もそのまま書けるイメージがありますが、Zodでは
+`refine()`というメソッドを後付けで追加してバリデーションします。少し癖があるので要注意です。
+
+<CodeBlockTitle title="src/apps/page.tsx" />
+
+```typescript
+const schema = z.object({
+  email: z.string().email({ message: "メールアドレスを正しく入力してください" }),
+  password: z.string().min(8, "パスワードを8文字以上で入力してください").max(20, "パスワードを20文字以下で入力してください"),
+  retype_password: z.string().min(8, "パスワードを8文字以上で入力してください").max(20, "パスワードを20文字以下で入力してください")
+})
+  .refine((value) => value.password === value.retype_password, {
+    message: "パスワードが一致しません",
+    path: ['retype_password']
+  })
+```
+
+##### 3.フォーム管理を`react-hook-form`に一任する処理を書く。
+
+ここはいわゆる**おまじない**です。
+react-hook-formは通常のhtmlに、バリデーション処理を簡便に注入するライブラリでして、そのバリデーションの成否を判定するリソルバは別途設定せねばなりません。Zod以外にも、`Yup`や`Superstruct`などさまざまなリソルバが用意されているようです。
+もし興味があれば、以下のリンクを参照してみてください。
+
+
+<RichLink 
+url="https://github.com/react-hook-form/resolvers#quickstart" 
+icon='ri-github-fill'
+title="react-hook-form/resolvers#quickstart" 
+subtitle="それぞれのリソルバの書き味を比較できます。ただこれだけだと比較上物足りない面も。本来的に比較するには、モック的に実装してみるしかないかも...？"
+targetBlank={true}
+ />
+
+私の方では、公式ドキュメントに載っている一般的なやり方で実装していきます。
+
+<CodeBlockTitle title="src/apps/page.tsx" />
+
+```typescript
+const Page = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+  });
+
+  const [loading, setLoading] = useState(false) // ロード処理
+
+  const onSubmit: SubmitHandler<FieldValues> = (values) => {
+
+    setLoading(true)
+
+    // こちらで、APIへのポストなどを行う
+
+    setLoading(false)
+
+    // alertで簡便に出力しているが、本来は、適宜要件に合わせてUI処理する
+    alert("処理を完了しました。")
+  }
+  
+  return (
+    // ここは4.の章でかく
+  )
+}
+```
+
+##### 4.Next.jsのjsxで書かれたフォーム処理に、`react-hook-form`のバリデーション処理、エラー表示処理を追加していく。
+
+あとはゴリゴリreact-hook-formの注入処理をjsxに入れていくのみです。
+（重複するので「完全なコード」の欄で書きます。）
+
+### 完全なコード
+
+最終的に、Next.jsプロジェクトのエントリーポイントとなる`src/app/page.tsx`のソースコードは以下となります。
+先述の通りNext 13プリインの**tailwindcss**をそのまま使っているので、1ファイルでほぼ処理が完結しています。
+
+<CodeBlockTitle title="src/apps/page.tsx" />
+```typescript
+"use client";
+
+import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useState } from 'react';
+
+const schema = z.object({
+  email: z.string().email({ message: "メールアドレスを正しく入力してください" }),
+  password: z.string().min(8, "パスワードを8文字以上で入力してください").max(20, "パスワードを20文字以下で入力してください"),
+  retype_password: z.string().min(8, "パスワードを8文字以上で入力してください").max(20, "パスワードを20文字以下で入力してください")
+})
+  .refine((value) => value.password === value.retype_password, {
+    message: "パスワードが一致しません",
+    path: ['retype_password']
+  })
+
+const Page = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+  });
+  const [loading, setLoading] = useState(false)
+
+  const onSubmit: SubmitHandler<FieldValues> = (values) => {
+
+    setLoading(true)
+
+    // こちらで、APIへのポストなどを行う
+
+    setLoading(false)
+
+    // alertで簡便に出力しているが、本来は、適宜要件に合わせてUI処理する
+    alert("処理を完了しました。")
+  }
+
+  return (
+    <main className="m-10 p-5 bg-white">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <h2 className="text-xl font-bold leading-loose pt-6">Zodの動作確認を行うサンプルプロジェクトです。</h2>
+
+        <div className="pt-6">
+
+          <h5 className="font-bold">メールアドレス</h5>
+
+          <div className="py-2 w-full flex">
+            <input {...register('email')} className={"w-full px-6 py-4 rounded-md text-xl" + (errors.email ? " border-red-500 border-2" : " border")} placeholder="メールアドレスを入力" />
+          </div>
+          {errors.email && <div className="text-red-500">{errors?.email?.message?.toString()}</div>}
+        </div>
+
+        <div className="pt-6">
+          <h5 className="font-bold">パスワード</h5>
+          <div className="py-2 w-full flex">
+            <input
+              {...register('password')}
+              className={"w-full px-6 py-4 rounded-md text-xl" + (errors.password ? " border-red-500 border-2" : " border")}
+              type="password"
+              placeholder="パスワードを入力してください"
+            />
+          </div>
+          {errors.password && <div className="text-red-500">{errors?.password?.message?.toString()}</div>}
+        </div>
+        <div className="pt-6">
+          <h5 className="font-bold">パスワード（確認）</h5>
+          <div className="py-2 w-full flex">
+            <input
+              {...register('retype_password')}
+              className={"w-full px-6 py-4 rounded-md text-xl" + (errors.retype_password ? " border-red-500 border-2" : " border")}
+              type="password"
+              placeholder="パスワード（確認）を入力してください"
+            />
+          </div>
+          {errors.retype_password && <div className="text-red-500">{errors?.retype_password?.message?.toString()}</div>}
+        </div>
+
+        <div className="w-full pt-12 pb-6">
+          <button type="submit" className="w-full bg-blue-300 hover:bg-blue-200 text-gray-700 font-semibold px-4 py-4 rounded-md">
+            送信
+          </button>
+        </div>
+
+
+      </form>
+    </main >
+
+  );
+};
+
+export default Page
 ```
 
 ### まとめ
 
-こういうのってその言語・フレームワークばっかり使ってると手癖で覚えていくもんだよなーと思います。
-そうじゃないと、いちいちググんないとダメですね...
+Next.js + react-hook-form + zodの組み合わせで、一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。
+ただ、DBと連関する処理や認証処理などは別途用意せねばなりませんので、用途によってはという注意書きはつきますが、少なくとも初学者などには非常に向いているソリューションだと思いました。
 
 この記事が何かのお役に立てれば幸いです。
 最後までお読みいただきありがとうございました！
-
 
 export default function Page({ children }) {
   return (
