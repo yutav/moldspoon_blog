@@ -3,7 +3,7 @@ const BLOG = {
   title: 'MoldSpoon Inc. blog',
   description:
     "iOS&Androidスマホアプリ・フロント/バックエンド開発を得意とするMoldSpoon Inc.の公式ブログです。",
-  summary: 'iOS&Androidスマートフォン Next.js/LaravelをはじめとしたWeb開発ならば、ぜひ弊社にお任せください。ワンストップでお届けします。お問合せは<a href="https://moldspoon.jp/contact" target="_blank">こちら</a>から😃',
+  summary: 'iOS&Androidスマートフォン Next.js/LaravelをはじめとしたWeb開発ならば、ぜひ弊社にお任せください。ワンストップでお届けします。お問合せは<a href="https://moldspoon.jp/#contact" target="_blank">こちら</a>から😃',
   language: 'ja',
   latestLimit: 5,
 
