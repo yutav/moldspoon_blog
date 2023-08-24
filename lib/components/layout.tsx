@@ -95,7 +95,9 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           </>
         }
         <div className="dynamic-content">
-          <IntroduceMyself />
+          {inDetailPage &&
+            <IntroduceMyself />
+          }
           {children}
         </div>
         {inDetailPage &&
