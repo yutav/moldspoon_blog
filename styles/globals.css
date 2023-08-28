@@ -31,8 +31,10 @@ h1 {
   font-size: 1.5rem !important;
 }
 
+pre.language-text,
 pre.language-json,
-pre.language-typescript {
+pre.language-typescript,
+pre.language-html {
   margin-top: 0px !important;
   margin-bottom: 30px !important;
   border: none !important;

@@ -1,0 +1,251 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+
+export const meta = {
+  title: 'Next.jsプロジェクトで、next/headを使ってメタタグ定義したら詰まった',
+  date: '2023-08-28T16:30:00.000Z',
+  tags: [
+    'Next.js',
+    'Next12',
+    'Next13',
+    'Blog',
+    'Vercel',
+    'フロントエンド',
+    'next/head',
+    'メタタグ',
+    'プログラミング'
+  ]
+}
+
+### 本記事のゴール
+
+なぜかメタタグがうまく読み込まれないNext.jsプロジェクトの原因を調査したら
+原因はわかりやすかった。
+
+
+
+### 作業
+
+#### 問題に行き着いた経緯
+
+[このブログ](https://moldspoon.jp/blog)をFacebookのシェアデバッガーで確認したところ、
+
+<RichLink 
+url="https://developers.facebook.com/tools/debug/" 
+icon='ri-facebook-fill'
+title="Facebookのシェアデバッガー" 
+subtitle="Open Graphのメタタグをデバッグするには一番です。"
+targetBlank={true}
+ />
+
+同ドメインで、ルートに設置してある[コーポレートページ](https://moldspoon.jp/)のOGPが表示されて
+困っていました。
+
+```text
+// シェアデバッガーでは、以下のように表示される
+og:url	   https://moldspoon.jp/ // <= https://moldspoon.jp/blog としたい
+og:title   MoldSpoon Inc. // <= MoldSpoon Inc. blog としたい
+```
+
+そこでChromeの **「要素を検証」** でソースコードを確認しながら、**何が原因でタイトルが誤っているのか**を
+確認。
+
+ただ、「要素を検証」でソースコードを閲覧した時点では正しいメタタグが表示されてるみたいで...困りました。
+
+<CodeBlockTitle title="view:https://moldspoon.jp/blog" />
+
+```html
+<meta property="og:url" content="moldspoon.jp/blog">
+<meta property="og:title" content="Moldspoon Inc. blog">
+```
+
+X(Twitter)は別途 `twitter:xxx`でTwitterカードのメタタグを設定しますが、
+同じようにポスト時に誤ったOGP情報が表示されてしまっています。
+
+#### Next.jsの特性から考え直した。
+
+すると、シンプルな原因が...見えてきました。
+
+[next/head](https://nextjs-ja-translation-docs.vercel.app/docs/api-reference/next/head)はページのエンドポイントとなる.tsxファイルだけではなく、
+配下のcomponentや拡張したレイアウトファイルなどから簡単にメタタグへの処理の記入ができる便利なComponentです。
+
+こちらを使って私も当ブログのメタタグを定義していますが、ページの判定は`next/router`を使って動的に行っています。
+そのため、`next/router`の判定が終わっていない時点では、**仮のURLやタイトルが入ってしまっており、トップページのタイトルなどが適用されてしまっていた**
+ようです。
+
+具体的には以下のようになっていました。(Next.js 12で実装しています。Next13でも同じように動くと思います)
+
+##### before
+
+<CodeBlockTitle title="components/Head/CommonHead.tsx" />
+
+```typescript
+import { ReactElement } from 'react'
+import Head from 'next/head'
+
+type Props = {
+  head?: ReactElement
+  headTitle?: string
+  headKeyword?: string
+  headDescription?: string
+  headOgpPath?: string
+  currentUrl?: string
+  canonicalUrl?: string
+}
+
+const defaultHeadTitle = "MoldSpoon Inc."
+const defaultKeyword = "MoldSpoon,Keyword,Web Service"
+const defaultHeadDescription = "このように楽しく、役に立つWebサービスを愚直に作っています。"
+const defaultHeadOgpPath = "/img/ogp.png"
+const defaultCurrentUrl = process.env.baseUrl
+
+const CommonHead: React.FC<Props> = ({ head,
+  headTitle,
+  headKeyword,
+  headDescription,
+  headOgpPath,
+  currentUrl,
+  canonicalUrl }) => {
+  // ... 本筋と関係ない処理が色々されていたが、それは略 ...
+  return (
+    <Head>
+      <title>{headTitle ? headTitle : defaultHeadTitle}</title>
+      <meta name="google" content="notranslate" />
+      <meta name="referrer" content="strict-origin" />
+      <meta name="description" content={headDescription ? headDescription : defaultHeadDescription} />
+      <meta name="keyword" content={headKeyword ? headKeyword : defaultKeyword} />
+      <meta name="generator" content="yuku_tas" />
+      <meta name="author" content="MoldSpoon Inc." />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta property="og:site_name" content="MoldSpoon Inc." />
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={headTitle ? headTitle : defaultHeadTitle} />
+      <meta property="og:url" content={currentUrl ? currentUrl : defaultCurrentUrl} />
+      <meta property="og:site_name" content="MoldSpoon Inc." />
+      <meta property="og:description"
+        content={headDescription ? headDescription : defaultHeadDescription} />
+      <meta property="og:image" content={process.env.baseUrl + (headOgpPath ? headOgpPath : defaultHeadOgpPath)} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:creator" content={`@yuku_tas`} />
+      <meta property="twitter:image" content={process.env.baseUrl + (headOgpPath ? headOgpPath : defaultHeadOgpPath)} />
+      <link rel="icon" href="/favicon.ico" />
+      <link rel="canonical" href={canonicalUrl ? canonicalUrl : currentUrl ? currentUrl : defaultCurrentUrl}></link>
+    </Head>
+  )
+}
+export default CommonHead
+```
+
+このような書き方では、主に`next/router`に依存する`currentUrl`を判定に使っている時点で、
+1. 三項演算子により、まずトップページの内容のHeadタグが表示されてしまう(**ページを読み込んだ時点では100%、falseの分岐の方に行き、トップページのものが表示されてしまう。**)
+2. FBやTWのスクレイパは動的に吐き出されたメタタグのうち、**最初に表示されたものを読み込みそれ以上の判定をしない**
+
+ということになってしまうようでした。ということで改修を行い以下のようにしました。
+
+
+##### after
+
+
+<CodeBlockTitle title="components/Head/CommonHead.tsx" />
+
+```typescript
+import { ReactElement } from 'react'
+import Head from 'next/head'
+
+type Props = {
+  head?: ReactElement
+  headTitle?: string
+  headKeyword?: string
+  headDescription?: string
+  headOgpPath?: string
+  currentUrl?: string
+  canonicalUrl?: string
+}
+
+const defaultHeadTitle = "MoldSpoon Inc."
+const defaultKeyword = "MoldSpoon,Keyword,Web Service"
+const defaultHeadDescription = "このように楽しく、役に立つWebサービスを愚直に作っています。"
+const defaultHeadOgpPath = "/img/ogp.png"
+const defaultCurrentUrl = process.env.baseUrl
+
+const CommonHead: React.FC<Props> = ({ head,
+  headTitle,
+  headKeyword,
+  headDescription,
+  headOgpPath,
+  currentUrl,
+  canonicalUrl }) => {
+  if (currentUrl == null) {
+    return
+  }
+
+  return (
+    <Head>
+      <title>{headTitle ?? defaultHeadTitle}</title>
+      <meta name="google" content="notranslate" />
+      <meta name="referrer" content="strict-origin" />
+      <meta name="description" content={headDescription ?? defaultHeadDescription} />
+      <meta name="keyword" content={headKeyword ?? defaultKeyword} />
+      <meta name="generator" content="yuku_tas" />
+      <meta name="author" content="MoldSpoon Inc." />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta property="og:site_name" content="MoldSpoon Inc." />
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={headTitle ?? defaultHeadTitle} />
+      <meta property="og:url" content={currentUrl} />
+      <meta property="og:site_name" content="MoldSpoon Inc." />
+      <meta property="og:description" content={headDescription ?? defaultHeadDescription} />
+      <meta property="og:image" content={process.env.baseUrl + (headOgpPath ?? defaultHeadOgpPath)} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:creator" content={`@yuku_tas`} />
+      <meta property="twitter:image" content={process.env.baseUrl + (headOgpPath ?? defaultHeadOgpPath)} />
+      <link rel="icon" href="/favicon.ico" />
+      <link rel="canonical" href={canonicalUrl ?? currentUrl}></link>
+    </Head>
+  )
+}
+export default CommonHead
+```
+
+
+以下を行なっています。
+
+1. currentUrlがundefinedの時は、**Head自体を返さず空の結果を返し、currentUrlが取れるまでスクレイパを待たせる**。
+2. 三項演算子は書き方として冗長だったので、NULL合体演算子(??)を使う。
+
+これでOpenGraphの読み込みが確認できたので、改修を終えたと判断しました。
+
+ただ、**動的にHeadタグを生成しスクレイパを待たせているので、あとでSpeed Testなどを行いパフォーマンスに問題がありそうな場合は別の実装方法も検討したい**と思います。
+（その場合、`next/link`を使うのをやめないといけないですが、多分そうはならないでしょう。Next公式のビルトインされている、信用度が高いライブラリですからね。）
+
+### まとめ
+
+今回はたまたま、
+- コーポレートサイト
+- ブログ
+
+と全く役割が違うアプリケーションがサブディレクトリにあったため、この挙動に気付きやすかったです。
+
+<br />
+サブディレクトリ以下の役割がトップページなどデフォルトのメタタグの挙動と全く一緒だと、
+- Headタグの設定が誤っているのか
+- Canonicalで転送されているのか
+- Webサーバ(Apache/Nginxなど)で転送されているのか
+
+など**確認が必要な箇所が一気に広がり、ハマり込みそうな危険な問題だな**と思いました。
+
+<br />
+そのため、この記事が何かのお役に立てれば幸いだと思いました。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
