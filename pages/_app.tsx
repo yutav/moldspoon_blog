@@ -1,13 +1,10 @@
-import Head from 'next/head'
 import { NextPage } from 'next'
 import { AppProps } from 'next/app'
-import BLOG from '../blog.config'
 import useDomClean from 'lib/use-dom-clean'
 import { MDXProvider } from '@mdx-js/react'
 import { PrismBaseline } from '@geist-ui/prism'
 import { GeistProvider, CssBaseline, Image } from '@geist-ui/core'
-import { useCallback, useState, useEffect, useMemo } from 'react'
-import { getDNSPrefetchValue } from 'lib/data-transform'
+import { useCallback, useState, useEffect } from 'react'
 import { BlogConfigsProvider } from 'lib/components'
 import { HybridLink, HybridCode } from 'lib/components/mdx'
 import { useRouter } from "next/router"
@@ -18,8 +15,6 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   const router = useRouter()
   console.log(router)
   const [themeType, setThemeType] = useState('light')
-  const [isNotDetail, setIsNotDetail] = useState(false)
-  const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
   const changeHandle = useCallback((isDark: boolean) => {
     const next = isDark ? 'light' : 'dark'
     setThemeType(next)
@@ -28,8 +23,6 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   useEffect(() => {
     if (typeof localStorage !== 'object') return
     setThemeType(localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')
-    const _isNotDetail = router.pathname.match("/posts/(.*?)$") ? false : true
-    setIsNotDetail(_isNotDetail)
   }, [])
   useEffect(() => localStorage.setItem('theme', themeType), [themeType])
   useDomClean()
