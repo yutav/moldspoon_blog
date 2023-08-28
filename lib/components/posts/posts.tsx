@@ -50,28 +50,26 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
   let title = ""
   if (tag) {
     posts = useMemo(() => tag !== undefined ? getPosts(metadata, isLatest, tag) : [], [tag]);
-    title = `「${tag}」 の記事一覧`
-    console.log(title)
+    title = `「${tag}」 の記事一覧 - ` + Configs.title
   }
   else if (isLatest) {
     posts = useMemo(() => isLatest !== undefined ? getPosts(metadata, isLatest, tag) : [], [isLatest]);
-    title = Configs.labels.latest
+    title = Configs.title
+    //Configs.labels.latest
   }
   else {
     posts = useMemo(() => getPosts(metadata, isLatest, tag), []);
-    title = Configs.labels.list
+    title = Configs.labels.list + " - " + Configs.title
   }
-
-
 
   return (
     <section>
       <Head>
         <title>
-          {title} - {Configs.title}
+          {title}
         </title>
       </Head>
-      {!isLatest && <h2>{title} - {Configs.title}</h2>}
+      {!isLatest && <h2>{title}</h2>}
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />

@@ -42,32 +42,7 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
 
   return (
     <>
-      <Head>
-        <title>{BLOG.title}</title>
-        {domain && <link rel="dns-prefetch" href={domain} />}
-        <meta name="google" content="notranslate" />
-        <meta name="referrer" content="strict-origin" />
-        <meta property="og:site_name" content={BLOG.title} />
-        <meta property="og:type" content="website" />
-        <meta name="generator" content="yuku_tas" />
-        <meta name="author" content={BLOG.author} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:creator" content={`@${BLOG.twitter}`} />
-        {isNotDetail && (
-          <>
-            <meta property="og:url" content={BLOG.domain} />
-            <meta property="og:title" content={BLOG.title} />
-            <meta name="description" content={BLOG.description} />
-            <meta property="og:description" content={BLOG.description} />
-            <meta property="og:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
-            <meta property="twitter:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
-          </>
-        )}
-        <meta
-          name="viewport"
-          content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
-        />
-      </Head>
+
       <GeistProvider themeType={themeType}>
         <CssBaseline />
         <PrismBaseline />

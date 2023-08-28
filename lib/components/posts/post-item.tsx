@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTheme } from '@geist-ui/core'
-import NextLink from 'next/link'
+import Link from 'next/link'
 import Image from "next/image"
 
 const options: Intl.DateTimeFormatOptions = {
@@ -33,7 +33,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   return (
     <div className="item">
-      <NextLink href={post.url} as={post.url} passHref>
+      <Link href={post.url} passHref>
         <div className="flex">
           <Image src={process.env.baseUrl + "/api/og?v=1&title=" + encodeURI(post.name)} width="200" height="120" alt={post.name} style={{
             borderRadius: '15px'
@@ -46,7 +46,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             />
           </div>
         </div>
-      </NextLink>
+      </Link>
       <style jsx>{`
         .item {
           margin-bottom: calc(1.35 * ${theme.layout.gapHalf});

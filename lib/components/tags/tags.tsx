@@ -48,10 +48,10 @@ const Tags: React.FC<PostsProps> = () => {
         <ul>
           {Object.entries(tags).map(([tag, count], index) => (
             <li>
-              <Link key={index} href={`/tags/${tag}`}>
-                <a className="text-orange-500 hover:text-orange-300" target="_blank">
+              <Link key={index} href={`/tags/${tag}`} target="_blank">
+                <span className="text-orange-500 hover:text-orange-300" >
                   {tag} ({count})
-                </a>
+                </span>
               </Link>
             </li>
           ))}

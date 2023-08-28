@@ -9,6 +9,9 @@ import ShareButtons from './original/parts/ShareButtons'
 import TagLinks from './original/parts/TagLinks'
 import IntroduceMyself from './original/parts/IntroduceMyself'
 import "remixicon/fonts/remixicon.css"
+import BLOG from 'blog.config'
+import { getDNSPrefetchValue } from 'lib/data-transform'
+import { useRouter } from "next/router"
 
 export type PostMetadata = {
   title: string
@@ -25,21 +28,54 @@ export type LayoutHeader = {
 
 const LayoutHeader: React.FC<LayoutHeader> = ({ currentUrl, meta }) => {
 
+  const router = useRouter()
+  const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
+  const isDetailPage = router.pathname.startsWith('/posts');
+
+  console.log(meta.title)
+
   return (
     <Head>
-      {
-        meta.title && (
-          <title>
-            {changeTitle({ title: meta.title })}
-          </title>
-        )
-      }
-      {currentUrl && <meta property="og:url" content={currentUrl} />}
-      {meta.title && <meta property="og:title" content={meta.title} />}
-      {meta.description && <meta name="description" content={meta.description} />}
-      {meta.description && <meta property="og:description" content={meta.description} />}
-      {meta.title && <meta property="og:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
-      {meta.title && <meta property="twitter:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
+      {(isDetailPage && meta.title) ? (
+        <title>
+          {changeTitle({ title: meta.title })}
+        </title>
+      ) : (
+        <title>{BLOG.title}</title>
+      )}
+      {domain && <link rel="dns-prefetch" href={domain} />}
+      <meta name="google" content="notranslate" />
+      <meta name="referrer" content="strict-origin" />
+      <meta property="og:site_name" content={BLOG.title} />
+      <meta property="og:type" content="website" />
+      <meta name="generator" content="yuku_tas" />
+      <meta name="author" content={BLOG.author} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:creator" content={`@${BLOG.twitter}`} />
+      {isDetailPage ? (
+        <>
+          {currentUrl && <meta property="og:url" content={currentUrl} />}
+          {meta.title && <meta property="og:title" content={meta.title} />}
+          {meta.description && <meta name="description" content={meta.description} />}
+          {meta.description && <meta property="og:description" content={meta.description} />}
+          {meta.title && <meta property="og:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
+          {meta.title && <meta property="twitter:image" content={process.env.baseUrl + "/api/og?title=" + encodeURI(meta.title)} />}
+        </>
+      ) : (
+        <>
+          <meta property="og:url" content={BLOG.domain} />
+          <meta property="og:title" content={BLOG.title} />
+          <meta name="description" content={BLOG.description} />
+          <meta property="og:description" content={BLOG.description} />
+          <meta property="og:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
+          <meta property="twitter:image" content={`https:${domain}/blog/assets/moldspoonblog_ogp.png`} />
+        </>
+
+      )}
+      <meta
+        name="viewport"
+        content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
+      />
     </Head >
   )
 }
