@@ -35,6 +35,8 @@
     "lib/**/*.tsx",
     "pages/tags/[code].tsx",
     "pages/posts/[code].jsx",
-    "lib/components/posts/posts.jsx"
-, "pages/_app.tsx", "pages/api/og.tsx"  ]
+    "lib/components/posts/posts.jsx",
+    "pages/_app.tsx",
+    "pages/api/og.tsx",
+  ]
 }

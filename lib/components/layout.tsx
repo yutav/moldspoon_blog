@@ -32,8 +32,6 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ currentUrl, meta }) => {
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
   const isDetailPage = router.pathname.startsWith('/posts');
 
-  console.log(meta.title)
-
   return (
     <Head>
       {(isDetailPage && meta.title) ? (
