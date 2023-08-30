@@ -7,12 +7,10 @@ import { GeistProvider, CssBaseline, Image } from '@geist-ui/core'
 import { useCallback, useState, useEffect } from 'react'
 import { BlogConfigsProvider } from 'lib/components'
 import { HybridLink, HybridCode } from 'lib/components/mdx'
-import { useRouter } from "next/router"
 import '../styles/globals.css'
 import 'tailwindcss/tailwind.css'
 
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
-  const router = useRouter()
   const [themeType, setThemeType] = useState('light')
   const changeHandle = useCallback((isDark: boolean) => {
     const next = isDark ? 'light' : 'dark'
