@@ -13,7 +13,6 @@ import 'tailwindcss/tailwind.css'
 
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   const router = useRouter()
-  console.log(router)
   const [themeType, setThemeType] = useState('light')
   const changeHandle = useCallback((isDark: boolean) => {
     const next = isDark ? 'light' : 'dark'

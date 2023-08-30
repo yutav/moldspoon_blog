@@ -4,18 +4,22 @@ import PostItem from './post-item'
 import { Configs } from 'lib/utils'
 import NextLink from 'next/link'
 import metadata from 'lib/data/metadata.json'
-import { useTheme, Link } from '@geist-ui/core'
+import { useTheme } from '@geist-ui/core'
 
 const getMoreLink = (len: number): React.ReactNode => {
   if (len < Configs.latestLimit) return null
   return (
     <NextLink href="/blog" passHref>
-      <Link title="More">...</Link>
+      もっと見る
     </NextLink>
   )
 }
 
 const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
+
+  console.log("### IN GET POSTS")
+  console.log(isLatest)
+  console.log(Configs.latestLimit)
 
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
