@@ -31,7 +31,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
           <Link>
             <div className="">
               <h1><Image src={logoUrl} width="400" height="50" alt={BLOG.title} /></h1>
-              <div className="text-gray-500 text-xs" dangerouslySetInnerHTML={{ __html: Configs.summary }} />
+              <div className={theme.type === 'dark' ? "text-white" : "dark:text-black" + " p-4 pt-8 text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
             </div>
           </Link>
         </NextLink>

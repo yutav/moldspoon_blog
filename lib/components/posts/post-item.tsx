@@ -39,14 +39,14 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             borderRadius: '12.5px'
           }} className='hidden sm:block' />
           <div className="p-3">
-            <span className="text-black text-2xl font-bold">{post.name}</span>
+            <span className={(theme.type == 'dark' ? 'dark:text-white' : "text-black") + " text-2xl font-bold"}>{post.name}</span>
             <span
-              className="text-black text-sm leading-loose block"
+              className={(theme.type == 'dark' ? 'dark:text-white' : "text-black") + " text-sm leading-loose block"}
               dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
             />
           </div>
         </div>
-      </Link>
+      </Link >
       <style jsx>{`
         .item {
           margin-bottom: calc(1.35 * ${theme.layout.gapHalf});
@@ -90,7 +90,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           }
         }
       `}</style>
-    </div>
+    </div >
   )
 }
 
