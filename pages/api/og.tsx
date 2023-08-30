@@ -31,10 +31,8 @@ export default async function handler(req: NextRequest) {
       (
         <div
           style={{
-            backgroundImage: "url(" + process.env.baseUrl + "/assets/moldspoonblog_bg_ogp_base.png)",
             width: '100%',
             height: '100%',
-            background: '#FFA500',
             backgroundSize: '100% 100%',
             display: 'flex',
             textAlign: 'center',
@@ -42,7 +40,8 @@ export default async function handler(req: NextRequest) {
             justifyContent: 'center',
             flexDirection: 'column',
             flexWrap: 'nowrap',
-            border: '20px solid #FFA500',
+            padding: '40px',
+            background: 'linear-gradient(0deg, rgb(195,34,175,1) 0%, rgba(253,187,45,1) 100%)'
           }}
 
         >
@@ -59,8 +58,7 @@ export default async function handler(req: NextRequest) {
               justifyContent: 'center',
               flexDirection: 'column',
               flexWrap: 'nowrap',
-              border: '20px solid #FF6600',
-              borderRadius: '80px'
+              borderRadius: '40px',
             }}
           >
             <div
