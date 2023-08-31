@@ -1,8 +1,6 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { useTheme, Spacer, Link, Divider } from '@geist-ui/core'
 import useConfigs from '../config-context'
-import SunIcon from '@geist-ui/icons/sun'
-import MoonIcon from '@geist-ui/icons/moon'
 import { Configs } from '../utils'
 
 export interface ContactsProps {
@@ -13,9 +11,6 @@ const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
   isDetailPage = false,
 }) => {
   const theme = useTheme()
-  const configs = useConfigs()
-
-  const themeTitle = Configs.isCN() ? '切换主题' : 'Switch themes'
   const linkProps = {
     rel: 'noreferrer',
     target: '_blank',
