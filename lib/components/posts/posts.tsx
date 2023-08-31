@@ -17,10 +17,6 @@ const getMoreLink = (len: number): React.ReactNode => {
 
 const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
 
-  console.log("### IN GET POSTS")
-  console.log(isLatest)
-  console.log(Configs.latestLimit)
-
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 

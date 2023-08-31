@@ -144,7 +144,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
       <style jsx>{`
         section {
-          width: 100vw;
+          width: 100%;
           min-height: 100vh;
           display: flex;
           align-items: center;
