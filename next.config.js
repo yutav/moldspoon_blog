@@ -28,6 +28,20 @@ const nextConfig = {
   },
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
+  async headers() {
+    return [
+      {
+        source: '/(.*).(jpg|png)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value:
+              'public, max-age=60, s-maxage=60',
+          },
+        ],
+      }
+    ]
+  },
   async rewrites() {
     return [
       {

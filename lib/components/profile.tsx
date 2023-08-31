@@ -37,12 +37,12 @@ const Profile: React.FC<unknown> = React.memo(() => {
 
             <NextLink href="/" passHref>
               <Link>
-                <h1><Image src={logoUrl} width="400" height="50" alt={BLOG.title} /></h1>
+                <h1 className="w-56 sm:w-80 md:w-80 lg:w-full "><Image src={logoUrl} width="400" height="50" alt={BLOG.title} /></h1>
               </Link>
             </NextLink>
           </div>
-          <div className='flex-none w-14'>
-            <i className="ri-menu-line text-3xl cursor-pointer" onClick={handleMenuOpen} ></i>
+          <div className='flex-none w-8'>
+            <i className="ri-menu-line text-2xl md:text-3xl cursor-pointer" onClick={handleMenuOpen} ></i>
             <div
               className={
                 openMenu
@@ -52,7 +52,8 @@ const Profile: React.FC<unknown> = React.memo(() => {
             >
               <div className="flex justify-between">
                 <div></div>
-                <i className="ri-close-line text-3xl cursor-pointer" onClick={handleMenuOpen} ></i>
+
+                <i className="ri-close-line text-2xl md:text-3xl cursor-pointer" onClick={handleMenuOpen} ></i>
               </div>
               <nav className="block">
                 <p>
@@ -65,7 +66,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
             </div>
           </div>
         </div>
-        <div className={(theme.type === 'dark' ? "text-white" : "text-black") + " p-4 pt-8 text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
+        <div className={(theme.type === 'dark' ? "text-white" : "text-black") + " p-4 pt-8 text-xs md:text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
       </div>
       {/*<ProfileLinks />*/}
       <style jsx>{`
@@ -91,7 +92,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-top: 5rem;
+            padding-top: 2rem;
           }
         }
       `}</style>

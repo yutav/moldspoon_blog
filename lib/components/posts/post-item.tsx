@@ -51,7 +51,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
         .item {
           margin-bottom: calc(1.35 * ${theme.layout.gapHalf});
           overflow: hidden;
-          max-width: 60vw;
+          max-width: 100vw;
         }
 
         .item :global(.link) {

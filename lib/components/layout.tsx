@@ -117,9 +117,9 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     )
 
   return (
-    <section>
+    <section className="">
       <LayoutHeader meta={meta} />
-      <div className="container p-0 md:px-5 lg:px-0">
+      <div className="container p-0 lg:px-0">
         <Spacer />
         <Profile />
         {inDetailPage &&
