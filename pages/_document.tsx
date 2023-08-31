@@ -24,20 +24,7 @@ class BlogDocument extends Document {
     return (
       <Html lang={BLOG.language}>
         <Head />
-        <body>
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-            (function(){
-              if (!window.localStorage) return;
-              if (window.localStorage.getItem('theme') === 'dark') {
-                document.documentElement.style.background = '#000';
-                document.body.style.background = '#000';
-              };
-            })()
-          `,
-            }}
-          />
+        <body className="bg-white dark:bg-black text-black dark:text-white">
           <Main />
           <NextScript />
           <script

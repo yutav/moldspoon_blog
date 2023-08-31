@@ -2,7 +2,7 @@
 
 import { useRef, useLayoutEffect, ReactNode } from 'react';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/nord.css';
+import 'highlight.js/styles/dark.css';
 
 export const SyntaxHighlight = (
   { children }: { children: ReactNode },

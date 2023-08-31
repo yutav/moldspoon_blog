@@ -8,6 +8,7 @@ import Image from 'next/image'
 
 const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
+  console.log(theme)
   const [showText, setShowText] = useState(theme.type === 'dark')
   const [openMenu, setOpenMenu] = useState(false);
 
@@ -15,20 +16,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
     setOpenMenu(!openMenu);
   };
 
-  let logoUrl
-  if (theme.type === 'dark') {
-    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/blog/assets/moldspoonblog_short_white.png"
-  }
-  else {
-    logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/blog/assets/moldspoonblog_short.png"
-  }
-  useEffect(() => {
-    const show = theme.type === 'dark'
-    if (showText !== show) {
-      setShowText(show)
-    }
-  }, [theme.type])
-
+  let darkLogoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/blog/assets/moldspoonblog_short_white.png"
+  let logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/blog/assets/moldspoonblog_short.png"
+  const linkClass = "leading-relaxed"
+  const linkTextClass = "text-white hover:text-gray-700 dark:text-white dark:hover:text-gray-500"
   return (
     <div className="profile">
       <div className="user">
@@ -37,7 +28,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
 
             <NextLink href="/" passHref>
               <Link>
-                <h1 className="w-56 sm:w-80 md:w-80 lg:w-full "><Image src={logoUrl} width="400" height="50" alt={BLOG.title} /></h1>
+                <h1 className="w-56 sm:w-80 md:w-80 lg:w-full ">
+                  <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
+                  <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
+                </h1>
               </Link>
             </NextLink>
           </div>
@@ -46,27 +40,28 @@ const Profile: React.FC<unknown> = React.memo(() => {
             <div
               className={
                 openMenu
-                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 text-white -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out'
+                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out'
                   : 'fixed right-[-100%]'
               }
             >
               <div className="flex justify-between">
                 <div></div>
-
-                <i className="ri-close-line text-2xl md:text-3xl cursor-pointer" onClick={handleMenuOpen} ></i>
+                <i className="ri-close-line text-2xl md:text-3xl cursor-pointer text-white dark:text-white" onClick={handleMenuOpen} ></i>
               </div>
               <nav className="block">
                 <p>
-                  <Link href={process.env.domain} className="leading-relaxed hover:text-gray-500 transition">MoldSpoon Inc.企業ページ</Link>
+                  <Link href={process.env.domain} className={linkClass}><span className={linkTextClass}>MoldSpoon Inc.企業ページ</span></Link>
                 </p>
                 <p>
-                  <Link href={process.env.baseUrl + "/tags"} className="leading-relaxed">タグ一覧</Link>
+                  <Link href={process.env.baseUrl + "/tags"} className={
+                    linkClass
+                  }><span className={linkTextClass}>タグ一覧</span></Link>
                 </p>
               </nav>
             </div>
           </div>
         </div>
-        <div className={(theme.type === 'dark' ? "text-white" : "text-black") + " p-4 pt-8 text-xs md:text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
+        <div className={"text-black dark:text-white p-4 pt-8 text-xs md:text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
       </div>
       {/*<ProfileLinks />*/}
       <style jsx>{`

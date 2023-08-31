@@ -2,6 +2,10 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+* {
+  @apply text-black dark:text-white
+}
+
 h1 {
   margin-bottom: 0px !important;
 }

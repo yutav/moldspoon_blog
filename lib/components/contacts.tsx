@@ -14,8 +14,6 @@ const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
 }) => {
   const theme = useTheme()
   const configs = useConfigs()
-  const isDark = useMemo(() => theme.type === 'dark', [theme.type])
-  const switchTheme = () => configs.onChange(theme.type === 'dark')
 
   const themeTitle = Configs.isCN() ? '切换主题' : 'Switch themes'
   const linkProps = {
@@ -43,18 +41,6 @@ const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
               <Link aria-label="twitter" href={Configs.twitter} {...linkProps}>
                 Twitter
               </Link>
-            )}
-          </div>
-          <div>
-            {isDark && (
-              <span title={themeTitle}>
-                <SunIcon onClick={switchTheme} size={16} />
-              </span>
-            )}
-            {!isDark && (
-              <span title={themeTitle}>
-                <MoonIcon onClick={switchTheme} size={16} />
-              </span>
             )}
           </div>
         </div>
