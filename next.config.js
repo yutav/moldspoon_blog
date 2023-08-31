@@ -28,20 +28,6 @@ const nextConfig = {
   },
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
-  async headers() {
-    return [
-      {
-        source: '/(.*).(jpg|png|webp)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value:
-              'public, max-age=60, s-maxage=60',
-          },
-        ],
-      }
-    ]
-  },
   async rewrites() {
     return [
       {
@@ -68,6 +54,7 @@ const nextConfig = {
   poweredByHeader: false,
   images: {
     domains: ['localhost', 'moldspoon.jp'],
+    minimumCacheTTL: 60,
   },
   env: {
     VERSION: require('./package.json').version,
