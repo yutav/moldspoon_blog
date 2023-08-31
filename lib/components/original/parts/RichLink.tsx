@@ -10,7 +10,7 @@ type Prop = {
 const RichLink: React.FC<Prop> = ({ url, icon, title, subtitle, targetBlank = false }) => {
   return (
     <>
-      <Link href={url} className="text-black hover:text-gray-500" target={targetBlank ? "_blank" : ""}>
+      <Link href={url} className="dark:text-white text-black hover:text-gray-500" target={targetBlank ? "_blank" : ""}>
         <div className="border rounded-lg p-5 flex">
           {icon &&
             <i

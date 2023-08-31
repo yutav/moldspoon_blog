@@ -15,12 +15,6 @@ const CodeBlockTitle: React.FC<Prop> = ({ title }) => {
           background: darkgray;
           color: black;
         }
-        @media (prefers-color-scheme: dark) {
-          .code-title {
-            background: black;
-            color: darkgray;
-          }
-        }
       `}</style>
   </>
 }

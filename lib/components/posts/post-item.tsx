@@ -41,7 +41,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <div className="p-3">
             <span className={(theme.type == 'dark' ? 'dark:text-white' : "text-black") + " text-2xl font-bold"}>{post.name}</span>
             <span
-              className={(theme.type == 'dark' ? 'dark:text-white' : "text-black") + " text-sm leading-loose block"}
+              className={(theme.type == 'dark' ? 'dark:text-white' : "text-black") + " text-sm leading-loose block z-0"}
               dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
             />
           </div>
