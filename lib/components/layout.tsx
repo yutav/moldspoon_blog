@@ -178,12 +178,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
         .container :global(h2) {
           font-size: 1.7rem;
-          margin-top: 2.25rem;
         }
 
         .container :global(h3) {
           font-size: 1.4rem;
-          margin-top: 3rem;
           padding-left: 0.25rem;
           padding-bottom: 0.5rem;
           border-bottom: 5px dotted #f0f0f0;
@@ -192,20 +190,18 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
         .container :global(h4) {
           font-size: 1.2rem;
-          margin-top: 1.5rem;
           padding-left: 0.25rem;
           padding-bottom: 0.25rem;
           border-bottom: 2px groove #f8f8f8;
         }
 
         .container :global(h5) {
-          margin-top: 1.5rem;
           padding-left: 0.5rem;
           padding-bottom: 0.25rem;
           border-left: 5px solid #FFA500;
         }
 
-        @media only screen and (max-width: 767px) {
+        @media only screen and (max-width: 1024px) {
           .container {
             max-width: ${Configs.layouts.pageWidthMobile};
             min-height: 100vh;

@@ -24,7 +24,7 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, pageView }) => {
       {d.toLocaleString(locale)}
       <span className="split"> / </span>
       {msToString(time)}
-      {pageView && (
+      {pageView != undefined && (
         <>
           <span className="split"> / </span>
           {views}
