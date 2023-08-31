@@ -29,6 +29,7 @@ export interface PostItemProps {
 }
 
 const PostItem: React.FC<PostItemProps> = ({ post }) => {
+
   const theme = useTheme()
 
   return (

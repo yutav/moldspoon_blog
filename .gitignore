@@ -32,3 +32,6 @@ yarn-error.log*
 /lib/data/
 
 .vercel
+
+# env
+env/local.json

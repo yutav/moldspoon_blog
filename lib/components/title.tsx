@@ -1,26 +1,22 @@
 import React, { useMemo } from 'react'
 import { msToString } from '../data-transform'
 import { useTheme } from '@geist-ui/core'
-import { useRouter } from 'next/router'
 import { Configs } from '../utils'
-import useViews from '@unix/views'
 
 export interface DateDisplayProps {
   date: string
+  pageView: number
 }
 
-const DateDisplay: React.FC<DateDisplayProps> = ({ date }) => {
+const DateDisplay: React.FC<DateDisplayProps> = ({ date, pageView }) => {
   const theme = useTheme()
-  const { asPath } = useRouter()
-  const [count, countUpdated] = useViews(asPath, { disabled: !Configs.enableViews })
 
   const d = useMemo(() => new Date(date), [])
   if (`${d}` === 'Invalid Date') return null
 
   const time = Date.now() - d.getTime()
   const locale = Configs.isJa() ? 'ja' : 'en-us'
-  const showViews = useMemo(() => Configs.enableViews && countUpdated, [countUpdated])
-  const views = useMemo(() => `${count} ${Configs.isJa() ? 'PV' : 'views'}`, [count])
+  const views = useMemo(() => `${pageView > 0 ? pageView : "-"} ${Configs.isJa() ? 'PV' : 'views'}`, [pageView])
 
   return (
     <p>
@@ -28,7 +24,7 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date }) => {
       {d.toLocaleString(locale)}
       <span className="split"> / </span>
       {msToString(time)}
-      {showViews && (
+      {pageView && (
         <>
           <span className="split"> / </span>
           {views}
@@ -76,16 +72,17 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date }) => {
 export interface TitleProps {
   title: string
   date: string
+  pageView: number
 }
 
-const Title: React.FC<TitleProps> = ({ title, date }) => {
+const Title: React.FC<TitleProps> = ({ title, date, pageView }) => {
   const theme = useTheme()
 
   return (
     <div className="title">
       <h1>{title}</h1>
       <div className="date-box">
-        <DateDisplay date={date} />
+        <DateDisplay date={date} pageView={pageView} />
       </div>
 
       <style jsx>{`

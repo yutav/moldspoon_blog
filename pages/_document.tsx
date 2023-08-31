@@ -24,7 +24,7 @@ class BlogDocument extends Document {
     return (
       <Html lang={BLOG.language}>
         <Head />
-        <body className="bg-white dark:bg-black text-black dark:text-white">
+        <body className="bg-white dark:bg-gray-900 text-black dark:text-white">
           <Main />
           <NextScript />
           <script

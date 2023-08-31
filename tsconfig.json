@@ -37,6 +37,6 @@
     "pages/posts/[code].jsx",
     "lib/components/posts/posts.jsx",
     "pages/_app.tsx",
-    "pages/api/og.tsx",
+    "pages/api/og.tsx", "pages/api/getClientInfo.js",
   ]
 }

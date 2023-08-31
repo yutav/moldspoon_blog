@@ -23,6 +23,7 @@ const withMDX = require('@next/mdx')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
+    VERSION: require('./package.json').version,
     ...require(`./env/${process.env.APP_ENV || 'local'}.json`),
     TZ: 'Asia/Tokyo',
   },
@@ -55,10 +56,6 @@ const nextConfig = {
   images: {
     domains: ['localhost', 'moldspoon.jp'],
     minimumCacheTTL: 60,
-  },
-  env: {
-    VERSION: require('./package.json').version,
-    baseUrl: isProd ? 'https://moldspoon.jp/blog' : 'http://localhost:3001/blog'
   },
   experimental: {
     appDir: true,

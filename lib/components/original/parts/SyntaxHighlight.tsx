@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useLayoutEffect, ReactNode } from 'react';
+import { useRef, useEffect, ReactNode } from 'react';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/dark.css';
 
@@ -9,7 +9,7 @@ export const SyntaxHighlight = (
 ) => {
   const codeRef = useRef<HTMLElement>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (codeRef.current) {
       hljs.highlightBlock(codeRef.current);
     }

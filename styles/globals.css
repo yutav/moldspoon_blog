@@ -35,6 +35,14 @@ h1 {
   font-size: 1.5rem !important;
 }
 
+blockquote p{
+  @apply text-black dark:text-black
+}
+
+pre {
+  background: #303030;
+}
+
 pre.language-text,
 pre.language-json,
 pre.language-typescript,
@@ -44,5 +52,4 @@ pre.language-html {
   border: none !important;
   border-top-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
-  padding: 0px;
 }

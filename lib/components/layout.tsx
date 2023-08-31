@@ -12,6 +12,7 @@ import "remixicon/fonts/remixicon.css"
 import BLOG from 'blog.config'
 import { getDNSPrefetchValue } from 'lib/data-transform'
 import { useRouter } from "next/router"
+import { usePageCounter } from 'hooks/usePageCounter'
 
 export type PostMetadata = {
   title: string
@@ -22,15 +23,14 @@ export type PostMetadata = {
 }
 
 export type LayoutHeader = {
+  isDetailPage: boolean
   currentUrl?: string
   meta: PostMetadata
 }
 
-const LayoutHeader: React.FC<LayoutHeader> = ({ currentUrl, meta }) => {
+const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }) => {
 
-  const router = useRouter()
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
-  const isDetailPage = router.pathname.startsWith('/posts');
 
   return (
     <Head>
@@ -94,20 +94,28 @@ export type LayoutProps = Props & NativeAttrs
 
 const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   children,
-  meta,
+  meta
 }: LayoutProps & typeof defaultProps) => {
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   const [showAfterRender, setShowAfterRender] = useState(false)
   const inDetailPage = useMemo(() => meta && meta.title, [])
   useEffect(() => setShowAfterRender(true), [])
 
+  const router = useRouter()
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const isDetailPage = router.pathname.startsWith('/posts');
+
+  const [{ pageView }] = usePageCounter({
+    slug: router.asPath
+  })
+
+
   if (!showAfterRender)
     return (
       <div className="article-content">
-        <LayoutHeader currentUrl={currentUrl} meta={meta} />
+        <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
         {children}
-        <style jsx>{`
+        < style jsx>{`
           .article-content {
             opacity: 0;
             display: none;
@@ -118,13 +126,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
   return (
     <section className="">
-      <LayoutHeader meta={meta} />
+      <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
       <div className="container p-0 lg:px-0">
         <Spacer />
         <Profile />
         {inDetailPage &&
           <>
-            <Title title={meta.title} date={meta.date} />
+            <Title title={meta.title} date={meta.date} pageView={pageView} />
             <TagLinks tags={meta.tags} />
           </>
         }

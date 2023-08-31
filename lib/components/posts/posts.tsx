@@ -32,8 +32,6 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
     return tags.includes(tag);
   });
 
-  console.log(filteredPosts)
-
   if (!isLatest) return filteredPosts;
   return filteredPosts.slice(0, Configs.latestLimit);
 };
