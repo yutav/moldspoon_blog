@@ -1,6 +1,5 @@
 import React from 'react'
 import { useTheme, Spacer, Link, Divider } from '@geist-ui/core'
-import useConfigs from '../config-context'
 import { Configs } from '../utils'
 
 export interface ContactsProps {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useTheme, Link } from '@geist-ui/core'
 import NextLink from 'next/link'
 // import ProfileLinks from './profile-links'
@@ -8,8 +8,6 @@ import Image from 'next/image'
 
 const Profile: React.FC<unknown> = React.memo(() => {
   const theme = useTheme()
-  console.log(theme)
-  const [showText, setShowText] = useState(theme.type === 'dark')
   const [openMenu, setOpenMenu] = useState(false);
 
   const handleMenuOpen = () => {
