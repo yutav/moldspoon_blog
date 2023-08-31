@@ -31,7 +31,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*).(jpg|png)',
+        source: '/(.*).(jpg|png|webp)',
         headers: [
           {
             key: 'Cache-Control',
