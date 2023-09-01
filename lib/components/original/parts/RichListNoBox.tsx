@@ -15,7 +15,7 @@ const RichListNoBox: React.FC<Prop> = ({ color = "orange", list }) => {
                 ・
                 &nbsp;&nbsp;
                 <span
-                  dangerouslySetInnerHTML={{ __html: value }}
+                  dangerouslySetInnerHTML={{ __html: String(value) }}
                 />
               </p>
             )
