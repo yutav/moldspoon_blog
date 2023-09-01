@@ -43,6 +43,8 @@ export interface PostsProps {
 
 const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
 
+  console.log(metadata)
+
   const theme = useTheme()
   let posts = []
   let title = ""
