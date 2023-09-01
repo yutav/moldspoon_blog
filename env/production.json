@@ -1,4 +1,6 @@
 {
   "domain": "https://moldspoon.jp",
-  "baseUrl": "https://moldspoon.jp/blog"
+  "baseUrl": "https://moldspoon.jp/blog",
+  "SUPABASE_URL": "",
+  "SUPABASE_KEY": ""
 }
