@@ -12,11 +12,11 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
 
   return (
     <div className="pt-10">
-      <div className="text-xl font-bold">
+      <div className="text-normal md:text-xl font-bold">
         シェアしていただけると嬉しいです🤗💖
       </div>
 
-      <div className="py-5 w-3/4 grid grid-cols-12 gap-4 justify-items-center">
+      <div className="py-5 w-full md:w-3/4 grid grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-4 justify-items-center">
 
         <TwitterShareButton url={url} title={fullTitle}>
           <TwitterIcon size={30} round={true} />

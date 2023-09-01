@@ -129,7 +129,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     <section className="">
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
       <div className="container p-0 lg:px-0">
-
         <Spacer />
         <Profile />
         {inDetailPage &&
@@ -147,7 +146,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         {inDetailPage &&
           <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
         }
-
         <PrevNext routerPathName={router.pathname} />
 
         <Spacer h={5} />
