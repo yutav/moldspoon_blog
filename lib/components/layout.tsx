@@ -13,8 +13,7 @@ import BLOG from 'blog.config'
 import { getDNSPrefetchValue } from 'lib/data-transform'
 import { useRouter } from "next/router"
 import { usePageCounter } from 'hooks/usePageCounter'
-import Link from 'next/link'
-import metadata from 'lib/data/metadata.json'
+import PrevNext from './original/parts/PrevNext'
 
 export type PostMetadata = {
   title: string
@@ -130,6 +129,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     <section className="">
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
       <div className="container p-0 lg:px-0">
+
         <Spacer />
         <Profile />
         {inDetailPage &&
@@ -147,35 +147,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         {inDetailPage &&
           <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
         }
-        <div className="post-navigation">
-          {metadata.map((subs, _) => {
-            if (subs.name !== 'posts') {
-              return null;
-            }
-            return subs.children.map((item, index) => {
-              if (item.url === router.pathname) {
-                const nextPost = index > 0 ? subs.children[index - 1] : null;
-                const prevPost = index < subs.children.length - 1 ? subs.children[index + 1] : null;
 
-                return (
-                  <div className="navigation-buttons">
-                    {prevPost && (
-                      <Link href={prevPost.url} passHref>
-                        <span className="prev-button">前の記事: {prevPost.name}</span>
-                      </Link>
-                    )}
-                    {nextPost && (
-                      <Link href={nextPost.url} passHref>
-                        <span className="next-button">次の記事: {nextPost.name}</span>
-                      </Link>
-                    )}
-                  </div>
-                );
-              }
-              return null;
-            });
-          })}
-        </div>
+        <PrevNext routerPathName={router.pathname} />
 
         <Spacer h={5} />
         <Contacts isDetailPage={!!inDetailPage} />
@@ -240,7 +213,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           }
         }
       `}</style>
-    </section>
+    </section >
   )
 }
 
