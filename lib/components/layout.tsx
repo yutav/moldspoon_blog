@@ -135,17 +135,17 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           <>
             <Title title={meta.title} date={meta.date} pageView={pageView} />
             <TagLinks tags={meta.tags} />
+            <div className="dynamic-content">
+              <IntroduceMyself />
+              {children}
+            </div>
+            <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
           </>
         }
         <div className="dynamic-content">
-          {inDetailPage &&
-            <IntroduceMyself />
-          }
           {children}
         </div>
-        {inDetailPage &&
-          <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
-        }
+
         <PrevNext routerPathName={router.pathname} />
 
         <Spacer h={5} />

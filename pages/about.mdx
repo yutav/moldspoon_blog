@@ -1,0 +1,63 @@
+import { Layout } from "lib/components"
+import RichList from "lib/components/original/parts/RichList"
+import MdxImage from "lib/components/original/parts/MdxImage"
+
+<div className="mt-12">
+# このブログについて
+</div>
+
+<div className="mb-12 flex">
+<span className="font-bold text-sm text-gray-500 mr-5"><i class="ri-map-pin-time-line"></i>2023/09/04 14:24初稿</span>
+{/*<span className="font-bold text-sm text-gray-500 "><i class="ri-map-pin-time-line"></i>2023/09/04 14:24更新</span>*/}
+</div>
+
+### ごあいさつ
+
+<div className="w-1/2 sm:w-1/4 lg:w-1/5">
+<MdxImage image="yuku_tas.jpeg" alt="yuku_tas アイコン" width="100" height="100" />
+</div>
+
+ご覧いただき誠にありがとうございます。
+<br />
+本ブログは、MoldSpoon Inc. (モルドスプーン株式会社)代表の[yuku_tas](https://twitter.com/yuku_tas)が2023年8月より開始しました。
+
+私は2010年6月より13年間、個人開発会社を経営し、ほぼ受託開発でありがたいことに継続してご依頼をいただき糧を食んでまいりました。
+
+#### 主だった受託開発ジャンル
+
+- iOS/Android スマートフォンアプリ・サイト開発 (Swift/Kotlin)
+- Webサイトコンサル・開発 (PHP/Perl/Ruby)
+- マーケティングデータ分析業務におけるデータエンジニア (Java/MySQL)
+
+その中で自らの技術を主に受託開発のフィールドで生かすのみで、サービス開発に活かしてこなかったという反省が近年あり、コンテンツ制作のフィールドに進出するにあたり、アウトプットの場として本ブログを開設したものであります。
+
+今後ご愛顧くだされば誠にありがたいです。
+
+### 採用している技術
+
+- Next.js (React + Typescript)
+- Laravel (PHP バックエンド)
+- MySQL
+
+### クレジット
+
+[フラットアイコンデザイン様](http://flat-icon-design.com/?page_id=41)
+
+デザイン素材を一部利用させていただいております。
+
+export default function Page({ children }) {
+  return (
+    <Layout>
+      <>
+        {children}
+      </>
+      <style jsx>{`
+      td {
+        border : 1px solid #ccc;
+        padding: 10px;
+      `}
+    </style>
+    </Layout>
+  )
+}
+

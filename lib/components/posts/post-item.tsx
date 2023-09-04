@@ -34,14 +34,17 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   return (
     <div className="item">
-      <Link href={post.url} passHref>
-        <div className="flex">
-          <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="192" height="100" alt={post.name} style={{
+      <Link href={post.url} passHref className="">
+        <div className="flex hover:opacity-50 ease-out duration-300">
+          <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="280" height="100" alt={post.name} style={{
             borderRadius: '12.5px'
           }} className='hidden sm:block'
 
           />
           <div className="p-3">
+            {post.meta?.tags?.includes('Blog') && <p className="mt-0 mb-2">
+              <span className="bg-red-300 px-4 py-1 rounded-2xl">Blog</span>
+            </p>}
             <span className={"text-black dark:text-white md:text-base lg:text-xl xl:text-2xl font-bold"}>{post.name}</span>
             <span
               className={"text-black dark:text-white text-sm leading-loose block z-0"}
