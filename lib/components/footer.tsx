@@ -2,11 +2,11 @@ import React from 'react'
 import { useTheme, Spacer, Link, Divider } from '@geist-ui/core'
 import { Configs } from '../utils'
 
-export interface ContactsProps {
+export interface FooterProps {
   isDetailPage?: boolean
 }
 
-const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
+const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
   isDetailPage = false,
 }) => {
   const theme = useTheme()
@@ -36,6 +36,9 @@ const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
                 Twitter
               </Link>
             )}
+            <Link aria-label="about" href={process.env.baseUrl + "/about"} {...linkProps}>
+              このブログについて
+            </Link>
           </div>
         </div>
 
@@ -105,4 +108,4 @@ const Contacts: React.FC<React.PropsWithChildren<ContactsProps>> = ({
   )
 }
 
-export default Contacts
+export default Footer

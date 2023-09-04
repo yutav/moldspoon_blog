@@ -48,12 +48,23 @@ const Profile: React.FC<unknown> = React.memo(() => {
               </div>
               <nav className="block">
                 <p>
-                  <Link href={process.env.domain} className={linkClass}><span className={linkTextClass}>MoldSpoon Inc.企業ページ</span></Link>
+                  <Link href={process.env.domain} className={linkClass}><span className={linkTextClass}>
+                    <i className="ri-building-line text-white"></i>&nbsp;
+                    MoldSpoon Inc.企業ページ</span></Link>
                 </p>
                 <p>
                   <Link href={process.env.baseUrl + "/tags"} className={
                     linkClass
-                  }><span className={linkTextClass}>タグ一覧</span></Link>
+                  }><span className={linkTextClass}>
+                      <i className="ri-price-tag-3-line text-white"></i>&nbsp;
+                      タグ一覧</span></Link>
+                </p>
+                <p>
+                  <Link href={process.env.baseUrl + "/about"} className={
+                    linkClass
+                  }><span className={linkTextClass}>
+                      <i className="ri-information-line text-white"></i>&nbsp;
+                      このブログについて</span></Link>
                 </p>
               </nav>
             </div>

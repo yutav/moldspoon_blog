@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import Profile from './profile'
-import Contacts from './contacts'
+import Footer from './footer'
 import Title from './title'
 import { Spacer } from '@geist-ui/core'
 import { Configs, changeTitle } from '../utils'
@@ -149,7 +149,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         <PrevNext routerPathName={router.pathname} />
 
         <Spacer h={5} />
-        <Contacts isDetailPage={!!inDetailPage} />
+        <Footer isDetailPage={!!inDetailPage} />
       </div>
 
 
