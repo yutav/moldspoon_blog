@@ -10,8 +10,12 @@ const PrevNext: React.FC<Prop> = ({ routerPathName }) => {
     <div className="w-full">
       {metadata.map((subs, _) => {
         if (subs.name !== 'posts') {
-          return null;
+          return null
         }
+        if (subs.children == undefined) {
+          return null
+        }
+
         return subs.children.map((item, index) => {
           if (item.url === routerPathName) {
             const nextPost = index > 0 ? subs.children[index - 1] : null;
