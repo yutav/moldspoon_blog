@@ -32,10 +32,6 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  console.log('経験者向け')
-  console.log(post.meta?.tags)
-  console.log(post.meta?.tags?.includes('経験者向け'))
-
   return (
     <div className="item">
       <div className="flex">
@@ -43,35 +39,38 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="320" height="140" alt={post.name} style={{
             borderRadius: '12.5px'
           }} className='hidden sm:block hover:opacity-80'
-
+          />
+          <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="120" height="70" alt={post.name} style={{
+            borderRadius: '5px'
+          }} className='block sm:hidden hover:opacity-80'
           />
         </Link>
         <div className="p-3">
           <div className="flex flex-wrap">
             {post.meta?.tags?.includes('Tips') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/Tips`} target="_blank" className="text-black hover:text-gray-900 bg-cyan-100 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/Tips`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-cyan-100 hover:opacity-80 px-4 py-1 rounded-2xl">
                   Tips
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('Blog') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/Blog`} target="_blank" className="text-black hover:text-gray-900 bg-red-300 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/Blog`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-red-300 hover:opacity-80 px-4 py-1 rounded-2xl">
                   Blog
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('経験者向け') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/%E4%B8%8A%E7%B4%9A%E8%80%85`} target="_blank" className="text-black hover:text-gray-900 bg-amber-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/%E4%B8%8A%E7%B4%9A%E8%80%85`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-amber-200 hover:opacity-80 px-4 py-1 rounded-2xl">
                   経験者向け
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('初心者向け') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank" className="text-black hover:text-gray-900 bg-purple-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-purple-200 hover:opacity-80 px-4 py-1 rounded-2xl">
                   初級者向け
                 </Link>
               </div>

@@ -19,7 +19,7 @@ const Page: React.FC<unknown> = () => {
         <CategoryBox url={"/tags/Blog"} imageUrl={process.env.baseUrl + "/assets/f_f_object_151_svg_f_object_151_1bg.svg"} title="経験者向け" />
       </div>
 
-      <h2>新着記事</h2>
+      <p className="text-base sm:text-2xl lg:text-3xl font-bold">新着記事</p>
       <Posts isLatest={isLatest} />
 
     </Layout>
