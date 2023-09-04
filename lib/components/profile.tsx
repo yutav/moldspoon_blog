@@ -70,7 +70,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
             </div>
           </div>
         </div>
-        <div className={"text-black dark:text-white pt-8 text-xs md:text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
+        <div className={"font-bold text-gray-500 dark:text-white pt-8 text-xs md:text-sm"} dangerouslySetInnerHTML={{ __html: Configs.summary }} />
       </div>
       {/*<ProfileLinks />*/}
       <style jsx>{`
