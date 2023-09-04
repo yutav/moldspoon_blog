@@ -48,7 +48,7 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
   let title = ""
   if (tag) {
     posts = useMemo(() => tag !== undefined ? getPosts(metadata, isLatest, tag) : [], [tag]);
-    title = `「${tag}」 の記事一覧 - ` + Configs.title
+    title = `「${tag}」 の記事一覧`
   }
   else if (isLatest) {
     posts = useMemo(() => isLatest !== undefined ? getPosts(metadata, isLatest, tag) : [], [isLatest]);
@@ -80,7 +80,6 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
         }
 
         section h2 {
-          font-size: 0.8rem;
           color: ${theme.palette.accents_6};
           text-transform: uppercase;
           letter-spacing: 2px;
