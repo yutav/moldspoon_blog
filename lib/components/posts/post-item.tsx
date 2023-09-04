@@ -32,28 +32,62 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
+  console.log('経験者向け')
+  console.log(post.meta?.tags)
+  console.log(post.meta?.tags?.includes('経験者向け'))
+
   return (
     <div className="item">
-      <Link href={post.url} passHref className="">
-        <div className="flex hover:opacity-50 ease-out duration-300">
-          <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="280" height="100" alt={post.name} style={{
+      <div className="flex">
+        <Link href={post.url} passHref className="flex-none">
+          <Image src={process.env.baseUrl + "/api/og?v=2&title=" + encodeURI(post.name)} width="320" height="140" alt={post.name} style={{
             borderRadius: '12.5px'
-          }} className='hidden sm:block'
+          }} className='hidden sm:block hover:opacity-80'
 
           />
-          <div className="p-3">
-            {post.meta?.tags?.includes('Blog') && <p className="mt-0 mb-2">
-              <span className="bg-red-300 px-4 py-1 rounded-2xl">Blog</span>
-            </p>}
-            <span className={"text-black dark:text-white md:text-base lg:text-xl xl:text-2xl font-bold"}>{post.name}</span>
-            <span
-              className={"text-black dark:text-white text-sm leading-loose block z-0"}
-              dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
-            />
+        </Link>
+        <div className="p-3">
+          <div className="flex flex-wrap">
+            {post.meta?.tags?.includes('Tips') && (
+              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+                <Link href={`/tags/Tips`} target="_blank" className="text-black hover:text-gray-900 bg-cyan-100 hover:opacity-80 px-4 py-1 rounded-2xl">
+                  Tips
+                </Link>
+              </div>
+            )}
+            {post.meta?.tags?.includes('Blog') && (
+              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+                <Link href={`/tags/Blog`} target="_blank" className="text-black hover:text-gray-900 bg-red-300 hover:opacity-80 px-4 py-1 rounded-2xl">
+                  Blog
+                </Link>
+              </div>
+            )}
+            {post.meta?.tags?.includes('経験者向け') && (
+              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+                <Link href={`/tags/%E4%B8%8A%E7%B4%9A%E8%80%85`} target="_blank" className="text-black hover:text-gray-900 bg-amber-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                  経験者向け
+                </Link>
+              </div>
+            )}
+            {post.meta?.tags?.includes('初心者向け') && (
+              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank" className="text-black hover:text-gray-900 bg-purple-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                  初級者向け
+                </Link>
+              </div>
+            )}
           </div>
+          <Link href={post.url} passHref className="hover:opacity-80 ">
+            <span className={"text-black dark:text-white md:text-base lg:text-xl xl:text-2xl font-bold"}>{post.name}</span>
+          </Link>
+          <span
+            className={"text-black dark:text-white text-sm leading-loose block z-0"}
+            dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
+          />
         </div>
-      </Link >
+      </div>
       <style jsx>{`
+       
         .item {
           margin-bottom: calc(1.35 * ${theme.layout.gapHalf});
           overflow: hidden;

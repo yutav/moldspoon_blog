@@ -6,17 +6,15 @@ type Prop = {
 
 const TagLinks: React.FC<Prop> = ({ tags }) => {
   return (
-    <div className="flex flex-wrap">
+    <div className="flex flex-wrap mb-10">
       {tags.map((tag, index) => {
         const encodedTag = encodeURI(tag)
         return (
-          <div className="px-2 mr-2 mb-2 md:mb-10 border rounded-lg border-orange-100 dark:bg-gray-900 text-center" key={index}>
-            <Link href={`/tags/${encodedTag}`} target="_blank">
-              <span className="text-orange-500 hover:text-orange-300 dark:text-orange-400 " >
-                {tag}
-              </span>
-            </Link>
-          </div>
+          <Link href={`/tags/${encodedTag}`} target="_blank" className="mr-2 mb-2" key={index}>
+            <span className="text-white bg-orange-400 hover:text-orange-100 dark:bg-orange-700 px-2 py-1 rounded-xl text-center" >
+              {tag}
+            </span>
+          </Link>
         )
       })}
     </div>
