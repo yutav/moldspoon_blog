@@ -1,6 +1,5 @@
 import { getTagColor } from 'lib/utils';
 import Link from 'next/link';
-import { useEffect } from 'react';
 
 type Prop = {
   tags: Array<string>;
