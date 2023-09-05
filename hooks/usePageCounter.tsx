@@ -13,6 +13,7 @@ export const usePageCounter = ({ slug }: {
 
   const [pageView, setPageView] = useState(0)
   const [random, setRandom] = useState("")
+  console.log("### RANDOM")
   console.log(random)
 
   // ランダム文字列の発行および取得ロジック
@@ -25,9 +26,10 @@ export const usePageCounter = ({ slug }: {
     } else {
       const newRandom = getRandomString()
       localStorage.setItem('pageCounterRandom', String(newRandom));
-      setRandom(String(storedRandom))
+      console.log(newRandom)
+      setRandom(String(newRandom))
     }
-  }, [supabase]);
+  }, []);
 
   const fetchPageView = async (slug: string) => {
     const { data, error } = await supabase
