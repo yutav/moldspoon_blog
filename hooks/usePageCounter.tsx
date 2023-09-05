@@ -13,11 +13,13 @@ export const usePageCounter = ({ slug }: {
 
   const [pageView, setPageView] = useState(0)
   const [random, setRandom] = useState("")
+  console.log(random)
 
   // ランダム文字列の発行および取得ロジック
   useEffect(() => {
     console.log("#####")
     const storedRandom = localStorage.getItem('pageCounterRandom');
+    console.log(storedRandom)
     if (storedRandom) {
       setRandom(storedRandom)
     } else {
