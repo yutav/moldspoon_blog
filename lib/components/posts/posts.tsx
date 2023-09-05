@@ -67,7 +67,7 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
           {title}
         </title>
       </Head>
-      {!isLatest && <h2>{title}</h2>}
+      {!isLatest && <h2 className="mb-8">{title}</h2>}
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />
@@ -79,15 +79,6 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
           margin-top: calc(${theme.layout.gap} * 2);
         }
 
-        section h2 {
-          color: ${theme.palette.accents_6};
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          border-bottom: 2px solid ${theme.palette.accents_6};
-          padding: 2px ${theme.layout.gapQuarter} 0 0;
-          display: inline-block;
-          margin: 0;
-        }
 
         .content {
           margin: ${theme.layout.gap} 0;
