@@ -83,6 +83,9 @@ export const usePageCounter = ({ slug }: {
 
     const executePageCounter = async () => {
 
+      console.log(slug)
+      console.log("#####")
+
       let { data, error } = await fetchPageView(slug)
       let { data: detailData, error: detailError } = await fetchPageViewDetail(slug, random)
       if (error || data == undefined || detailError || detailData == undefined) {
