@@ -5,13 +5,7 @@ import { getRandomString } from "lib/utils"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
 
-console.log("### BEFORE")
-console.log(supabaseUrl)
-console.log(supabaseKey)
-
 const supabase = createClient(supabaseUrl, supabaseKey)
-
-console.log(supabase)
 
 export const usePageCounter = ({ slug }: {
   slug: string
@@ -20,14 +14,9 @@ export const usePageCounter = ({ slug }: {
   const [pageView, setPageView] = useState(0)
   const [random, setRandom] = useState("")
 
-
-
   // ランダム文字列の発行および取得ロジック
   useEffect(() => {
-    console.log("####")
-
     const storedRandom = localStorage.getItem('pageCounterRandom');
-    console.log(storedRandom)
     if (storedRandom) {
       setRandom(storedRandom)
     } else {
@@ -42,8 +31,6 @@ export const usePageCounter = ({ slug }: {
       .from('pageviews')
       .select()
       .eq('slug', slug)
-    console.log(data)
-    console.log(error)
     return { data, error }
   }
 
@@ -93,9 +80,6 @@ export const usePageCounter = ({ slug }: {
     }
 
     const executePageCounter = async () => {
-
-      console.log(slug)
-      console.log("#####")
 
       let { data, error } = await fetchPageView(slug)
       let { data: detailData, error: detailError } = await fetchPageViewDetail(slug, random)
