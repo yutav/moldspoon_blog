@@ -16,6 +16,7 @@ export const usePageCounter = ({ slug }: {
 
   // ランダム文字列の発行および取得ロジック
   useEffect(() => {
+    console.log("#####")
     const storedRandom = localStorage.getItem('pageCounterRandom');
     if (storedRandom) {
       setRandom(storedRandom)
@@ -24,7 +25,7 @@ export const usePageCounter = ({ slug }: {
       localStorage.setItem('pageCounterRandom', String(newRandom));
       setRandom(String(storedRandom))
     }
-  }, []);
+  }, [supabase]);
 
   const fetchPageView = async (slug: string) => {
     const { data, error } = await supabase
