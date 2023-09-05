@@ -2,6 +2,7 @@ import React from 'react'
 import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
 import Image from "next/image"
+import { getTagColor } from 'lib/utils'
 
 const options: Intl.DateTimeFormatOptions = {
   weekday: 'short',
@@ -49,28 +50,33 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <div className="flex flex-wrap">
             {post.meta?.tags?.includes('Tips') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/Tips`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-cyan-100 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/Tips`} target="_blank" className={getTagColor('Tips') +
+                  " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"
+                }>
                   Tips
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('Blog') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/Blog`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-red-300 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/Blog`} target="_blank"
+                  className={getTagColor('Blog') + " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   Blog
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('経験者向け') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/%E4%B8%8A%E7%B4%9A%E8%80%85`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-amber-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/%E4%B8%8A%E7%B4%9A%E8%80%85`} target="_blank"
+                  className={getTagColor('経験者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   経験者向け
                 </Link>
               </div>
             )}
             {post.meta?.tags?.includes('初心者向け') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
-                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank" className="text-black text-xs md:text-base hover:text-gray-900 bg-purple-200 hover:opacity-80 px-4 py-1 rounded-2xl">
+                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank"
+                  className={getTagColor('初心者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   初級者向け
                 </Link>
               </div>

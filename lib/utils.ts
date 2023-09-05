@@ -53,3 +53,23 @@ export const getRandomString = () => {
   }
   return result;
 }
+
+export const getTagColor = (tag: string) => {
+
+  let bgText = "text-white bg-orange-400 hover:text-orange-100 dark:bg-orange-700"
+
+  if (tag == 'Tips') {
+    bgText = "text-black hover:text-gray-900 bg-cyan-100 "
+  }
+  else if (tag == 'Blog') {
+    bgText = "text-black hover:text-gray-900 bg-red-300 "
+  }
+  else if (tag == '経験者向け') {
+    bgText = "text-black hover:text-gray-900 bg-amber-200"
+  }
+  else if (tag == '初心者向け') {
+    bgText = "text-black hover:text-gray-900 bg-purple-200"
+  }
+
+  return bgText
+}
