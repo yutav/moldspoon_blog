@@ -1,0 +1,77 @@
+import { Layout } from 'lib/components'
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'AWS EC2が大量のNetwork Inで停止してしまうケース',
+  date: '2023-09-05T07:30:00.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    'EC2',
+    'AWS VPC',
+    'フローログ'
+  ]
+}
+
+### 問題
+
+EC2が、あるタイミングで大量のNetwork In / Network Packet Inがありサーバが落ちてしまった。
+
+サーバが落ちた時間帯で`/var/log/message`を確認したところ、以下のメッセージが
+
+```
+crond[16600]: PAM unable to dlopen(/lib64/security/pam_unix.so): /lib64/security/pam_unix.so: failed to map segment from shared object: Cannot allocate memory
+```
+
+ただ、Nginxのログを確認しても、F5アタックのような大量のアクセスによるものではなく、何か特定の重い処理（ファイルアップロードなど）
+によるものと推察した。が、それが具体的になんなのかが、現時点では情報不足で判断がつかない。
+
+
+### 解決策
+
+[VPC Flow Log](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/flow-logs.html)を作成し、入力時のパケットのボリュームを含め監視することとした。
+
+##### CloudWatchにロググループ作成
+
+[ClodWatch](https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1)で監視を行うので、先にロググループを適当な名称で
+[ここ](https://ap-northeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-northeast-1#logsV2:log-groups)からつくっておく。（後でフローログの作成時に使う）
+
+##### 権限を持ったIAMロール作成
+
+IAMロールの作り方はこちらを参照。
+https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/flow-logs-cwl.html#flow-logs-iam-role
+
+ざっくりいうと
+1. ポリシーの作成
+2. ポリシーが付与されたロールの作成
+
+##### フローログ作成
+
+IAMロールを作成したら、[VPC](https://ap-northeast-1.console.aws.amazon.com/vpc/home)のコンソールに移動して、
+お使いのVPC から 当該VPCをチェック => 右クリックでフローログを作成
+
+名前・フィルタ（私はすべてを選択）・最大集約間隔（10分間を選択）・送信先（CloudWatch Logsを選択）
+を順次入力し、**あらかじめ作成しておいたロググループ**と**あらかじめ作成しておいたIAMロール**を選択。
+
+ログレコードは「AWSのデフォルト形式」を選択。
+
+CloudWatchのロググループに移動して、確認すると無事ログが取得できていた。
+
+<MdxImage month="202309" image="flow-log.png" month="202309" />
+
+これで、メモリ不足の原因を追いたいと思う。
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
