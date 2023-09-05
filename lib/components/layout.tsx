@@ -106,10 +106,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const isDetailPage = router.pathname.startsWith('/posts');
 
+  console.log(router.asPath)
+
   const [{ pageView }] = usePageCounter({
     slug: router.asPath
   })
 
+  console.log(pageView)
 
   if (!showAfterRender)
     return (
