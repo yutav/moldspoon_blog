@@ -31,6 +31,8 @@ export const usePageCounter = ({ slug }: {
       .from('pageviews')
       .select()
       .eq('slug', slug)
+    console.log(data)
+    console.log(error)
     return { data, error }
   }
 
