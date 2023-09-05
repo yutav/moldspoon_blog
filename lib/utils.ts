@@ -43,7 +43,7 @@ export const fixedEncodeURIComponent = (
   });
 }
 
-export const getRandomString = () => {
+export const getRandomString = (length = 40) => {
   let result = '';
   const characters =
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
