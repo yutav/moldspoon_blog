@@ -5,7 +5,13 @@ import { getRandomString } from "lib/utils"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || ''
 
+console.log("### BEFORE")
+console.log(supabaseUrl)
+console.log(supabaseKey)
+
 const supabase = createClient(supabaseUrl, supabaseKey)
+
+console.log(supabase)
 
 export const usePageCounter = ({ slug }: {
   slug: string
@@ -13,6 +19,8 @@ export const usePageCounter = ({ slug }: {
 
   const [pageView, setPageView] = useState(0)
   const [random, setRandom] = useState("")
+
+
 
   // ランダム文字列の発行および取得ロジック
   useEffect(() => {
