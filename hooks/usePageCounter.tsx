@@ -16,7 +16,10 @@ export const usePageCounter = ({ slug }: {
 
   // ランダム文字列の発行および取得ロジック
   useEffect(() => {
+    console.log("####")
+
     const storedRandom = localStorage.getItem('pageCounterRandom');
+    console.log(storedRandom)
     if (storedRandom) {
       setRandom(storedRandom)
     } else {
