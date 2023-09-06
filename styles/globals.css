@@ -53,6 +53,7 @@ pre {
 pre.language-text,
 pre.language-json,
 pre.language-typescript,
+pre.language-javascript,
 pre.language-html {
   margin-top: 0px !important;
   margin-bottom: 30px !important;

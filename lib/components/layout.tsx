@@ -110,7 +110,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     slug: router.asPath
   })
 
-  if (!showAfterRender)
+  if (!showAfterRender) {
     return (
       <div className="article-content">
         <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
@@ -123,6 +123,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         `}</style>
       </div>
     )
+  }
 
   return (
     <section className="">
