@@ -3,6 +3,7 @@ import Image from "next/image"
 import styles from "../../../../styles/mdximage.module.css"
 
 interface Prop {
+  addClass?: string
   month?: string
   image: string
   alt: string
@@ -10,7 +11,7 @@ interface Prop {
   height?: number
 }
 
-const MdxImage: React.FC<Prop> = ({ month, image, alt, width, height }) => {
+const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height }) => {
 
   let imageUrl
   if (month) {
@@ -21,25 +22,27 @@ const MdxImage: React.FC<Prop> = ({ month, image, alt, width, height }) => {
   }
 
   return (
-    <div className={styles.imageContainer}>
-      {month ? (
-        <Image
-          className={styles.image}
-          src={imageUrl}
-          alt={alt}
-          layout={"fill"}
-          objectFit={"contain"}
-        />
-      ) : (
-        <Image
-          className={styles.image}
-          src={imageUrl}
-          alt={alt}
-          width={width}
-          height={height}
-        />
-      )}
-    </div>
+    <div className={styles.imageContainer + " " + (addClass ? addClass : "")
+    }>
+      {
+        month ? (
+          <Image
+            className={styles.image}
+            src={imageUrl}
+            alt={alt}
+            layout={"fill"}
+            objectFit={"contain"}
+          />
+        ) : (
+          <Image
+            className={styles.image}
+            src={imageUrl}
+            alt={alt}
+            width={width}
+            height={height}
+          />
+        )}
+    </div >
 
   );
 }

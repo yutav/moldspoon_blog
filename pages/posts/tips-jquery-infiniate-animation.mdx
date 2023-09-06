@@ -1,0 +1,132 @@
+https://api.jquery.com/animate/#animate-properties-duration-easing-complete
+
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "../../lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'jQueryでアニメーションの無限ループを作る',
+  date: '2023-09-06T05:54:00.000Z',
+  tags: [
+    'Tips',
+    '初心者向け',
+    'プログラミング',
+    'Javascript',
+    'jQuery',
+    'アニメーション処理'
+  ]
+}
+
+### 問題
+
+jQueryを使っているシステムで、無限ループのアニメーションを作る必要が生じました。
+
+Reactであればであれば[react-spring](https://www.react-spring.dev/)を使ってサクッと実装するところだが、
+jQueryではどう対処すればいいのでしょうか？
+
+### 解決策
+
+jQueryでは[.animate()](https://api.jquery.com/animate/#animate-properties-duration-easing-complete)というメソッドが用意されていて、**これを
+使って一種の無限ループを作る形でなんとかするしかない**ようです。
+
+(なお、本記事の執筆日時2023/09/06時点では、[最新バージョン](https://jquery.com/)は **v3.7.1**のようです。）
+
+こちらの[Stack Overflow 記事](https://stackoverflow.com/questions/4713477/how-to-make-a-jquery-infinite-animation)では、.animateのコールバックを連発して表現しているようですが、流石に不恰好なので微妙に調整します。
+
+実装としては以下のように、最初のアニメーションが終了したところをcallbackで補足　→ 次のアニメーションを動かし、callbackで補足 → ...　ということで**無限ループ**を作りました。
+
+<CodeBlockTitle title="src/app/api/og.tsx" />
+
+```javascript
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"
+			integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+<div id="moving-button">
+	I'm moving!
+</div>
+
+<style>
+	#moving-button {
+		width: 400px;
+		font-size: 2rem;
+		padding: 10px 20px;
+		text-align: center;
+		border-radius: 20px;
+		background: blue;
+		color: white;
+	}
+</style>
+
+<script>
+	$(function() {
+
+		function animate(obj, direction) {
+			let animateArray = {}
+			if (direction == 0) {
+				animateArray = {
+					opacity: 0.5,
+					fontSize: "2rem",
+					padding: '10px 20px',
+					borderRadius: '20px'
+				}
+			} else {
+				animateArray = {
+					opacity: 1,
+					fontSize: "4em",
+					padding: '20px 40px',
+					borderRadius: '40px'
+				}
+			}
+			obj.animate(
+				animateArray,
+				500, // duration
+				'swing', // type
+				function() { // callback fired when complete animation
+					direction = direction == 0 ? 1 : 0 // アニメーションの向きを反転
+					animate(obj, direction)
+				}
+			)
+		}
+
+		// fired at first
+		animate($('#moving-button'), 0)
+	})
+</script>
+
+```
+
+### できあがり
+
+こんな感じにできました。
+
+<MdxImage month="202309" image="im-moving.gif" month="202309" addClass="w-1/2"/>
+
+`animate()`の第1引数はcssを指定できるようなので、さまざまな表現をお手軽に行うことが可能となっています。
+
+詳しくは以下の公式ドキュメントをご確認ください。
+
+<RichLink 
+url="https://api.jquery.com/animate/" 
+icon='ri-pages-line'
+title=".animate()" 
+subtitle="jqueryのアニメーションメソッド"
+targetBlank={true}
+ />
+
+<br />
+そのため、この記事が何かのお役に立てれば幸いだと思いました。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
