@@ -5,9 +5,4 @@ module.exports = {
   generateRobotsTxt: false,
   sitemapSize: 7000,
   outDir: './public/',
-  exclude: [
-    '/thanks'
-  ],
-
-
 };
