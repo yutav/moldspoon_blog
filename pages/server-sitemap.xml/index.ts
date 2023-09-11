@@ -20,7 +20,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
   tagsArray.forEach((tag) => {
     fields.push({
-      loc: `/blog/tags/${tag}`,
+      loc: process.env.baseUrl + `/tags/${tag}`,
       changefreq: 'monthly',
       priority: 0.3,
     });
