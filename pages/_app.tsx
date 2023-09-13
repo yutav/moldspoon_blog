@@ -7,7 +7,6 @@ import { GeistProvider, CssBaseline, Image } from '@geist-ui/core'
 import { useCallback, useState, useEffect } from 'react'
 import { BlogConfigsProvider } from 'lib/components'
 import { HybridLink, HybridCode } from 'lib/components/mdx'
-import { googleTagManagerId } from 'utils/gtm';
 import '../styles/globals.css'
 import 'tailwindcss/tailwind.css'
 
