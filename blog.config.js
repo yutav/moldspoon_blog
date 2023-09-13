@@ -19,7 +19,7 @@ const BLOG = {
   twitter: 'yuku_tas',
   domain: 'moldspoon.jp',
 
-  googleAnalytics: 'UA-51495358-1',
+  googleAnalytics: 'GTM-KC3HDQX',
   cn: true,
   enableViews: true,
 

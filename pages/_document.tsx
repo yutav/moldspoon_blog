@@ -2,6 +2,7 @@ import Document, { Html, Head, Main, NextScript, DocumentContext } from 'next/do
 import BLOG from '../blog.config'
 import { CssBaseline } from '@geist-ui/core'
 import flush from 'styled-jsx/server'
+import Script from 'next/script'
 
 class BlogDocument extends Document {
   static async getInitialProps(ctx: DocumentContext) {
@@ -27,19 +28,17 @@ class BlogDocument extends Document {
         <body className="bg-white dark:bg-gray-900 text-black dark:text-white">
           <Main />
           <NextScript />
-          <script
-            async
-            src={`https://www.googletagmanager.com/gtag/js?id=${BLOG.googleAnalytics}`}
-          />
-          <script
-            async
+          <Script
+            id="gtm"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${BLOG.googleAnalytics}');
-              `,
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','${BLOG.googleAnalytics}');
+      `,
             }}
           />
         </body>
