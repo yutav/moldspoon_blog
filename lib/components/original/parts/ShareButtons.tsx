@@ -39,7 +39,7 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
 
   return (
     <div
-      className="block lg:fixed lg:-ml-16 lg:top-1/3"
+      className="block lg:fixed lg:-ml-20 lg:top-1/3"
       style={{ opacity: opacity }}
     >
       <div className="px-2 lg:px-0 py-5 w-full lg:w-12 grid grid-cols-6 md:grid-cols-10 lg:grid-cols-1 md:grid-rows-8 gap-4 justify-items-center lg:bg-gray-100 lg:border lg:border-gray-300 lg:rounded-2xl">
