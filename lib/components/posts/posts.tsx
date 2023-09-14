@@ -20,6 +20,9 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 
+  console.log(posts)
+  console.log(tag)
+
   if (!tag) {
     // tagが指定されていない場合、全てのポストを返す
     if (!isLatest) return posts;
@@ -31,6 +34,7 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
     const tags = (post.meta || {}).tags || [];
     return tags.includes(tag);
   });
+  console.log(filteredPosts)
 
   if (!isLatest) return filteredPosts;
   return filteredPosts.slice(0, Configs.latestLimit);
@@ -46,17 +50,14 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
   const theme = useTheme()
   let posts = []
   let title = ""
-  if (tag) {
-    posts = useMemo(() => tag !== undefined ? getPosts(metadata, isLatest, tag) : [], [tag]);
+  posts = useMemo(() => getPosts(metadata, isLatest, tag), [tag]);
+  if (tag !== undefined) {
     title = `「${tag}」 の記事一覧`
   }
   else if (isLatest) {
-    posts = useMemo(() => isLatest !== undefined ? getPosts(metadata, isLatest, tag) : [], [isLatest]);
     title = Configs.title
-    //Configs.labels.latest
   }
   else {
-    posts = useMemo(() => getPosts(metadata, isLatest, tag), []);
     title = Configs.labels.list + " - " + Configs.title
   }
 

@@ -170,6 +170,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
         .container {
           width: 100%;
+          min-height: 1000px;
           max-width: ${Configs.layouts.pageWidth};
           display: flex;
           flex-direction: column;

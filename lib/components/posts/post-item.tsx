@@ -33,6 +33,10 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
+  post.meta?.tags?.map((value) => {
+    console.log(value)
+  })
+
   return (
     <div className="item">
       <div className="flex">
@@ -89,6 +93,18 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             className={"text-black dark:text-white text-sm leading-loose block z-0"}
             dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
           />
+          <p className="py-0 m-0 mt-0 text-xs text-gray-700 dark:text-white">
+            タグ: &nbsp;
+            {post.meta?.tags?.map((value) => {
+              const excludedTags = ["経験者向け", "初心者向け", "Tips", "Blog"];
+              if (excludedTags.includes(value)) {
+                return
+              }
+              return (
+                <Link href={`/tags/` + encodeURI(value)} key={value} className="underline text-xs mr-2 text-gray-700 dark:text-white">{value}</Link>
+              )
+            })}
+          </p>
         </div>
       </div>
       <style jsx>{`
