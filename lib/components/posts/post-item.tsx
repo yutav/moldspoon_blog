@@ -33,10 +33,6 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  post.meta?.tags?.map((value) => {
-    console.log(value)
-  })
-
   return (
     <div className="item">
       <div className="flex">

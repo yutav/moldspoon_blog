@@ -20,9 +20,6 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 
-  console.log(posts)
-  console.log(tag)
-
   if (!tag) {
     // tagが指定されていない場合、全てのポストを返す
     if (!isLatest) return posts;
@@ -34,7 +31,6 @@ const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
     const tags = (post.meta || {}).tags || [];
     return tags.includes(tag);
   });
-  console.log(filteredPosts)
 
   if (!isLatest) return filteredPosts;
   return filteredPosts.slice(0, Configs.latestLimit);
