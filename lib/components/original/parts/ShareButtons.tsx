@@ -1,6 +1,5 @@
 import { changeTitle } from "lib/utils";
 import { TwitterShareButton, FacebookShareButton, LineShareButton, HatenaShareButton, TwitterIcon, FacebookIcon, LineIcon, HatenaIcon } from "react-share";
-import { scroller } from "react-scroll";
 import { useEffect, useState } from "react";
 type Prop = {
   url: string
