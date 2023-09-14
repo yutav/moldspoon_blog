@@ -29,14 +29,6 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
     };
   }, []);
 
-  const scrollToTop = () => {
-    // ページのトップにスクロールする関数
-    scroller.scrollTo("top", {
-      duration: 500,
-      smooth: true,
-    });
-  };
-
   return (
     <div
       className="block lg:fixed lg:-ml-20 lg:top-1/3"
