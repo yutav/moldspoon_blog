@@ -1,9 +1,7 @@
 import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
 import type { MDXComponents } from 'mdx/types';
 
-export function useMDXComponents(components: MDXComponents): MDXComponents {
-
-
+export function useMDXComponents(_: MDXComponents): MDXComponents {
   const CustomH1: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h1 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h1>
   );
@@ -16,11 +14,9 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
   const CustomH4: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h4 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h4>
   );
-
   const CustomH5: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h5 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h5>
   );
-
   const CustomH6: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h6 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h6>
   );

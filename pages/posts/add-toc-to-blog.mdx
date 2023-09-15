@@ -5,7 +5,7 @@ import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
 import MdxImage from "../../lib/components/original/parts/MdxImage"
 
 export const meta = {
-  title: 'Next.js製ブログに目次を追加する。',
+  title: 'Next.js製ブログにオリジナルの目次を追加する。',
   date: '2023-09-15T10:50:00.000Z',
   tags: [
     'Blog',
@@ -21,9 +21,20 @@ export const meta = {
   ]
 }
 
-今回は、Next.jsで作られているこのブログに目次を追加しようと思いました。Wordpressだとプラグイン一発なのですが、Next.jsプロジェクトの目次ってどう作ればいいんだろう？というところから入ってみます。
+今回は、Next.jsで作られているこのブログにオリジナルの目次を追加しようと思いました。Wordpressだとプラグイン一発なのですが、Next.jsプロジェクトの目次ってどう作ればいいんだろう？というところからですね😅
 
-### 本記事のゴール
+### 本記事について
+
+#### 必要な技術
+
+- Next.js
+- react-dom
+- @mdxjs-react (MDXブログでの利用を想定)
+- tailwindcss (Next13ならばビルトインされています)
+
+こちらをプロジェクトに採用しているのを前提としています。
+
+#### 記事のゴール
 
 ブログに目次(Table of Contents = Toc)を追加する
 
@@ -32,23 +43,25 @@ export const meta = {
   title="要件定義"
   list={
   [
-    '.mdx記事の、見出し(h1,h2,h3,h4,h5)が階層的に目次になるように作成する',
+    '.mdx記事の、見出し(h1,h2,h3...h6)が階層的に目次になるように作成する',
+    '作成した目次をクリックすると、見出しに遷移する。アドレスバーに表示されるのも~#見出し名となる。',
     '折り返しは考慮しない'
   ]
 } />
 
-なお、VSCodeにはプラグインで、.mdファイルを編集するだけで自動で目次を生成してくれるものがあるので、これを使えたら瞬殺だな、と思ったのですが
-**.mdxファイルには使えませんでした。**残念。
-
-参考記事: [【vscode】Markdownにおける目次(TOC)の作成に、Markdown All in Oneが便利だった件](https://qiita.com/eyuta/items/b1a53f3da8c5f8e7f41d)
 
 ### 設計
 
-おおよそ以下の方針でいく。
+目次の生成は、
+1. .mdxファイルの見出しを、入れ子構造のオブジェクトに格納し
+2. 機械的に`<ul>`および`<li>`タグで生成
+
+という流れで処理することになります。この類の機能の作成を行った人であれば想像がつくはず。
+問題はページ内リンクの実装だが、結論から言うと[MDX Provider](https://mdxjs.com/docs/using-mdx/#mdx-provider)により、記事内のh1~h6を一律で書き換えることで対応できます。
 
 <RichList
   color="orange"
-  title="設計"
+  title="設計のポイント"
   list={
   [
     'Tocコンポーネントを作成する。',
@@ -59,258 +72,230 @@ export const meta = {
 
 ### 実装
 
-#### ライブラリをNext.jsプロジェクトにインストール
+#### 目次コンポーネントと必要な処理を作る
 
-プロジェクトのルートに移動し、yarnでインストールを実施します。
+##### Toc.tsxを作る
 
-```
-yarn add @supabase/supabase-js
-```
+今回は**Next13プロジェクトのappレイアウト**で`lib/components`以下に**Toc.tsx**と言う名称でクラスを作成しました。
+各ページ共通で呼び出されるlayout.tsxで、.mdxから変換されたhtmlをこのコンポーネントに渡すことで、目次を出力します。
 
-#### layout.tsx / hooksの形で実装
-
-ブログの詳細ページ共通で呼ばれるコンポーネントであればどこでも良いと思います。
-
-私はhook形式にした上で、レイアウトコンポーネントで
-呼ぶようにしました。_app.tsxからだと、利用するViewからは階層が遠く引き回す方法を考えないといけないからです。（Contextを使えばできるが、そこまでしなくてもいいかなと）
-
-<CodeBlockTitle title="lib/components/layout.tsx" />
+<CodeBlockTitle title="lib/components/Toc.tsx" />
 
 ```typescript
-import React from 'react'
-import "remixicon/fonts/remixicon.css"
-import { useRouter } from "next/router"
-import { usePageCounter } from 'hooks/usePageCounter'
+import { Configs } from "lib/utils";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
-type LayoutProps = {
-  children: React.ReactNode
-}
+type Prop = {
+  body: string
+};
 
-const Layout: React.FC<LayoutProps> = ({
-  children
-}) => {
+// 入れ子の目次オブジェクトを型定義する
+type TocData = {
+  [key: string]: TocData
+};
 
-  const router = useRouter()
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const isDetailPage = router.pathname.startsWith('/posts');
+const Toc: React.FC<Prop> = ({ body }) => {
+  const [tocObject, setTocObject] = useState<{ [key: string]: any }>({});
 
-  // hooksで、中身で全ての処理を完結させる
-  const [{ pageView }] = usePageCounter({
-    slug: router.asPath
-  })
+  const showNumberString = false // trueにすると、章立ての番号が表示される
+  useEffect(() => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(body, "text/html");
 
-  // 以下はお手元のlayout.tsxの内容を移植してください。
+    const headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
+
+    // このstackで階層構造を管理する。
+    const stack: any[] = [];
+    let tocData: TocData = {};
+
+    headings.forEach((heading) => {
+      const level = parseInt(heading.tagName.charAt(1), 10);
+      const text = heading.textContent || "";
+
+      while (stack.length && stack[stack.length - 1].level >= level) {
+        stack.pop();
+      }
+
+      let parent = tocData;
+
+      stack.forEach(item => {
+        parent = parent[item.text];
+      });
+
+      parent[text] = {};
+
+      stack.push({ text: text, level: level });
+    });
+
+    setTocObject(tocData);
+  }, [body]);
+
+  const renderToc = (
+    data: { [key: string]: any },
+    parentNumbers: number[] = []
+  ) => {
+    return (
+      <ul className="toc-list px-0 mx-3 my-2 list-none">
+        {Object.keys(data).map((key, index) => {
+          const currentNumbers = [...parentNumbers, index + 1];
+          const numberString = currentNumbers.join("-");
+
+          return (
+            <li key={key} className="p-0 m-0 text-xs">
+              <Link href={`#${key.replace(/\s+/g, "-").toLowerCase()}`} className="text-black dark:text-white">
+                {showNumberString && numberString + ". "}{key}
+              </Link>
+              {renderToc(data[key], currentNumbers)}
+            </li>
+          )
+        })}
+      </ul>
+    );
+  };
+
+  // 以下taildinw
+
   return (
-    <>
-      {children}
-    </>
+    <div className={`toc xl:fixed xl:pl-8 xl:top-16 hidden xl:block `}>
+      <div className="toc-box p-2 rounded-xl break-words">
+        <div className="rounded-xl shadow-2xl bg-white dark:bg-black px-4 py-2">
+          <p className="pt-0 font-bold">目次</p>
+          {renderToc(tocObject)}
+        </div>
+      </div>
+      <style jsx>{`
+        .toc-box {
+          background: linear-gradient(0deg, rgb(195,34,175,1) 0%, rgba(253,187,45,1) 100%)
+        }
+        .toc {
+          margin-left: ${Configs.layouts.pageWidth};
+        }
+        .toc-list li {
+          padding: 0px;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default Toc;
+```
+
+##### layout.tsxにToc.tsxの呼び出し処理を追加する
+
+記事ページ共通で呼ばれるコンポーネントに、Tocタグを追加します。
+その際に、.mdxページから`React.ReactNode`型の`children`が渡されてきますが、これを
+stringに置換した上で、Tocに渡します。
+
+あなたのご利用中のlayout.tsxに合わせて、実装してください
+
+<CodeBlockTitle title="app/layout.tsx" />
+
+```typescript
+// ... importは省略
+
+import Toc from 'lib/components/Toc'
+import { renderToString } from 'react-dom/server';
+
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+
+  let childrenHtml = '';
+  if (React.isValidElement(children)) {
+    // React.ReactNodeをhtmlに置換
+    childrenHtml = renderToString(children);
+  }
+
+　// 以下の<html><Navbar>などのタグはデフォルトのものそのままです。
+  // Tocを呼び出す箇所はコンテンツに合わせてどうぞ
+  return (
+    <html lang="en">
+      <body>
+        <Navbar />
+          <main className="">{children}</main>
+          <Toc body={childrenHtml} />
+        <Footer />
+      </body>
+    </html>
   )
 }
 
-export default Layout
-
 ```
 
-#### usePageCounter.tsx / randomコードをフックに全てを処理する
+##### mdx-component.tsxを設置し、h1~h6のid属性を埋め込むように変更
 
-ページ描画時に、`useEffect()`が呼ばれ、localStorageから保存済みのランダム文字列があれば呼ばれます。なければ新規に作っています。
+**プロジェクトのルート直下**にmdx-component.tsxを設置し、
+アンカーリンクでの移動のため必要な属性を追加してくださいませ。
 
-これを条件にSupabaseのDBへ参照を行い、
-
-- 1. 既にテーブルにレコードがあれば+1
-- 2. レコードがなければ新規作成
-
-という流れになります。
-
-<CodeBlockTitle title="hooks/userPageCounter.tsx" />
+<CodeBlockTitle title="mdx-component.tsx" />
 
 ```typescript
-import { useEffect, useState } from "react"
-import { createClient } from '@supabase/supabase-js'
-import { getRandomString } from "lib/utils"
+import type { MDXComponents } from 'mdx/types';
 
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_KEY || ''
+export function useMDXComponents(components: MDXComponents): MDXComponents {
 
-const supabase = createClient(supabaseUrl, supabaseKey)
+  const CustomH1: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h1 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h1>
+  );
+  const CustomH2: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h2 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h2>
+  );
+  const CustomH3: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h3 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h3>
+  );
+  const CustomH4: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h4 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h4>
+  );
+  const CustomH5: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h5 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h5>
+  );
+  const CustomH6: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h6 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h6>
+  );
 
-export const usePageCounter = ({ slug }: {
-  slug: string
-}) => {
-
-  const [pageView, setPageView] = useState(0)
-  const [random, setRandom] = useState("")
-
-  // ランダム文字列の発行および取得ロジック
-  useEffect(() => {
-    const storedRandom = localStorage.getItem('pageCounterRandom');
-    if (storedRandom) {
-      setRandom(storedRandom)
-    } else {
-      const newRandom = getRandomString()
-      localStorage.setItem('pageCounterRandom', String(newRandom));
-      setRandom(String(storedRandom))
-    }
-  }, []);
-
-  const fetchPageView = async (slug: string) => {
-    const { data, error } = await supabase
-      .from('pageviews')
-      .select()
-      .eq('slug', slug)
-    return { data, error }
+  return {
+    // 他に処理があればここに追加
+    h1: CustomH1,
+    h2: CustomH2,
+    h3: CustomH3,
+    h4: CustomH4,
+    h5: CustomH5,
+    h6: CustomH6
   }
-
-  const fetchPageViewDetail = async (slug: string, random: string) => {
-    const { data, error } = await supabase
-      .from('pageview_details')
-      .select()
-      .eq('slug', slug)
-      .eq('random', random)
-      .eq('date', new Date().toISOString())
-    return { data, error }
-  }
-
-  // NOTE: 本来はdataを型指定するべきだが、supabase loginなど作業が必要なため、一旦anyで判定
-  const upsertPageview = async (data: any, slug: string) => {
-    let id
-    let pageview = 1 // 初期値は0ではなく1
-    if (data.length > 0) {
-      id = data[0].id
-      pageview = data[0].pageview + 1 // increment
-    }
-    const { data: dataUpsert, error: errorUpsert } = await supabase
-      .from('pageviews')
-      .upsert({
-        id: id,
-        slug: slug,
-        pageview: pageview
-      })
-      .select()
-    return { dataUpsert, errorUpsert }
-  }
-
-  const insertPageViewDetail = async (slug: string, random: string) => {
-    const { error } = await supabase
-      .from('pageview_details')
-      .insert({
-        slug: slug,
-        random: random,
-        date: new Date().toISOString()
-      })
-    return { error }
-  }
-
-  useEffect(() => {
-    if (random === "") {
-      return
-    }
-
-    const executePageCounter = async () => {
-
-      let { data, error } = await fetchPageView(slug)
-      let { data: detailData, error: detailError } = await fetchPageViewDetail(slug, random)
-      if (error || data == undefined || detailError || detailData == undefined) {
-        // add error handling if needed
-        return
-      }
-      // 既に詳細データがある場合は、何もしないで終了する
-      if (data.length > 0 && detailData.length > 0) {
-        setPageView(data[0].pageview);
-        return
-      }
-
-      //　データがない場合は新規作成する
-      await insertPageViewDetail(slug, random)
-      const { dataUpsert, errorUpsert } = await upsertPageview(data, slug)
-      if (errorUpsert || dataUpsert == undefined) {
-        // add error handling if needed
-        return
-      }
-
-      // 処理が終わってからpageviewを更新
-      setPageView(dataUpsert[0].pageview);
-    }
-
-    executePageCounter()
-  }, [random])
-
-  return [{ pageView }]
 }
 ```
 
-##### ※ ランダム文字列の発行ロジック
+### 動作確認（テスト）
 
-一例ですがこちら
-[https://www.slingacademy.com/article/ways-to-generate-random-strings-in-javascript/](https://www.slingacademy.com/article/ways-to-generate-random-strings-in-javascript/
-)
-などを適宜実装してください。上記のusePageCounterで申しますと`getRandomString()`のところです。
+ローカルで`yarn run dev`でプロジェクトを起動し、記事ページで目次が動いていることを確認します。
 
-私はこちらを使っていませんが、適宜作成し、util的なファイルに気軽に呼べるメソッドとして追加。
-あるいはhooks集などにあるやつを適宜採用ください。
+<MdxImage month="202309" image="page-anchor-link.gid" month="202309" />
 
-#### 動作確認（テスト）
+（ちなみに、モバイルでは消すようにしています。[https://dev.classmethod.jp/](クラスメソッド)さんなども目次を消すようにしているようですので）
 
-ローカルで`yarn run dev`でプロジェクトを起動し、ブログページでカウンターの増加を確認します。
+### 参考文献
 
-<MdxImage month="202309" image="pv-increment.png" month="202309" />
+##### Markdown All in One
+[【vscode】Markdownにおける目次(TOC)の作成に、Markdown All in Oneが便利だった件](https://qiita.com/eyuta/items/b1a53f3da8c5f8e7f41d)
+VSCodeにはプラグインで、.mdファイルを編集するだけで自動で目次を生成してくれるものがあるので、これを使えたら瞬殺だな、と思ったのですが残念😢
 
-うん、ちゃんと増えてる。
+##### MDX Providerを使ったタグの書き換え
+[https://titanicrising.jp/blog/nextjs-mdx]
+ページリンク部分は、この方法を使って書き換えられそうなことがわかりました。ありがとうございました。
 
-### 使ってみて感じたSupabaseの長所・短所
+##### Tocの先行実績
+[https://www.cyishere.dev/blog/toc-for-mdx-with-nextjs](Table of Contents for MDX with Next.js)
+こちらの方のブログ参考になりました。おかげで、独自実装もアリだなと思えました。ありがとうございました。
 
-私の方でSupabaseを使ったのは初めてでしたので、自分のため、が主目的とはなりますが今回長短所を軽く整理してみました。
-
-数ヶ月〜かかるような中大規模プロジェクトへの導入を前提に検討していないため、粗があるかと思いますのでその点はお許しをいただけますと幸いです。
-
-#### 長所
-
-<RichListNoBox
-  color="red"
-  list={
-  [
-    'バックエンドフレームワークのORMのような感覚でDBに繋げ、RDB経験が豊富な人には使いやすい。',
-    'エラーハンドリングがSingleで実装でき、React経験豊富な人にもわかりやすい。',
-    '要するにどちらか片方の技術スタックを持っていればとっつきやすい。イコール、プロジェクトにおいて人材の確保などもしやすい。',
-    'RDBなので、NoSQLに比べて複数人数での開発プロジェクトに適応しやすそう（この辺りのフィジビリはまだまだなので、稿を改めて）',
-    '意外に現時点でもフィルターはサンプルも豊富にあり充実していそうだった。（自分で試せてない）',
-    '中身Postgresqlなので、移植は普通にしやすい。supabaseコマンド経由でバックアップも取れるし、<a href="https://zenn.dev/www_y/articles/a1e0c61a12b57c">psqlでダンプもどうやら取れる</a>らしい'
-  ]
-} />
-
-#### 短所
-
-<RichListNoBox
-  color="red"
-  list={
-  [
-    'Vercel/AWS/GCPなどと比べてGUIが過渡期でこなれていない。',
-    '（個人的な感想となるが）GUIでのDB操作は効率面で悪く感じてしまう。',
-    'と思ったら、<a href="https://qiita.com/SuyamaDaichi/items/aa3cf41684c820ff654e">TablePlusなどのDBクライアントで接続する方法を見つけた</a>...のであまり短所にならないかも？',
-    'コミュニティの日本語情報がまだ少ない。（gql系の技術などにも通じる話で、ナレッジが蓄積されたらどんどん便利になりそう。）',
-  ]
-} />
-<br />
-
-
-既存のRestAPI + RDBと比べると現時点（2023/09）では効率がまだまだかなと思うところがあるのも事実です。
-<br />
 
 ### まとめ・感想
 
-技術選定にあたっては、**「この技術に未来はあるのか？」** という観点で考えるわけですが、**RDBとGUIを組み合わせたIaaSという発想は筋がいい**と思います。
-「データが膨らんだ時にスケーラブルに利用継続できるのと差し替えに、NoSQL使うのはしんどい」とか「学習コストが高い」という話はずっと続いてたので。つまり、旧来の課題に対して適切に刺せているように感じられます。
-
-一方で、利用者はエンジニアである以上最終的には**GUIはオマケにしかならないじゃないか** という話もあるかと思います。
-つまり、Supabaseは「当初は無料で使える」「クラウドDBサービス」であることが価値の源泉であり、IaaSとしては厳密にはそこまで重視されていないのだと思います。
-
-技術選定に一定の予算および工数がかけられる、大規模案件ならともかく。CUIよりも使いやすいGUIの登場を待っているわけには個人開発ではいかないので、`supabase`コマンドを使ったり
-前述のように[Tableplus](https://tableplus.com/)を使って対応するようになりそうですが、そうなるといよいよ更に簡便に使える[Firebase](https://firebase.google.com/?hl=ja)や[AWS RDS](https://aws.amazon.com/jp/rds/)などの既存のRDBサービスでもいい気がしてきた次第でした。
-
-結論、個人開発には気が向いたら使うかな、くらいでしょうかねえ。
-
-数ヶ月・複数人のプロジェクトで会社として、試しに導入してみるのはいいと思いました！
-またEdge FunctionやAuthの使い勝手もどんなものかを、また稿を改めて書きたいと思っています。
+実装自体は、なかなか楽しかったですがかゆいところに手が届く目次を作るためには、さらなる車輪の再発明をする感が漂ってきますね...。
+ただ、**Webエンジニアの人にはWordpressよりは絶対に自分のイメージする形に実装しやすい**と思うので、**フロントエンドの実装力がある人や、Next.jsを今後も使い続けたい！という方**ならこの方法は大いにアリかと思った次第でした。
 <br />
 この記事が何かのお役に立てれば幸いです。<br />
 最後までお読みいただきありがとうございました！

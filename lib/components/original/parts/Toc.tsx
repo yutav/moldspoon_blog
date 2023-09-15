@@ -1,5 +1,5 @@
 import { Configs } from "lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Prop = {
@@ -15,33 +15,33 @@ const Toc: React.FC<Prop> = ({ body }) => {
   const [tocObject, setTocObject] = useState<{ [key: string]: any }>({});
 
   const showNumberString = false // trueにすると、章立ての番号が表示される
-
   useEffect(() => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(body, "text/html");
 
     const headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
 
-    const stack: (string | number)[] = [];
+    // このstackで階層構造を管理する。
+    const stack: any[] = [];
     let tocData: TocData = {};
 
     headings.forEach((heading) => {
       const level = parseInt(heading.tagName.charAt(1), 10);
       const text = heading.textContent || "";
 
-      while (stack.length >= level) {
+      while (stack.length && stack[stack.length - 1].level >= level) {
         stack.pop();
       }
 
       let parent = tocData;
-      for (let i = 1; i < stack.length; i++) {
-        parent = parent[stack[i]];
-      }
+
+      stack.forEach(item => {
+        parent = parent[item.text];
+      });
 
       parent[text] = {};
 
-      stack.push(text);
-
+      stack.push({ text: text, level: level });
     });
 
     setTocObject(tocData);
@@ -52,7 +52,7 @@ const Toc: React.FC<Prop> = ({ body }) => {
     parentNumbers: number[] = []
   ) => {
     return (
-      <ul className="toc-list p-0 mx-3 my-2 list-none">
+      <ul className="toc-list px-0 mx-3 my-2 list-none">
         {Object.keys(data).map((key, index) => {
           const currentNumbers = [...parentNumbers, index + 1];
           const numberString = currentNumbers.join("-");
