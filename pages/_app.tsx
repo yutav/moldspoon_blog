@@ -1,12 +1,10 @@
 import { NextPage } from 'next'
 import { AppProps } from 'next/app'
 import useDomClean from 'lib/use-dom-clean'
-import { MDXProvider } from '@mdx-js/react'
 import { PrismBaseline } from '@geist-ui/prism'
 import { GeistProvider, CssBaseline, Image } from '@geist-ui/core'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, ReactChild, ReactFragment, ReactPortal } from 'react'
 import { BlogConfigsProvider } from 'lib/components'
-import { HybridLink, HybridCode } from 'lib/components/mdx'
 import '../styles/globals.css'
 import 'tailwindcss/tailwind.css'
 
@@ -24,24 +22,15 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   useEffect(() => localStorage.setItem('theme', themeType), [themeType])
   useDomClean()
 
-  const components = {
-    a: HybridLink,
-    img: Image,
-    pre: HybridCode,
-  };
-
   return (
     <>
 
       <GeistProvider themeType={themeType}>
         <CssBaseline />
         <PrismBaseline />
-        <MDXProvider
-          components={components} >
-          <BlogConfigsProvider onChange={changeHandle}>
-            <Component {...pageProps} />
-          </BlogConfigsProvider>
-        </MDXProvider>
+        <BlogConfigsProvider onChange={changeHandle}>
+          <Component {...pageProps} />
+        </BlogConfigsProvider>
         <style global jsx>{`
           @media only screen and (max-width: 767px) {
             html {

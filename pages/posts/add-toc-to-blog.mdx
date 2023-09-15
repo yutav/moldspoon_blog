@@ -1,0 +1,327 @@
+import { Layout } from 'lib/components'
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'Next.js製ブログに目次を追加する。',
+  date: '2023-09-15T10:50:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'Next.js',
+    'Vercel',
+    'フロントエンド',
+    '目次',
+    'Toc',
+    'Markdown',
+    'mdx',
+    'プログラミング'
+  ]
+}
+
+今回は、Next.jsで作られているこのブログに目次を追加しようと思いました。Wordpressだとプラグイン一発なのですが、Next.jsプロジェクトの目次ってどう作ればいいんだろう？というところから入ってみます。
+
+### 本記事のゴール
+
+ブログに目次(Table of Contents = Toc)を追加する
+
+<RichList
+  color="orange"
+  title="要件定義"
+  list={
+  [
+    '.mdx記事の、見出し(h1,h2,h3,h4,h5)が階層的に目次になるように作成する',
+    '折り返しは考慮しない'
+  ]
+} />
+
+なお、VSCodeにはプラグインで、.mdファイルを編集するだけで自動で目次を生成してくれるものがあるので、これを使えたら瞬殺だな、と思ったのですが
+**.mdxファイルには使えませんでした。**残念。
+
+参考記事: [【vscode】Markdownにおける目次(TOC)の作成に、Markdown All in Oneが便利だった件](https://qiita.com/eyuta/items/b1a53f3da8c5f8e7f41d)
+
+### 設計
+
+おおよそ以下の方針でいく。
+
+<RichList
+  color="orange"
+  title="設計"
+  list={
+  [
+    'Tocコンポーネントを作成する。',
+    'remark-tocを使って各ブログページのマークダウン部をtypescriptのオブジェクトにする。',
+    'Tocコンポーネント内でオブジェクトを使って目次を組み立てる'
+  ]
+} />
+
+### 実装
+
+#### ライブラリをNext.jsプロジェクトにインストール
+
+プロジェクトのルートに移動し、yarnでインストールを実施します。
+
+```
+yarn add @supabase/supabase-js
+```
+
+#### layout.tsx / hooksの形で実装
+
+ブログの詳細ページ共通で呼ばれるコンポーネントであればどこでも良いと思います。
+
+私はhook形式にした上で、レイアウトコンポーネントで
+呼ぶようにしました。_app.tsxからだと、利用するViewからは階層が遠く引き回す方法を考えないといけないからです。（Contextを使えばできるが、そこまでしなくてもいいかなと）
+
+<CodeBlockTitle title="lib/components/layout.tsx" />
+
+```typescript
+import React from 'react'
+import "remixicon/fonts/remixicon.css"
+import { useRouter } from "next/router"
+import { usePageCounter } from 'hooks/usePageCounter'
+
+type LayoutProps = {
+  children: React.ReactNode
+}
+
+const Layout: React.FC<LayoutProps> = ({
+  children
+}) => {
+
+  const router = useRouter()
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const isDetailPage = router.pathname.startsWith('/posts');
+
+  // hooksで、中身で全ての処理を完結させる
+  const [{ pageView }] = usePageCounter({
+    slug: router.asPath
+  })
+
+  // 以下はお手元のlayout.tsxの内容を移植してください。
+  return (
+    <>
+      {children}
+    </>
+  )
+}
+
+export default Layout
+
+```
+
+#### usePageCounter.tsx / randomコードをフックに全てを処理する
+
+ページ描画時に、`useEffect()`が呼ばれ、localStorageから保存済みのランダム文字列があれば呼ばれます。なければ新規に作っています。
+
+これを条件にSupabaseのDBへ参照を行い、
+
+- 1. 既にテーブルにレコードがあれば+1
+- 2. レコードがなければ新規作成
+
+という流れになります。
+
+<CodeBlockTitle title="hooks/userPageCounter.tsx" />
+
+```typescript
+import { useEffect, useState } from "react"
+import { createClient } from '@supabase/supabase-js'
+import { getRandomString } from "lib/utils"
+
+const supabaseUrl = process.env.SUPABASE_URL || ''
+const supabaseKey = process.env.SUPABASE_KEY || ''
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+export const usePageCounter = ({ slug }: {
+  slug: string
+}) => {
+
+  const [pageView, setPageView] = useState(0)
+  const [random, setRandom] = useState("")
+
+  // ランダム文字列の発行および取得ロジック
+  useEffect(() => {
+    const storedRandom = localStorage.getItem('pageCounterRandom');
+    if (storedRandom) {
+      setRandom(storedRandom)
+    } else {
+      const newRandom = getRandomString()
+      localStorage.setItem('pageCounterRandom', String(newRandom));
+      setRandom(String(storedRandom))
+    }
+  }, []);
+
+  const fetchPageView = async (slug: string) => {
+    const { data, error } = await supabase
+      .from('pageviews')
+      .select()
+      .eq('slug', slug)
+    return { data, error }
+  }
+
+  const fetchPageViewDetail = async (slug: string, random: string) => {
+    const { data, error } = await supabase
+      .from('pageview_details')
+      .select()
+      .eq('slug', slug)
+      .eq('random', random)
+      .eq('date', new Date().toISOString())
+    return { data, error }
+  }
+
+  // NOTE: 本来はdataを型指定するべきだが、supabase loginなど作業が必要なため、一旦anyで判定
+  const upsertPageview = async (data: any, slug: string) => {
+    let id
+    let pageview = 1 // 初期値は0ではなく1
+    if (data.length > 0) {
+      id = data[0].id
+      pageview = data[0].pageview + 1 // increment
+    }
+    const { data: dataUpsert, error: errorUpsert } = await supabase
+      .from('pageviews')
+      .upsert({
+        id: id,
+        slug: slug,
+        pageview: pageview
+      })
+      .select()
+    return { dataUpsert, errorUpsert }
+  }
+
+  const insertPageViewDetail = async (slug: string, random: string) => {
+    const { error } = await supabase
+      .from('pageview_details')
+      .insert({
+        slug: slug,
+        random: random,
+        date: new Date().toISOString()
+      })
+    return { error }
+  }
+
+  useEffect(() => {
+    if (random === "") {
+      return
+    }
+
+    const executePageCounter = async () => {
+
+      let { data, error } = await fetchPageView(slug)
+      let { data: detailData, error: detailError } = await fetchPageViewDetail(slug, random)
+      if (error || data == undefined || detailError || detailData == undefined) {
+        // add error handling if needed
+        return
+      }
+      // 既に詳細データがある場合は、何もしないで終了する
+      if (data.length > 0 && detailData.length > 0) {
+        setPageView(data[0].pageview);
+        return
+      }
+
+      //　データがない場合は新規作成する
+      await insertPageViewDetail(slug, random)
+      const { dataUpsert, errorUpsert } = await upsertPageview(data, slug)
+      if (errorUpsert || dataUpsert == undefined) {
+        // add error handling if needed
+        return
+      }
+
+      // 処理が終わってからpageviewを更新
+      setPageView(dataUpsert[0].pageview);
+    }
+
+    executePageCounter()
+  }, [random])
+
+  return [{ pageView }]
+}
+```
+
+##### ※ ランダム文字列の発行ロジック
+
+一例ですがこちら
+[https://www.slingacademy.com/article/ways-to-generate-random-strings-in-javascript/](https://www.slingacademy.com/article/ways-to-generate-random-strings-in-javascript/
+)
+などを適宜実装してください。上記のusePageCounterで申しますと`getRandomString()`のところです。
+
+私はこちらを使っていませんが、適宜作成し、util的なファイルに気軽に呼べるメソッドとして追加。
+あるいはhooks集などにあるやつを適宜採用ください。
+
+#### 動作確認（テスト）
+
+ローカルで`yarn run dev`でプロジェクトを起動し、ブログページでカウンターの増加を確認します。
+
+<MdxImage month="202309" image="pv-increment.png" month="202309" />
+
+うん、ちゃんと増えてる。
+
+### 使ってみて感じたSupabaseの長所・短所
+
+私の方でSupabaseを使ったのは初めてでしたので、自分のため、が主目的とはなりますが今回長短所を軽く整理してみました。
+
+数ヶ月〜かかるような中大規模プロジェクトへの導入を前提に検討していないため、粗があるかと思いますのでその点はお許しをいただけますと幸いです。
+
+#### 長所
+
+<RichListNoBox
+  color="red"
+  list={
+  [
+    'バックエンドフレームワークのORMのような感覚でDBに繋げ、RDB経験が豊富な人には使いやすい。',
+    'エラーハンドリングがSingleで実装でき、React経験豊富な人にもわかりやすい。',
+    '要するにどちらか片方の技術スタックを持っていればとっつきやすい。イコール、プロジェクトにおいて人材の確保などもしやすい。',
+    'RDBなので、NoSQLに比べて複数人数での開発プロジェクトに適応しやすそう（この辺りのフィジビリはまだまだなので、稿を改めて）',
+    '意外に現時点でもフィルターはサンプルも豊富にあり充実していそうだった。（自分で試せてない）',
+    '中身Postgresqlなので、移植は普通にしやすい。supabaseコマンド経由でバックアップも取れるし、<a href="https://zenn.dev/www_y/articles/a1e0c61a12b57c">psqlでダンプもどうやら取れる</a>らしい'
+  ]
+} />
+
+#### 短所
+
+<RichListNoBox
+  color="red"
+  list={
+  [
+    'Vercel/AWS/GCPなどと比べてGUIが過渡期でこなれていない。',
+    '（個人的な感想となるが）GUIでのDB操作は効率面で悪く感じてしまう。',
+    'と思ったら、<a href="https://qiita.com/SuyamaDaichi/items/aa3cf41684c820ff654e">TablePlusなどのDBクライアントで接続する方法を見つけた</a>...のであまり短所にならないかも？',
+    'コミュニティの日本語情報がまだ少ない。（gql系の技術などにも通じる話で、ナレッジが蓄積されたらどんどん便利になりそう。）',
+  ]
+} />
+<br />
+
+
+既存のRestAPI + RDBと比べると現時点（2023/09）では効率がまだまだかなと思うところがあるのも事実です。
+<br />
+
+### まとめ・感想
+
+技術選定にあたっては、**「この技術に未来はあるのか？」** という観点で考えるわけですが、**RDBとGUIを組み合わせたIaaSという発想は筋がいい**と思います。
+「データが膨らんだ時にスケーラブルに利用継続できるのと差し替えに、NoSQL使うのはしんどい」とか「学習コストが高い」という話はずっと続いてたので。つまり、旧来の課題に対して適切に刺せているように感じられます。
+
+一方で、利用者はエンジニアである以上最終的には**GUIはオマケにしかならないじゃないか** という話もあるかと思います。
+つまり、Supabaseは「当初は無料で使える」「クラウドDBサービス」であることが価値の源泉であり、IaaSとしては厳密にはそこまで重視されていないのだと思います。
+
+技術選定に一定の予算および工数がかけられる、大規模案件ならともかく。CUIよりも使いやすいGUIの登場を待っているわけには個人開発ではいかないので、`supabase`コマンドを使ったり
+前述のように[Tableplus](https://tableplus.com/)を使って対応するようになりそうですが、そうなるといよいよ更に簡便に使える[Firebase](https://firebase.google.com/?hl=ja)や[AWS RDS](https://aws.amazon.com/jp/rds/)などの既存のRDBサービスでもいい気がしてきた次第でした。
+
+結論、個人開発には気が向いたら使うかな、くらいでしょうかねえ。
+
+数ヶ月・複数人のプロジェクトで会社として、試しに導入してみるのはいいと思いました！
+またEdge FunctionやAuthの使い勝手もどんなものかを、また稿を改めて書きたいと思っています。
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

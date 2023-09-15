@@ -24,7 +24,7 @@ const BLOG = {
   enableViews: true,
 
   layouts: {
-    pageWidth: '1024px',
+    pageWidth: '900px',
     pageWidthMobile: '92vw',
   },
 }

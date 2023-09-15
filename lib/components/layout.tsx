@@ -14,6 +14,8 @@ import { getDNSPrefetchValue } from 'lib/data-transform'
 import { useRouter } from "next/router"
 import { usePageCounter } from 'hooks/usePageCounter'
 import PrevNext from './original/parts/PrevNext'
+import Toc from './original/parts/Toc'
+import { renderToString } from 'react-dom/server';
 
 export type PostMetadata = {
   title: string
@@ -98,6 +100,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   meta
 }: LayoutProps & typeof defaultProps) => {
 
+  let childrenHtml = '';
+
+  if (React.isValidElement(children)) {
+    // childrenがReact要素である場合のみrenderToStringを呼び出す
+    childrenHtml = renderToString(children);
+  }
+
   const [showAfterRender, setShowAfterRender] = useState(false)
   const inDetailPage = useMemo(() => meta && meta.title, [])
   useEffect(() => setShowAfterRender(true), [])
@@ -115,7 +124,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
       <div className="article-content">
         <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
         {children}
-        < style jsx>{`
+        <style jsx>{`
           .article-content {
             opacity: 0;
             display: none;
@@ -128,7 +137,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   return (
     <section className="">
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
-      <div className="container p-0 lg:px-0">
+      <div className="container p-0 lg:px-12 bg-white dark:bg-black">
         <Spacer />
         <Profile />
         {inDetailPage ? (
@@ -141,6 +150,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               {children}
             </div>
             <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+            <Toc body={childrenHtml} />
+
           </>
         ) : (
           <div className="dynamic-content">
