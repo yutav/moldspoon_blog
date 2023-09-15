@@ -36,9 +36,6 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
                 Twitter
               </Link>
             )}
-            <Link aria-label="sitemap" href={process.env.baseUrl + "/sitemap"} {...linkProps}>
-              サイトマップ
-            </Link>
             <Link aria-label="about" href={process.env.baseUrl + "/about"} {...linkProps}>
               このブログについて
             </Link>
