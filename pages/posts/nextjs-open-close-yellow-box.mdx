@@ -1,0 +1,173 @@
+import { Layout } from 'lib/components'
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import RichLink from "lib/components/original/parts/RichLink"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'ReactやNext.js環境で動く開閉ボックスパーツ',
+  date: '2023-09-19T10:00:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'React',
+    'Next.js',
+    'フロントエンド',
+    'パーツ',
+    'プログラミング'
+  ]
+}
+
+### 問題
+開閉するボックスパーツをReact または Next.jsの React系環境で作りたい。
+
+今回作成したパーツは基本、React系ならなんでも動くと思われます。
+
+#### 今回動作を確認した環境
+
+<RichListNoBox
+  color="orange"
+  title="動作環境"
+  list={
+  [
+    'Next.js (Next13)',
+    'Typescript',
+    'Vercel(インフラ)',
+    'tailwindcss'
+  ]
+} />
+
+### 解決策
+
+以下のように組みます。仕様としては、
+
+- モバイルレイアウトにも対応できるように、開閉を行うキャレットパーツは右寄せとしています。
+- タイトルを押しても開閉できるようにしています。
+
+#### 実装したコンポーネント
+
+<CodeBlockTitle title="lib/components/OpenCloseYellowBox.tsx" />
+
+```javascript
+import { useState, useEffect } from "react";
+
+type Prop = {
+  title: string;
+  body: React.ReactNode;
+};
+
+const OpenCloseYellowBox: React.FC<Prop> = ({ title, body }) => {
+  const [openStatus, setOpenStatus] = useState(false);
+
+  const toggleOpen = () => {
+    setOpenStatus((prevOpenStatus) => !prevOpenStatus);
+  };
+
+  useEffect(() => {
+    const box = document.getElementById("yellow-box-body");
+    if (box) {
+      if (openStatus) {
+        box.style.maxHeight = box.scrollHeight + "px";
+      } else {
+        box.style.maxHeight = "0";
+      }
+    }
+  }, [openStatus]);
+
+  const toggleTitleOpen = () => {
+    setOpenStatus((prevOpenStatus) => !prevOpenStatus);
+  };
+
+  return (
+    <div className="pt-6 pb-2">
+      <div className="bg-yellow-100 dark:bg-gray-700 p-6 mt-6 rounded-xl text-sm relative">
+        <div
+          className={`absolute top-7 right-6 transform transition-transform ${openStatus ? "rotate-180" : ""
+            } cursor-pointer`}
+          onClick={toggleOpen}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            fill="currentColor"
+            className="bi bi-caret-down"
+            viewBox="0 0 16 16"
+          >
+            <path
+              fillRule="evenodd"
+              d="M14.646 8.854a.5.5 0 0 1-.708 0L8 3.207 2.354 8.854a.5.5 0 0 1-.708-.708l6-6a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708z"
+            />
+          </svg>
+        </div>
+        <p
+          className={`leading-loose font-bold mb-2 cursor-pointer ${openStatus ? "" : ""
+            }`}
+          onClick={toggleTitleOpen}
+        >
+          {title}
+        </p>
+        <div
+          id="yellow-box-body"
+          className={`overflow-hidden transition-max-height duration-300 ${openStatus ? "max-h-96" : "max-h-0"
+            }`}
+        >
+          {body}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OpenCloseYellowBox;
+
+```
+
+#### 呼び出す処理（一例）
+
+<CodeBlockTitle title="lib/app/page.tsx" />
+
+```javascript
+// ページコンポーネントの前後は省略
+<OpenCloseYellowBox title="中央新幹線とは何か" body={
+  <>
+  <p className="leading-relax">さて、中央新幹線についても少し説明しましょう。中央新幹線は、日本国内で東海道新幹線に次いで重要な新幹線路線の一つです。東京から大阪を結び、高速で移動するための交通手段として利用されています。中央新幹線には東京、名古屋、京都、大阪などの主要な都市が含まれており、ビジネスや観光で多くの人々に利用されています。</p>
+  <br />
+  <p className="leading-relax">中央新幹線は、その高速性と快適な車両で知られており、長距離を短時間で移動することができます。多くの人にとって、中央新幹線は日本国内を効率的に移動するための不可欠な手段となっています。</p>
+  </>
+}
+/>
+```
+
+**body**はjsxで書けるようにしまして、表現に幅を持たせることができるようにしています。
+
+それにしても、tailwindcssのトランジション系は本当に簡単でいいですね。jQueryなどよりアニメーションで書く量が圧倒的に減りますのでおすすめです。
+
+<RichLink 
+url="https://tailwindcss.com/docs/transition-property" 
+icon='ri-github-fill'
+title="tailwindcss Transition property" 
+subtitle="パーツを遷移させるのをやりたい場合はこのあたりをご参照ください。"
+targetBlank={true}
+ />
+
+なおキャレットはsvgを埋め込んでいますが、方法はいろいろあると思います。絵文字でもいいし、テキストでもいいかも。
+
+### まとめ
+
+こういう共通パーツは一度作れば半永久的に使いまわせます。ただ、当たり前すぎてなかなか共有されにくいですよね。
+そのため、今回記事化しようと思った次第でした。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
