@@ -7,6 +7,7 @@ import MdxImage from "../../lib/components/original/parts/MdxImage"
 export const meta = {
   title: 'ReactやNext.js環境で動く開閉ボックスパーツ',
   date: '2023-09-19T10:00:00.000Z',
+  updateDate: '2023-09-19T16:58.000Z',
   tags: [
     'Tips',
     '経験者向け',
@@ -79,8 +80,8 @@ const OpenCloseYellowBox: React.FC<Prop> = ({ title, body }) => {
   };
 
   return (
-    <div className="pt-6 pb-2">
-      <div className="bg-yellow-100 dark:bg-gray-700 p-6 mt-6 rounded-xl text-sm relative">
+    <div className="pt-0 pb-0">
+      <div className="bg-yellow-100 dark:bg-gray-700 p-0 mt-6 rounded-xl text-sm relative">
         <div
           className={`absolute top-7 right-6 transform transition-transform ${openStatus ? "rotate-180" : ""
             } cursor-pointer`}
@@ -101,7 +102,7 @@ const OpenCloseYellowBox: React.FC<Prop> = ({ title, body }) => {
           </svg>
         </div>
         <p
-          className={`leading-loose font-bold mb-2 cursor-pointer ${openStatus ? "" : ""
+          className={`leading-loose font-bold cursor-pointer p-6 ${openStatus ? "" : ""
             }`}
           onClick={toggleTitleOpen}
         >
@@ -112,7 +113,10 @@ const OpenCloseYellowBox: React.FC<Prop> = ({ title, body }) => {
           className={`overflow-hidden transition-max-height duration-300 ${openStatus ? "max-h-96" : "max-h-0"
             }`}
         >
-          {body}
+          <div className="px-6 pb-6">
+
+            {body}
+          </div>
         </div>
       </div>
     </div>
