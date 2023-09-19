@@ -5,25 +5,56 @@ import { Configs } from '../utils'
 
 export interface DateDisplayProps {
   date: string
+  updateDate?: string
   pageView: number
 }
 
-const DateDisplay: React.FC<DateDisplayProps> = ({ date, pageView }) => {
+const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView }) => {
   const theme = useTheme()
 
   const d = useMemo(() => new Date(date), [])
   if (`${d}` === 'Invalid Date') return null
 
-  const time = Date.now() - d.getTime()
-  const locale = Configs.isJa() ? 'ja' : 'en-us'
   const views = useMemo(() => `${pageView > 0 ? pageView : "-"} ${Configs.isJa() ? 'PV' : 'views'}`, [pageView])
 
+  const publishString = d.getFullYear() + "年"
+    + (d.getMonth() + 1).toString().padStart(2, "0") + "月"
+    + d.getDate().toString().padStart(2, "0") + "日"
+    + " " + d.getHours().toString().padStart(2, "0") + ":"
+    + d.getMinutes().toString().padStart(2, "0")
+
+  console.log(d)
+  console.log(date)
+  console.log(updateDate)
+
+  let updateString
+  let ud
+  if (updateDate) {
+    ud = useMemo(() => new Date(updateDate), [])
+    console.log(ud)
+    if (`${ud}` === 'Invalid Date') return null
+
+    console.log(date)
+
+    updateString = ud.getFullYear() + "年"
+      + (ud.getMonth() + 1).toString().padStart(2, "0") + "月"
+      + ud.getDate().toString().padStart(2, "0") + "日"
+      + " " + ud.getHours().toString().padStart(2, "0") + ":"
+      + ud.getMinutes().toString().padStart(2, "0")
+    console.log(updateDate)
+  }
+
   return (
-    <p>
-      <span className="dot">﹥</span>
-      {d.toLocaleString(locale)}
-      <span className="split"> / </span>
-      {msToString(time)}
+    <p className="text-sm ">
+      {updateDate ? (
+        <>
+          <i className="ri-restart-line"></i>&nbsp;最終更新: {updateString}
+        </>
+      ) : (
+        <>
+          <i className="ri-time-fill"></i> &nbsp;記事公開: {publishString}
+        </>
+      )}
       {pageView != undefined && (
         <>
           <span className="split"> / </span>
@@ -31,39 +62,8 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, pageView }) => {
         </>
       )}
       <style jsx>{`
-        p {
-          color: ${theme.palette.accents_4};
-          font-size: 0.8rem;
-          display: inline-flex;
-          align-items: center;
-          font-family: ${theme.font.mono};
-        }
 
-        span {
-          user-select: none;
-          font-weight: bold;
-        }
-
-        .dot {
-          color: ${theme.palette.accents_7};
-          padding-right: 2px;
-        }
-
-        .split {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          color: ${theme.palette.success};
-          padding: 0 0.5rem;
-        }
-
-        @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
-          p {
-            text-align: center;
-            font-size: 0.75rem;
-          }
-        }
+     
       `}</style>
     </p>
   )
@@ -72,17 +72,18 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, pageView }) => {
 export interface TitleProps {
   title: string
   date: string
+  updateDate?: string
   pageView: number
 }
 
-const Title: React.FC<TitleProps> = ({ title, date, pageView }) => {
+const Title: React.FC<TitleProps> = ({ title, date, updateDate, pageView }) => {
   const theme = useTheme()
 
   return (
     <div className="title">
       <h1>{title}</h1>
       <div className="date-box">
-        <DateDisplay date={date} pageView={pageView} />
+        <DateDisplay date={date} updateDate={updateDate} pageView={pageView} />
       </div>
 
       <style jsx>{`

@@ -20,6 +20,7 @@ import { renderToString } from 'react-dom/server';
 export type PostMetadata = {
   title: string
   date: string
+  updateDate?: string
   tags?: Array<string>
   description?: string
   image?: string
@@ -88,6 +89,7 @@ const defaultProps = {
   meta: {
     title: '',
     date: new Date().toISOString(),
+    updateDate: new Date().toISOString(),
     tags: []
   },
 }
@@ -143,7 +145,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         {inDetailPage ? (
 
           <>
-            <Title title={meta.title} date={meta.date} pageView={pageView} />
+            <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
             <TagLinks tags={meta.tags} />
             <div className="dynamic-content">
               <IntroduceMyself />
