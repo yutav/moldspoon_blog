@@ -73,10 +73,10 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
                 </Link>
               </div>
             )}
-            {post.meta?.tags?.includes('初心者向け') && (
+            {post.meta?.tags?.includes('初級者向け') && (
               <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
                 <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85`} target="_blank"
-                  className={getTagColor('初心者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
+                  className={getTagColor('初級者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   初級者向け
                 </Link>
               </div>
@@ -92,7 +92,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <p className="py-0 m-0 mt-0 text-xs text-gray-700 dark:text-white">
             タグ: &nbsp;
             {post.meta?.tags?.map((value) => {
-              const excludedTags = ["経験者向け", "初心者向け", "Tips", "Blog"];
+              const excludedTags = ["経験者向け", "初級者向け", "Tips", "Blog"];
               if (excludedTags.includes(value)) {
                 return
               }

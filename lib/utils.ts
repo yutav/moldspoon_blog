@@ -67,7 +67,7 @@ export const getTagColor = (tag: string) => {
   else if (tag == '経験者向け') {
     bgText = "text-black hover:text-gray-900 bg-amber-200"
   }
-  else if (tag == '初心者向け') {
+  else if (tag == '初級者向け') {
     bgText = "text-black hover:text-gray-900 bg-purple-200"
   }
 
