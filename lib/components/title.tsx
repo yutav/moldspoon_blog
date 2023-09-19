@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react'
-import { msToString } from '../data-transform'
 import { useTheme } from '@geist-ui/core'
 import { Configs } from '../utils'
 
@@ -10,7 +9,6 @@ export interface DateDisplayProps {
 }
 
 const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView }) => {
-  const theme = useTheme()
 
   const d = useMemo(() => new Date(date), [])
   if (`${d}` === 'Invalid Date') return null
