@@ -1,0 +1,510 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'Open Interpreterをインストールし、オートでソースコードを実行させてみた。',
+  date: '2023-09-19T13:30:00.000Z',
+  tags: [
+    'Tips',
+    '初心者向け',
+    'プログラミング',
+    'Open AI',
+    'Code-Llama',
+    'Open Interpreter',
+    'ChatGPT',
+    'GPT-3.5-Turbo',
+    'やってみた'
+  ]
+}
+
+### 概要
+
+9月初旬にプレリリースv0.1.4版がリリースされるや、瞬く間に話題になった[Code Interpreter](https://github.com/KillianLucas/open-interpreter/releases)
+僕も友達に教えてもらって早速使ってみました。その中で、ハマったポイントや便利に使うためのTipsをご紹介します！
+
+参考までに、僕の環境は以下となります。
+
+<RichListNoBox
+  color="orange"
+  title="動作環境"
+  list={
+  [
+    'Mac Studio (M1 Max 32GB)',
+    'Mac OS Monterey 12.2',
+    'Python 2.7.18',
+  ]
+} />
+
+Mac Studioのほぼデフォルト。コンテナを使わないと汚れちゃいますが、**お試しということで一旦気にしない**ようにします。
+
+#### インストール
+
+**Read.me**に従って、gitからのチェックアウトと、インストールします。
+
+<RichLink 
+url="https://github.com/KillianLucas/open-interpreter" 
+icon='ri-github-fill'
+title="open-interpreter" 
+subtitle="Let language models run code on your computer."
+targetBlank={true}
+ />
+
+
+```
+git clone git@github.com:KillianLucas/open-interpreter.git
+cd openn-interpreter
+pip install open-interpreter
+interpreter
+```
+
+#### 起動して使ってみる
+
+プロジェクトのディレクトリで **interpreter**と打つだけで起動です。超シンプル！
+
+```
+yuta@yutanoMacStudio open-interpreter % interpreter
+
+●
+
+Welcome to Open Interpreter.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+▌ OpenAI API key not found
+
+To use GPT-4 (recommended) please provide an OpenAI API key.
+
+To use Code-Llama (free but less capable) press enter.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+```
+
+##### 利用するモデルの選択
+
+最初にプロンプトが表示されます。API keyを打ち込んでエンターを押すと、GPT-4、そのまま無条件でエンターを打つとCode-Llamaが選ばれるようです。
+自分はGPT-4のAPI keyを持っていないので、**Code-Llama**を選択。
+
+```
+OpenAI API key:
+
+▌ Switching to Code-Llama...
+
+Tip: Run interpreter --local to automatically use Code-Llama.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Open Interpreter will use Code Llama for local execution. Use your arrow keys to set up the model.
+```
+
+##### パラメータ数・品質の選択
+
+```
+Open Interpreter will use Code Llama for local execution. Use your arrow keys to set up the model.
+
+[?] Parameter count (smaller is faster, larger is more capable): 7B
+ > 7B
+   13B
+   34B
+```
+
+「Open Interpreterは、ローカル実行にCode Llamaを使用します。以下はモデルの設定です。」
+ということで、もっともパラメーター数が少なく、起動が早い**7B**を選択。
+
+```
+[?] Quality (smaller is faster, larger is more capable): Small | Size: 2.6 GB, Estimated RAM usage: 5.1 GB
+ > Small | Size: 2.6 GB, Estimated RAM usage: 5.1 GB
+   Medium | Size: 3.8 GB, Estimated RAM usage: 6.3 GB
+   Large | Size: 6.7 GB, Estimated RAM usage: 9.2 GB
+   See More
+```
+
+続いて、「品質」を選択。これもお試しということで、サイズが最も小さい**Small**を選択。
+
+```
+[?] Use GPU? (Large models might crash on GPU, but will run more quickly) (Y/n): Y
+```
+
+GPUを使うか？ということだったので、**Yes**を選択
+
+**選択したモデル**のダウンロードが始まるので、しばらく待ちます。
+
+#### 起動準備完了
+
+```
+Open Interpreter will require approval before running code. Use interpreter -y to bypass this.
+
+Press CTRL-C to exit.
+
+>
+
+  Let's start with the plan. You want me to write a program that can complete any goal by executing code. To do this, we need to use a programming language that allows us to execute arbitrary code. Python is a popular choice because it has a wide range of
+  libraries and frameworks that make it easy to perform various tasks.
+
+  Here's the first step:
+
+```
+
+インストールが完了し、「>」の文字が表示されたので、よく英語を読まずにエンターを連打していたところ、下記のような
+文言が表示され無限ループとなってしまいました。
+
+```
+
+  # Import the necessary libraries
+  import os
+  import sys
+  import subprocess
+
+  # Set up the environment
+  os.environ['PYTHONPATH'] = '/Users/yuta/dev/test/open-interpreter'
+  sys.path.append('/Users/yuta/dev/test/open-interpreter')
+
+
+  Would you like to run this code? (y/n)
+
+
+
+> y
+
+
+
+
+  # Import the necessary libraries
+  import os
+  import sys
+  import subprocess
+
+  # Set up the environment
+  os.environ['PYTHONPATH'] = '/Users/yuta/dev/test/open-interpreter'
+  sys.path.append('/Users/yuta/dev/test/open-interpreter')
+
+
+  Would you like to run this code? (y/n)
+  
+  # 以下延々と続く...
+```
+
+これは、**Open Interpreter**が何か悪いわけではなくて、プロンプトに対し無言回答で連打を繰り返したために、ループにはまってしまったようです。
+**Ctrl-C**を押して、起動を終了させ、再度
+
+```
+interpreter
+```
+
+で起動します。
+
+#### Code-Llamaの指定ではだめ？
+
+次は、以下のように命令文を打ちました。
+
+```
+// 起動時にパラメータ数・品質を選ぶのは今までと同じ。
+
+[?] Use GPU? (Large models might crash on GPU, but will run more quickly) (Y/n): y
+
+Model found at /Users/yuta/Library/Application Support/Open Interpreter/models/codellama-7b-instruct.Q2_K.gguf
+
+▌ Model set to TheBloke/CodeLlama-7B-Instruct-GGUF
+
+Open Interpreter will require approval before running code. Use interpreter -y to bypass this.
+
+Press CTRL-C to exit.
+
+> 日本の東京の、１年間の日の出日の入り時刻を出力するソースコードを教えて
+
+  To start with, let's find out what you want me to do. Please provide me with more information about the task you want me to complete.
+
+> 日本の東京の、１年間の日の出日の入り時刻を出力するソースコードをPythonで出力して教えてください。
+
+  To start with, let's find out what you want me to do. Please provide me with more information about the task you want me to complete.
+
+>
+```
+
+どうもうまく会話が通じません...。
+
+#### ChatGPT3.5なら使えることが判明。切り替える。
+
+ここで、友人から以下の起動でAPI keyを入力さえすれば、ChatGPT4ではなく、**ChatGPT 3.5なら使える**ことを教えてもらいました。
+普段使い慣れている
+
+```
+interpreter --local
+```
+
+Open AI Plusに入っているので、3.5なら使えます。
+
+起動後、Open AIのAPI Keysから取得したキーを打ち込みます。
+
+<RichLink 
+url="https://platform.openai.com/account/api-keys" 
+icon='ri-openai-fill'
+title="API keys - OpenAI API" 
+subtitle="Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them."
+targetBlank={true}
+ />
+
+```
+yuta@yutanoMacStudio open-interpreter % interpreter --fast
+
+●
+
+Welcome to Open Interpreter.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+▌ OpenAI API key not found
+
+To use GPT-4 (recommended) please provide an OpenAI API key.
+
+To use Code-Llama (free but less capable) press enter.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+OpenAI API key: sk-fJpnmqmWdvvxxxxxx63mMfbNrliLDlYeBxxxxxxNjOh1Si0PTYrm
+
+Tip: To save this key for later, run export OPENAI_API_KEY=your_api_key on Mac/Linux or setx OPENAI_API_KEY your_api_key on Windows.
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+▌ Model set to GPT-3.5-TURBO
+
+Tip: To run locally, use interpreter --local
+
+Open Interpreter will require approval before running code. Use interpreter -y to bypass this.
+
+Press CTRL-C to exit.
+
+>
+```
+
+無事GPT-3.5-TURBOにモデルがセットされました。
+
+##### いい感じで動き出す。
+
+プロンプトに先ほどと同じ内容を入力したところ、MacのUnix環境を使ってどんどんPythonが動き出しました。**必要なライブラリを勝手にインストールしてくれる！** ので、yを押します。
+
+```
+> 日本の東京の、１年間の日の出日の入り時刻を出力するソースコードをPythonで出力して教えてください。
+
+  プラン：
+
+   1 datetime モジュールを使用して現在の日付を取得します。
+   2 pytz パッケージを使用して東京のタイムゾーンを設定します。
+   3 sunrise-sunset パッケージを使用して日の出と日の入りの時刻を取得します。
+   4 取得した時刻を出力します。
+
+  コードを実行してみましょう。
+
+
+
+  from datetime import date
+  import pytz
+  from sunrise_sunset import SunriseSunset
+
+  # 現在の日付を取得
+  today = date.today()
+
+  # 東京のタイムゾーンを設定
+  tz = pytz.timezone('Asia/Tokyo')
+
+  # 日の出と日の入りの時刻を取得
+  ss = SunriseSunset(date=today, latitude=35.6895, longitude=139.6917)
+  sunrise = ss.sunrise(tz)
+  sunset = ss.sunset(tz)
+
+  # 時刻を出力
+  print(f'日の出時刻: {sunrise}')
+  print(f'日の入り時刻: {sunset}')
+
+
+  Would you like to run this code? (y/n)
+```
+
+##### 手動実行を求められる
+
+ちょっと長いですが、以下のように**段階を踏んで実行するようてはずが整えられます。**
+フルオートとはいかず、手動実行を求められるようです...。
+
+感覚的には**まだソフトウェアとしてはチューニングが足りず、手動で逃げているところも多いのかな？** と。この辺りは
+今後の課題ですが、**良くなっていく雰囲気がぷんぷんしていますね！**
+
+```
+ Would you like to run this code? (y/n)
+
+  y
+
+
+  from datetime import date
+  import pytz
+  from sunrise_sunset import SunriseSunset
+
+  # 現在の日付を取得
+  today = date.today()
+
+  # 東京のタイムゾーンを設定
+  tz = pytz.timezone('Asia/Tokyo')
+
+  # 日の出と日の入りの時刻を取得
+  ss = SunriseSunset(date=today, latitude=35.6895, longitude=139.6917)
+  sunrise = ss.sunrise(tz)
+  sunset = ss.sunset(tz)
+
+  # 時刻を出力
+  print(f'日の出時刻: {sunrise}')
+  print(f'日の入り時刻: {sunset}')
+
+
+  File "<stdin>", line 8, in <module>
+  ModuleNotFoundError: No module named 'sunrise_sunset'
+
+
+  申し訳ありません、sunrise-sunset パッケージが見つからないようです。パッケージをインストールしてから再度実行します。
+
+  コードを実行してみましょう。
+
+
+
+  !pip install sunrise-sunset
+
+
+  Would you like to run this code? (y/n)
+
+  y
+
+
+  !pip install sunrise-sunset
+
+
+  Traceback (most recent call last):
+    File "/opt/homebrew/lib/python3.10/site-packages/interpreter/code_interpreter.py", line 183, in run
+      code = self.add_active_line_prints(code)
+    File "/opt/homebrew/lib/python3.10/site-packages/interpreter/code_interpreter.py", line 282, in add_active_line_prints
+      return add_active_line_prints_to_python(code)
+    File "/opt/homebrew/lib/python3.10/site-packages/interpreter/code_interpreter.py", line 454, in add_active_line_prints_to_python
+      tree = ast.parse(code)
+    File "/opt/homebrew/Cellar/python@3.10/3.10.12_1/Frameworks/Python.framework/Versions/3.10/lib/python3.10/ast.py", line 50, in parse
+      return compile(source, filename, mode, flags,
+    File "<unknown>", line 1
+      !pip install sunrise-sunset
+      ^
+  SyntaxError: invalid syntax
+
+
+
+  申し訳ありません、!pip install コマンドは実行できません。代わりに、パッケージを手動でインストールする方法をお伝えします。
+
+   1 ターミナルを開きます。
+   2 以下のコマンドを実行して sunrise-sunset パッケージをインストールします。
+
+
+   pip install sunrise-sunset
+
+
+   3 インストールが完了したら、再度コードを実行してください。
+
+  コードを実行してみましょう。
+
+  // 以下、手続きの出力が続く...
+```
+
+#### yesオプション指定、フルオートでやり直してみる。
+
+**最初からやり直すと全く違う結果が出る** 、と同じ友人から聞いていたので実行してみます。
+ついでに、
+
+```
+interpreter -y --fast
+```
+
+と指定すると面倒なライブラリなどのインストールもyesを連打する形でやってくれるとのこと。
+**yumとかapt-getのinstall時のyオプションと同じ** 、ということですね。
+叩いて待ちます。
+
+```
+  // ここまでに、geopy sunrise_sunsetなどさまざまなライブラリを試した模様...
+
+  申し訳ありませんが、geopy パッケージも見つかりませんでした。別の方法を試してみましょう。
+
+  代わりに、pytz パッケージと requests パッケージを使用して日の出と日の入りの時刻を取得する方法があります。pytz パッケージはタイムゾーン情報を取得し、requests パッケージはAPIを使用して日の出と日の入りの時刻を取得します。
+
+  pytz パッケージと requests パッケージをインストールして、コードを実行してみましょう。
+
+
+
+  from datetime import datetime
+  import pytz
+  import requests
+
+  # 東京の位置情報を取得
+  latitude = 35.6895
+  longitude = 139.6917
+
+  tz = 'Asia/Tokyo'
+
+  # 現在の日付を取得
+  now = datetime.now()
+
+  # 日の出と日の入りの時刻を取得
+  url = f'https://api.sunrise-sunset.org/json?lat={latitude}&lng={longitude}&date={now.strftime("%Y-%m-%d")}&formatted=0'
+  response = requests.get(url)
+  data = response.json()
+  sunrise_time = datetime.fromisoformat(data['results']['sunrise']).astimezone(pytz.timezone(tz)).strftime('%H:%M:%S')
+  sunset_time = datetime.fromisoformat(data['results']['sunset']).astimezone(pytz.timezone(tz)).strftime('%H:%M:%S')
+
+  # 結果を出力
+  sunrise_time, sunset_time
+
+
+  ('05:25:10', '17:45:18')
+
+
+  東京の現在の日の出時刻は午前5時25分10秒で、日の入り時刻は午後5時45分18秒です。
+```
+
+でたあ！いい感じです。
+
+### まとめ
+
+GPT3.5だったからこの精度で、GPT4ならばもっともっといい精度で、素早く結果が出るかも。
+かつ、品質やパラメーター数も増やすことができるので、**リソースを潤沢に使える環境ならばもっといい結果が出そう**ですね。
+
+AWSやGCPで時間借りして試すのもいいかも。
+
+今や世界中で話題沸騰になっている**Open Interpreter**ですが、
+公式ドキュメントによると以下のコマンドで**好きなモデルも選択できる**ようで、
+
+```
+interpreter --model tiiuae/falcon-180B
+```
+
+<RichLink 
+url="https://github.com/KillianLucas/open-interpreter#running-open-interpreter-locally" 
+icon='ri-github-fill'
+title="Running Open Interpreter locally" 
+subtitle="You can run interpreter in local mode from the command line to use Code Llama:..."
+targetBlank={true}
+ />
+
+
+ローカルでさまざまなAIモデルを試せるというのはとても魅力的ですね。
+今後はAI専門家がプロジェクトメンバにいなかったとしても、自社にあったAIモデルでR&Dを行うことができる、
+なんて日も近くなっているのかもしれません...！胸熱！
+<br />
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
