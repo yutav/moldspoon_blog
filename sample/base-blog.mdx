@@ -1,7 +1,35 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'title',
+  date: '2023-08-31T06:50:00.000Z',
+  tags: [
+    'Tips',
+    'プログラミング'
+  ]
+}
 
 ### 本記事のゴール
 
 ### 作業
 
 ### まとめ
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
 

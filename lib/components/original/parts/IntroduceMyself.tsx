@@ -1,5 +1,4 @@
 import Link from "next/link"
-import MdxImage from "./MdxImage"
 
 type Prop = {
 }

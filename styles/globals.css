@@ -18,6 +18,20 @@ body div a {
   @apply mt-4 mb-8
 }
 
+.container h2 {
+  @apply text-lg bg-orange-400 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
+}
+
+.container h2:before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 10%;
+  margin-left: -15px;
+  border: 15px solid transparent;
+  border-top: 15px solid #fb923c;
+}
+
 .container h3 {
   @apply mt-16 mb-8;
 }
