@@ -53,3 +53,47 @@ pre.language-html {
   border-top-left-radius: 0px !important;
   border-top-right-radius: 0px !important;
 }
+
+/* IntroduceMyself */
+
+.balloon2-left {
+  position: relative;
+  display: inline-block;
+  padding: 7px 10px;
+  min-width: 120px;
+  max-width: 100%;
+  border: solid 3px #555;
+  box-sizing: border-box;
+}
+
+.balloon2-left:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -24px;
+  margin-top: -12px;
+  border-right: 14px solid #FFF;
+  border: 12px solid transparent;
+  z-index: 2;
+}
+
+.balloon2-left:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -30px;
+  margin-top: -14px;
+  border: 14px solid transparent;
+  border-right: 15px solid #555;
+  z-index: 1;
+}
+
+.balloon2-left p {
+  margin: 0;
+  padding: 0;
+}
+
+img.overImage {
+  width: 100px !important;
+  height: 100px !important;
+}
