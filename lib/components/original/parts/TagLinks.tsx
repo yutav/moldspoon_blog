@@ -14,7 +14,7 @@ const TagLinks: React.FC<Prop> = ({ tags }) => {
         const encodedTag = encodeURI(tag)
         return (
           <Link href={`/tags/${encodedTag}`} target="_blank" className="mr-2 mb-2" key={index}>
-            <span className={getTagColor(tag) + " px-4 py-1 rounded-xl text-center"}>
+            <span className={getTagColor(tag) + " text-xs md:text-base px-4 py-1 rounded-xl text-center"}>
               {tag}
             </span>
           </Link>
