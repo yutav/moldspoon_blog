@@ -3,19 +3,8 @@ import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
 import Image from "next/image"
 import { getTagColor } from 'lib/utils'
+import DateDisplay from 'lib/components/date-display'
 
-const options: Intl.DateTimeFormatOptions = {
-  weekday: 'short',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-}
-
-const getDateString = (date: string = ''): string => {
-  const d = new Date(date)
-  if (`${d}` === 'Invalid Date') return ''
-  return new Date(date).toLocaleString('ja', options).replace('日', '日, &nbsp;')
-}
 
 export interface PostItemProps {
   post: {
@@ -23,6 +12,7 @@ export interface PostItemProps {
     name: string
     meta?: {
       date?: string
+      updateDate?: string
       title?: string
       tags?: Array<string>
     }
@@ -85,10 +75,10 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           <Link href={post.url} passHref className="hover:opacity-80 ">
             <span className={"text-black dark:text-white md:text-base lg:text-xl xl:text-2xl font-bold"}>{post.name}</span>
           </Link>
-          <span
-            className={"text-black dark:text-white text-sm leading-loose block z-0"}
-            dangerouslySetInnerHTML={{ __html: getDateString(post.meta?.date) }}
-          />
+
+          <div className="py-2">
+            <DateDisplay date={post.meta?.date ?? ""} updateDate={post.meta?.updateDate} />
+          </div>
           <p className="py-0 m-0 mt-0 text-xs text-gray-700 dark:text-white">
             タグ: &nbsp;
             {post.meta?.tags?.map((value) => {
