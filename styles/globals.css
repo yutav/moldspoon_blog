@@ -23,7 +23,7 @@ body div a {
 }
 
 .container h4 {
-  @apply mt-12 mb-8 border-t-2 border-b-2 border-purple-800 dark:border-purple-400 text-purple-800 dark:text-purple-400
+  @apply mt-12 mb-8 border-t-2 border-b-2 border-purple-800 dark:border-purple-300 text-purple-800 dark:text-purple-300
 }
 
 .container h5 {
