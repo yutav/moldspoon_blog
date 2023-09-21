@@ -220,11 +220,9 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         .container :global(h4) {
           font-size: 1.2rem;
           padding: 0.25rem 0.5rem;
-          border-top: 2px solid purple;
-          border-bottom: 2px solid purple;
-          color: purple;
         }
 
+        
         .container :global(h5) {
           padding-left: 0.5rem;
           padding-bottom: 0.25rem;
