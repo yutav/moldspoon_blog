@@ -202,15 +202,27 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           font-size: 1.4rem;
           padding-left: 0.25rem;
           padding-bottom: 0.5rem;
-          border-bottom: 5px dotted #f0f0f0;
+          border-bottom: 3px solid #f0f0f0;        
+          position: relative; /* 親要素に対して相対的な位置を設定 */
+        }
         
+        .container :global(h3)::after {
+          content: "";
+          display: block;
+          position: absolute;
+          bottom: -3px;
+          left: 0;
+          width: 100px;
+          height: 3px;
+          background-color: #FFA500;
         }
 
         .container :global(h4) {
           font-size: 1.2rem;
-          padding-left: 0.25rem;
-          padding-bottom: 0.25rem;
-          border-bottom: 2px groove #f8f8f8;
+          padding: 0.25rem 0.5rem;
+          border-top: 2px solid purple;
+          border-bottom: 2px solid purple;
+          color: purple;
         }
 
         .container :global(h5) {

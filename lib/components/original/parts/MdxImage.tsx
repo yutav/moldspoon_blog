@@ -9,9 +9,10 @@ interface Prop {
   alt: string
   width?: number
   height?: number
+  classStr?: string
 }
 
-const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height }) => {
+const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr }) => {
 
   let imageUrl
   if (month) {
@@ -27,7 +28,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height }
       {
         month ? (
           <Image
-            className={styles.image}
+            className={styles.image + " " + classStr}
             src={imageUrl}
             alt={alt}
             layout={"fill"}
@@ -35,7 +36,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height }
           />
         ) : (
           <Image
-            className={styles.image}
+            className={styles.image + " " + classStr}
             src={imageUrl}
             alt={alt}
             width={width}
