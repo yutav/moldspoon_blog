@@ -43,14 +43,14 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView })
   }
 
   return (
-    <p className="text-sm ">
+    <p className="text-sm text-gray-900 dark:text-white">
       {updateDate ? (
         <>
-          <i className="ri-restart-line"></i>&nbsp;最終更新: {updateString}
+          <i className="ri-restart-line"></i>&nbsp; {updateString}
         </>
       ) : (
         <>
-          <i className="ri-time-fill"></i> &nbsp;記事公開: {publishString}
+          <i className="ri-time-fill"></i> &nbsp; {publishString}
         </>
       )}
       {pageView != undefined && (
