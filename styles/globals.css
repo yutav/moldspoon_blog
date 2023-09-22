@@ -19,7 +19,7 @@ body div a {
 }
 
 .container h2 {
-  @apply text-lg bg-orange-400 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
+  @apply text-lg bg-orange-400 dark:bg-orange-700 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
 }
 
 .container h2:before {
@@ -30,6 +30,12 @@ body div a {
   margin-left: -15px;
   border: 15px solid transparent;
   border-top: 15px solid #fb923c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .container h2:before {
+    border-top: 15px solid #C2410C;
+  }
 }
 
 .container h3 {
@@ -50,11 +56,11 @@ body div a {
 
 
 blockquote {
+  @apply !bg-red-100 dark:!bg-red-900;
   max-width: 500px;
   position: relative;
   padding: 30px 50px !important;
   color: #333333;
-  background-color: #ffeeee !important;
 }
 
 blockquote::before {
