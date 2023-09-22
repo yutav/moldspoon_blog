@@ -1,0 +1,173 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'Next.jsプロジェクトでFirebaseに初めてデータを入れようとする時に出たエラーを修正する方法',
+  date: '2023-09-22T13:54:00.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'React',
+    'Next.js',
+    'Firebase',
+    'Cloud Firestore',
+    'フロントエンド',
+    'エラー',
+    'プログラミング'
+  ]
+}
+
+### 問題
+
+手元の**Next.jsプロジェクト** に、**Firebase DB** への接続設定を追加し、**テストテーブルにデータを投げ込もう** としています。
+公式ドキュメントの手順に従って、以下のように処理を組んだところ、try~catchでエラーの方に入ってしまいました。
+
+<RichLink 
+url="https://firebase.google.com/docs/firestore/quickstart" 
+icon='ri-google-fill'
+title="Cloud Firestore" 
+subtitle="GCPでFirebase (Cloud Firestore)を利用するときのチュートリアル"
+targetBlank={true}
+ />
+
+ ### エラーが出てしまった実装
+
+<CodeBlockTitle title="page/test.tsx" />
+
+```typescript
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, addDoc } from "firebase/firestore";
+
+// Vercelでのデプロイを想定しているので、あらかじめ
+// 公式ドキュメントの通り、以下のURLで取れるキーを.env以下に環境に合わせて移しておきます
+// https://support.google.com/firebase/answer/7015592
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
+  measurementId: process.env.FIREBASE_MEASUREMENT_ID
+}
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore()
+const bmcCollection = collection(db, "sample-table-name");
+
+addDoc(bmcCollection, {
+  text1: 'hogehoge',
+  text2: 'fugafuga'
+})
+.then((docRef) => {
+  console.log("Document written with ID: ", docRef.id);
+})
+.catch((error) => {
+  console.error("Error adding document: ", error);
+});
+
+```
+
+#### エラー内容を確認
+
+Chromeの**コンソール**を確認したところ以下のようなエラーとなりました。
+
+```
+client.js:1 Error adding document:  FirebaseError: Missing or insufficient permissions.
+```
+
+さらに、実行中の`yarn run dev`で動かしているNext.jsのコンソールの方でも以下のようなエラーが。
+
+```
+[2023-09-22T13:51:11.752Z]  @firebase/firestore: Firestore (10.4.0): GrpcConnection RPC 'Write' stream 0x10b0dcb0 error. Code: 7 Message: 7 PERMISSION_DENIED: Missing or insufficient permissions.
+Error adding document:  [FirebaseError: 7 PERMISSION_DENIED: Missing or insufficient permissions.] {
+  code: 'permission-denied',
+  customData: undefined,
+  toString: [Function (anonymous)]
+}
+```
+
+これは何か設定が悪いのだろうか...
+
+### 対処
+
+#### Googleで検索してみた
+
+以下のような公式のエラーコード一覧ページが引っかかりました。
+
+<RichLink 
+url="https://firebase.google.com/docs/auth/admin/errors?hl=ja" 
+icon='ri-google-fill'
+title="Admin Authentication API エラー " 
+subtitle="Firebase Admin Node.js Authentication API によってスローされるエラーコードとその説明"
+targetBlank={true}
+ />
+
+**insufficient permissions** でページ内検索したところ、
+
+> auth/insufficient-permission	Admin SDK の初期化に使用された認証情報に、リクエストされた Authentication リソースにアクセスするための権限がありません。適切な権限を持つ認証情報を生成し、その認証情報を使用して Admin SDK を認証する方法については、Firebase プロジェクトを設定するをご覧ください。
+
+と説明が。やはり**認証設定が何かおかしい** ようです。
+先ほど、本番環境向けということで設定した、以下の**ルール** ページを見直してみます。
+
+<RichLink 
+url="https://console.firebase.google.com/project/moldspoon/firestore/rules?hl=ja" 
+icon='ri-google-fill'
+title="Cloud Firestore ルール" 
+subtitle="独自言語で、認証周りのルールを設定するページです。"
+targetBlank={true}
+ />
+
+よく見ると、
+
+
+```plain
+allow read, write: if false;
+```
+
+
+となっている行が...
+
+```plain
+allow read, write: if true;
+```
+
+こちらに変えて、「公開」を押してしばらく待ちます。（反映には少し時間がかかるみたいです。）
+
+ページをリロードすると...
+
+```
+Document written with ID:  bn6wWinqLoxxxxxxxxxx
+```
+
+**無事、例外を発出せず登録処理が成功しました！**
+
+<MdxImage month="202309" image="firebase-add-first-result.png" month="202309" />
+
+GUIから見てもデータができていますね🤗
+
+### まとめ
+
+この設定(当初はfalseにしておく)は、従量課金のシステムということで、**いきなり不正な利用で課金死しないよう、
+Googleの方で用意してくれたフェイルセーフ** である、不慣れな状況下では詰まりやすく、そういえば前も同じところで
+詰まったなと思って、改めてまとめました。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
