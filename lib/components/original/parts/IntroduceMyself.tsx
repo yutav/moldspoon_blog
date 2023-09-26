@@ -9,8 +9,6 @@ const IntroduceMyself: React.FC<Prop> = () => {
       <div className="bg-gray-200 dark:bg-gray-800 p-3 pl-28 md:pl-32 mr-2 md:mr-0 rounded absolute z-1 mt-5">
         <div className="balloon2-left bg-white dark:bg-gray-900 text-black dark:text-white px-3 py-2 md:px-4 md:py-3 shadow rounded text-xs md:text-base
         h-16 md:h-auto
-        before:border-r-4 before:dark:border-r-white
-        after:border-r-5 after:dark:border-r-white
       ">
           こんにちは、Webサービス開発者の<Link href="https://twitter.com/yuku_tas">yuku_tas</Link>です。
         </div>
@@ -37,6 +35,12 @@ const IntroduceMyself: React.FC<Prop> = () => {
         border-right: 12px solid #FFF;
         z-index: 2;
       }
+      @media (prefers-color-scheme: dark) {
+        .balloon2-left:before {
+          border-right: 12px solid #111727;
+        }
+      }
+      
       
       .balloon2-left:after {
         content: "";
