@@ -73,7 +73,7 @@ const Toc: React.FC<Prop> = ({ body }) => {
   return (
     <div className={`toc xl:fixed xl:pl-8 xl:top-16 hidden xl:block `}>
       <div className="toc-box p-2 rounded-xl break-words">
-        <div className="rounded-xl shadow-2xl bg-white dark:bg-black px-4 py-2">
+        <div className="rounded-xl shadow-xl bg-white dark:bg-black px-4 py-2">
           <p className="pt-0 font-bold">目次</p>
           {renderToc(tocObject)}
         </div>
