@@ -1,6 +1,6 @@
 const BLOG = {
-  author: 'Moldspoon Inc. blog',
-  title: 'MoldSpoon Inc. blog',
+  author: 'yuku_tas',
+  title: 'モルドスプーンブログ',
   description:
     "iOS&Androidスマホアプリ・フロント/バックエンド開発を得意とするMoldSpoon Inc.の公式ブログです。",
   summary: 'iOS&Androidスマートフォン開発(Swift/Kotlin/Flutter) および Next.js/LaravelをはじめとしたWeb開発ならば、ぜひ創業13年の弊社にお任せください。ワンストップでお届けします。お問合せは<a href="https://moldspoon.jp/#contact" target="_blank">こちら</a>から',

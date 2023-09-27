@@ -33,7 +33,7 @@ export const Configs = {
 
 
 export const changeTitle = ({ title }: { title: string }) => {
-  return title + "-" + Configs.title
+  return title + " - " + Configs.title
 }
 
 export const fixedEncodeURIComponent = (

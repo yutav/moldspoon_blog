@@ -1,0 +1,149 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'VSCodeにturbo-console-logを入れてデバッグをスムーズに',
+  date: '2023-09-28T00:37:00.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'Vercel',
+    'Zod',
+    'バリデーション',
+    'フロントエンド',
+  ]
+}
+
+### 問題
+
+個人開発をしていると、長いソースコードを分割してクラス化・コンポーネント化することを後回しにしがちです...。
+
+
+いつかはやらなきゃいけない作業なんですが、ヒットしない可能性もある初期のプロダクトのソースだと保守性は犠牲にすることもありますね。
+
+具体的には、以下のような多重なコールバックで処理を受け取っているようなところがどうしても増えます。
+
+<CodeBlockTitle title="page/sample.tsx" />
+
+```typescript
+const onSubmit = async (formData) => {
+
+    setTimeout(async function () {
+
+      addDoc(bmc, formData)
+        .then(async (docRef) => {
+
+// 以下略
+        }
+    }
+}
+
+```
+
+ということで、こうしたケースではクライアントサイドの処理の**デバッグのためにconsole.logを多用する**ことになります。
+
+
+ただ、コピペで入れていくのがとても面倒です。消すのも面倒です。ということで、VSCodeのマーケットを検索したところ、以下の
+**turbo-console-log**を見つけました！
+
+
+<RichLink 
+url="https://marketplace.visualstudio.com/items?itemName=ChakrounAnas.turbo-console-log" 
+icon='ri-plug-fill'
+title="Turbo Console Log" 
+subtitle="Automating the process of writing meaningful log messages."
+targetBlank={true}
+ />
+<br />
+<MdxImage month="202309" image="turbo-console-log.png" />
+
+**ロケットのマークがイカしてる。**
+
+### 実際に試す
+
+インストール後表示される画面の説明には以下のようにあります。
+
+>I) Insert meaningful log message automatically
+>Two steps:
+>
+>Selecting or hovering the variable which is the subject of the debugging (Manual selection will always take over the hover selection)
+>
+>Pressing ctrl + alt + L (Windows) or ctrl + option + L (Mac)
+>
+>The log message will be inserted in the next line relative to the selected variable like this:
+>
+>console.log("SelectedVariableEnclosingClassName -> SelectedVariableEnclosingFunctionName -> SelectedVariable", SelectedVariable)
+>
+> 日本語訳:
+>
+>I) 意味のあるログメッセージを自動的に挿入する 2つのステップ：
+>
+>デバッグの対象となる変数を選択するかホバーする（手動選択は常にホバー選択を引き継ぐ）
+>
+>ctrl + alt + L (Windows) または ctrl + option + L (Mac) を押す。
+>
+>次のように、選択した変数に関連する次の行にログメッセージが挿入されます：
+>
+>console.log("SelectedVariableEnclosingClassName -> SelectedVariableEnclosingFunctionName -> SelectedVariable", SelectedVariable)
+
+私の環境はMacなので、出力を行いたい変数を左クリック=>
+カーソルを合わせて**ctrl + option + L** を実行します。
+<MdxImage month="202309" image="turbo-console-log-animation.gif" />
+
+うまくいきましたね。
+
+#### 様々なオプション
+
+他にも以下のことができるみたいです！
+
+##### 複数変数を出力 optionを押しながら変数選択、ctrl+option+L 
+**optionを押しながらマウスの左クリック**で複数の変数を選択した上で、**ctrl + option + L (Mac)** を押すと、一気にconsole.logを設置できます。
+
+##### ファイルのconsole.logを全てコメントアウト option+shift+c
+大量に追加されたconsole.logもこのコマンド一発で無効にできます。
+
+##### ファイルのconsole.logのコメントアウトを取り消し option+shift+u
+**ファイル内の全てのconsole.logに対するコメントアウト** をこのコマンド一発で無効にできるようです。
+
+（実践の中で試したいと思います）
+
+##### ファイルのconsole.logを全て削除 option+shift+d
+全削除するにはこちらです。
+
+（実践の中で試したいと思います）
+
+### まとめ
+
+これは便利なライブラリですね。長年のconsole.logに対する問題点を一発で解消できそうでしたー。
+
+<br />
+
+ただ、根本的な問題は上にも書いた通り。
+
+<br />
+
+console.logを多用しないとデバッグできないソースコードの保守性の悪さなので、こまめに
+リファクタリングするように気をつけたいと思います！笑
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
+
+
+https://marketplace.visualstudio.com/items?itemName=ChakrounAnas.turbo-console-log

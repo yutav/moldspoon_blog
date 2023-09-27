@@ -43,11 +43,22 @@ module.exports = {
           "100%": {
             opacity: "1"
           }
+        },
+        slideInFwdLeft: {
+          "0%": {
+            transform: "translateZ(-20px) translateX(-20px)",
+            opacity: "0"
+          },
+          "100%": {
+            transform: "translateZ(0) translateX(0)",
+            opacity: "1"
+          }
         }
       },
       animation: {
         slideInTop: "slideInTop 3.0s cubic-bezier(0.250, 0.460, 0.450, 0.940) both",
         slideInFwdCenter: "slideInFwdCenter 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940)   both",
+        slideInFwdLeft: "slideInFwdLeft 0.4s cubic-bezier(0.250, 0.460, 0.450, 0.940)   both",
         flashShort: "flashFade 1.0s forwards",
         fadeIn: "fadeIn 0.5s cubic-bezier(0.390, 0.575, 0.565, 1.000)   both",
         textFocusIn: "textFocusIn 1.0s cubic-bezier(0.550, 0.085, 0.680, 0.530)   both"
