@@ -137,7 +137,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   }
 
   return (
-    <section className="">
+    <section className="animate-fadeIn">
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
       <div className="container p-0 lg:px-12 bg-white dark:bg-black shadow">
         <Spacer />
