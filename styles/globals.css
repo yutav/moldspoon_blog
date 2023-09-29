@@ -4,11 +4,11 @@
 
 * {
   @apply text-black dark:text-white;
-  font-family: var(--stk-base-font-family,"游ゴシック","Yu Gothic","游ゴシック体","YuGothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif);
+  font-family: var(--stk-base-font-family, "游ゴシック", "Yu Gothic", "游ゴシック体", "YuGothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif);
 }
 
 p {
-  font-family: var(--stk-base-font-family,"游ゴシック","Yu Gothic","游ゴシック体","YuGothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif) !important;
+  font-family: var(--stk-base-font-family, "游ゴシック", "Yu Gothic", "游ゴシック体", "YuGothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif) !important;
 }
 
 body div a {
@@ -61,7 +61,7 @@ body div a {
 
 
 blockquote {
-  @apply !bg-gray-50 dark:!bg-gray-900 dark:!text-white;
+  @apply !bg-gray-50 dark: !bg-gray-900 dark: !text-white;
   max-width: 100%;
   position: relative;
   padding: 30px 50px !important;
