@@ -3,7 +3,12 @@
 @import "tailwindcss/utilities";
 
 * {
-  @apply text-black dark:text-white
+  @apply text-black dark:text-white;
+  font-family: var(--stk-base-font-family,"游ゴシック","Yu Gothic","游ゴシック体","YuGothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif);
+}
+
+p {
+  font-family: var(--stk-base-font-family,"游ゴシック","Yu Gothic","游ゴシック体","YuGothic","Hiragino Kaku Gothic ProN",Meiryo,sans-serif) !important;
 }
 
 body div a {
