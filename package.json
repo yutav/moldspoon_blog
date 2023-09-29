@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "npm run collect && next dev",
-    "dev": "export NODE_ENV=dev && npm run collect && next dev",
+    "dev": "export NODE_ENV=dev && npm run collect && next dev -p 3001",
     "now-build": "npm run collect && next build && npx next-sitemap --config sitemap.config.js",
     "post": "node scripts/create.js",
     "prettier": "prettier --write .",

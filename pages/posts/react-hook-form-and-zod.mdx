@@ -1,0 +1,275 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'react-hook-formと組み合わせるバリデーションライブラリ５選',
+  date: '2023-09-28T00:37:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'Vercel',
+    'Zod',
+    'Yup',
+    'Superstruct',
+    'Joi',
+    'Class-Validator',
+    'バリデーション',
+    'フロントエンド',
+  ]
+}
+
+ReactやNext.jsでフォームのバリデーションを行いたいけれど、どのバリデーションライブラリを選べばいいのか分からない方向け！
+
+この記事では、専門用語を最小限に抑え、初学者でも分かるようにReact Hook Formと組み合わせて使えるバリデーションライブラリについて解説します。それぞれのライブラリの特徴や使い方を紹介しますので、ぜひ参考にしてください😀
+
+## はじめに
+まず、react-hook-formが公式で対応している、フォームバリデーションライブラリは下記で確認できます！
+本記事はこちらをもう少し、細かく掘り下げていきます。
+
+<RichLink 
+url="https://github.com/react-hook-form/resolvers" 
+icon='ri-github-fill'
+title="react-hook-form/resolvers" 
+subtitle="Validation resolvers: Yup, Zod, AJV, Joi, Superstruct, Vest, class-validator, io-ts, typanion, Ajv, TypeBox, Valibot and nope."
+targetBlank={true}
+ />
+
+### 1. Zod
+ZodはReactやNext.jsでバリデーションを行う際に日本国内では人気の(2023年9月現在)バリデーションライブラリで、**私も開発プロジェクトで使用しています。**
+React Hook Formと組み合わせると、以下のように使えます。
+
+```jsx
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+const schema = z.object({
+  username: z.string().min(3),
+  email: z.string().email(),
+});
+
+function MyForm() {
+  const { register, handleSubmit, errors } = useForm({ resolver: zodResolver(schema) });
+
+  // フォームの残りの部分を記述
+
+  return (
+    // フォームのUIを記述
+  );
+}
+```
+
+#### 長所:
+
+- シンプルなスキーマ定義でバリデーションが可能。
+- TypeScriptとの親和性が高い。
+
+#### 短所:
+- カスタムバリデーションルールを設定する際、やや複雑。状況によるが、バリデーションルールが超長くなる。
+
+```
+ex z.string({message: 'xxxxx'}).min(3).max(100).nullable() ... 
+```
+
+- エラーメッセージもスキーマに書く方法と、UIで出力する方法で両方選べて、コーディングルールがないと処理が複雑になる可能性がある。
+
+### 2. Superstruct
+[Superstruct](https://github.com/ianstormtaylor/superstruct)は軽量かつ柔軟なバリデーションライブラリです。React Hook Formと組み合わせて以下のように使用できます。
+
+今回比較する中で、**個人的にはこれが一番いいかも！使いやすそう！** って思いました。
+
+```jsx
+import { useForm } from 'react-hook-form';
+import { superstructResolver } from '@hookform/resolvers';
+import { struct } from 'superstruct';
+import isEmail from 'is-email'
+
+const Email = define('Email', isEmail)
+const schema = struct({
+  name: string(),
+  email: Email,
+  age: number(),
+  created: date(),
+});
+
+function MyForm() {
+  const { register, handleSubmit, errors } = useForm({ resolver: superstructResolver(schema) });
+
+  // フォームの残りの部分を記述
+
+  return (
+    // フォームのUIを記述
+  );
+}
+```
+
+#### 長所
+
+[こちら](https://github.com/ianstormtaylor/superstruct#why)に他のライブラリより強いところが掲載されています。
+
+- シンプルなスキーマ記述。(Typescript,Flow,go,GlaphQLに影響を受けていて、確かによく見る形)
+- 豊富にバリデーションタイプが用意されている。
+- 詳細なエラーを返す
+- エラーメッセージは、schema定義に書くのではなく、UIの制御時に書く。([こちらの記事](https://blog.kamijin-fanta.info/2020/2021/01/react-forms-with-schema-validation/)を参考)
+
+#### 短所
+
+- TypeScriptサポートがZodよりもやや限られているかもしれない。
+
+### 3. Yup
+[Yup](https://github.com/jquense/yup)は、シンプルで人気のあるバリデーションライブラリです。**2015年に登場したライブラリで歴史と実績がしっかりあります**。
+React Hook Formと組み合わせるには以下のように使用できます。
+
+```jsx
+import { useForm } from 'react-hook-form';
+import * as yup from 'yup';
+
+const schema = yup.object().shape({
+  username: yup.string().min(3),
+  email: yup.string().email(),
+  age: yup.number().required().positive().integer(),
+  created: date().default(() => new Date()),
+});
+
+function MyForm() {
+  const { register, handleSubmit, errors } = useForm({ resolver: yupResolver(schema) });
+
+  // フォームの残りの部分を記述
+
+  return (
+    // フォームのUIを記述
+  );
+}
+```
+
+#### 長所
+
+- 豊富なバリデーションルールが提供されている。
+
+#### 短所
+
+- Typescriptとの相性がイマイチかも。
+- スキーマ定義が他のライブラリに比べてやや冗長かもしれない(Zodと同じ？)
+- バリデーションエラーの定義が、[項目ごとに都度書かなきゃいけなくて面倒](https://github.com/jquense/yup#customizing-errors)かもしれない。
+
+### 4. Joi
+[Joi](https://github.com/hapijs/joi)は2011年登場と古いが、とても実績があり(2023/9現在で2万Star以上)、強力なバリデーションライブラリです。
+個人的にはお勧めしません。
+
+React Hook Formと連携するには次のように使えます。
+```jsx
+import { useForm } from 'react-hook-form';
+import { joiResolver } from '@hookform/resolvers/joi';
+import Joi from 'joi';
+
+const schema = Joi.object({
+  username: Joi.string().min(3).required(),
+  email: Joi.string().email().required(),
+  age: Joi.number().required()
+});
+
+function MyForm() {
+  const { register, handleSubmit, errors } = useForm({ resolver: joiResolver(schema) });
+
+  // フォームの残りの部分を記述
+
+  return (
+    // フォームのUIを記述
+  );
+}
+```
+
+#### 長所
+
+- [ドキュメントが十分に用意](https://joi.dev/api/)されている
+- 直感的でこなれたバリデーションメソッドが用意されている
+
+#### 短所
+
+- 2010年代前半の、裸のJavascriptやjQuery時代のバリデーション方法を引きずっている設計で、ReactやNext.jsをベースにしたreact-hook-formとの相性は良くなさそう...。
+- react-hook-formで利用するときのドキュメントが整っていない印象がある。（基本的な利用方法と書き方が変わってくる。壁に当たりやすそう。）
+
+### 5. class-validator
+class-validatorは、クラスとデコレーターを使用してバリデーションを行うためのライブラリ。こちらで列挙した中では、
+React Hook Formと組み合わせるには以下のように使用できます。
+
+```jsx
+import { useForm } from 'react-hook-form';
+import {
+  validate,
+  validateOrReject,
+  Contains,
+  IsInt,
+  IsEmail,
+  IsDate,
+  Min,
+  Max,
+} from 'class-validator';
+
+class User {
+  @MinLength(3, { message: 'ユーザー名は3文字以上必要です' })
+  username: string;
+
+  @IsEmail({}, { message: '正しいメールアドレスを入力してください' })
+  @Contains('.jp')
+  email: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  rating: number;
+
+  @IsDate()
+  createDate: Date;
+}
+
+function MyForm() {
+  const { register, handleSubmit, errors } = useForm({ resolver: classValidatorResolver(User) });
+
+  // フォームの残りの部分を記述
+
+  return (
+    // フォームのUIを記述
+  );
+}
+```
+
+#### 長所
+
+- クラスとデコレーターを使用してバリデーションを行うため、オブジェクト指向と同じような利用方法になる。クラス定義を覚えたらスムーズになりそう。
+- 特殊なバリデーションルールの設定が柔軟。（デコレーターを分けているので、自由自在にくっつけられる）
+
+#### 短所:
+
+- クラスは具体的な定義を確認する必要があり学習コストが高そう。（バリデーションルールごとに引数が異なる感じで覚えるのが大変...）
+
+### まとめ
+
+いかがでしたでしょうか、それぞれ書き味も含めて一長一短がありますが、全て利用実績があり、やれることに大きな違いはないです。
+気軽に色々お試しいただき、プロジェクトに合ったものを選んでいただいて、効果的なフォームバリデーションを実現できれば幸いです。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+### 補足
+この記事を書いた後、以下のポストを見つけました。
+
+なるほど、この記事では書き味についての比較を中心に書きましたが、こちらの記事では**typescriptの型推論の性能がどうか** という観点で書かれていて素晴らしいと思いました。
+
+[React Hook FormでValidationライブラリはどれにするか?](https://zenn.dev/longbridge/articles/8a167c53ff026c)
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
