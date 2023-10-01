@@ -28,7 +28,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
       {
         month ? (
           <Image
-            className={styles.image + " " + classStr}
+            className={styles.image + " my-10 border border-gray-300 shadow-lg " + classStr}
             src={imageUrl}
             alt={alt}
             layout={"fill"}

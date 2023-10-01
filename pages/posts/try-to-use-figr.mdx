@@ -1,0 +1,122 @@
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "../../lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: '有名サイトを簡単にfigrに書き起こす！「Figr」を使ってみる',
+  date: '2023-10-02T00:21:00.000Z',
+  tags: [
+    'Blog',
+    '試してみた',
+    'figr',
+    'Figr',
+    'フロントエンド'
+  ]
+}
+
+Twitterでちょっとだけ話題になっていた、figr向けに有名サイトを書き起こしてくれる
+サイト[Figr](https://flash.figr.design/)を早速使ってみました。
+
+海外の新規Webサービス紹介サービス[Product Hunt](https://www.producthunt.com/)でも、2023年10月の現時点[デイリーランキングで2位](https://www.producthunt.com/products/figr-design-research-simplified?utm_source=badge-top-post-badge&utm_medium=badge#figr-2-0)となっており、
+一定の評価をすでに得ているようですね。
+
+### なぜこのサービスを使うか？
+
+Web企画・開発では、大手のサイトデザインを**参考にする** という作業が必要になってきます。
+完全にパクるのはダメですが、大手のサイトは数人以上のプロフェッショナルなUIデザイナーが考え尽くした上で
+そのデザインになっていることが多いです。
+
+従って、いいサービスを作る上で、すでに世の中にあるいいサイトを穴が開くほど眺めて研究することは、必ず求められてくると思います。
+
+### 使い始め~figrにコピーするまで
+
+早速使ってみましょう。
+
+サイトにアクセス。
+
+<MdxImage month="202310" image="figr1.png" month="202310" />
+
+ページ上部のサーチバーをクリックすると、たくさんの候補が出てきます。
+
+<MdxImage month="202310" image="figr2.png" month="202310" />
+
+**有名サイトのサービス名** だけでなく、 **「Home」「Creativity」のようなカテゴリー** も選択可能です。
+
+私は、[Apple](https://apple.com/)を選択。
+
+<MdxImage month="202310" image="figr3.png" month="202310" />
+
+検索結果に一致するものが表示されるので、iPhone(なぜかiPhone14笑)のページを選択。
+
+<MdxImage month="202310" image="figr4.png" month="202310" />
+
+デザインのプレビュー的なものが表示されます。
+
+「フィグマのデザインをコピー」 Copy Figma Design ボタンを押すと、
+コピーされます。
+
+そのままFigmaのデザインボードにペーストすれば、いつも通りFigmaで利用できます。
+
+<MdxImage month="202310" image="figr5.png" month="202310" />
+
+単に画像で貼り付けただけでなく、inspectでcss等も表示されていることが確認できますね！
+
+<MdxImage month="202310" image="figr6.png" month="202310" />
+
+差し替えるだけで、丸パクリしたサイトを作れちゃうかも？内緒です...笑
+
+#### 気になったこと
+
+##### デザインの著作権はどうなっているのか。
+
+まず気になったこととして、
+これって、**デザインの著作権どうなっている** のでしょう...。
+
+確かに大手のサイトをコピーできるのはとても便利で、ユーザーメリットに適っているとは思いますが、
+有料プランで提供するとなるとちょっとフリーライダーの感が出ちゃうかなとも思いました。
+
+ただ、すでにProduct Huntでも評価を得ているので、著作権の問題はある程度解消しているのでしょうね。
+
+##### 日本のWebサービスに対応できていない。データ作成はフルオートじゃない？
+
+**日本のWebサービスには全く対応できていないようです。** (2023年10月初旬現在)
+
+従って、おそらくある程度人の手が入ったような方法でfigrのデザイン化を行なっている可能性もあるなと思っています。
+
+全てプログラムあるいはAIによるフルオートで書き起こしをできるのであれば、利用できるサービスを絞る必要はないですからね。
+
+ただ、ファイル数はかなり多いので、データ作成時の何らかの自動化・省力化はやっているでしょうね。
+
+#### 良いなと思った点
+
+##### コピペベースでどこにでも転記できる。
+
+figrのいいところは、UIを好きなところに切り貼りできるところであり、インターフェースとしてのコピペって利便性が高いんだなと改めて思った次第です。
+サービス設計的にもサブスクモデルなので、いわば、**課金すればコピペし放題** というところでしょうか。
+
+### まとめ
+
+いかがでしたでしょうか。
+
+個人的な結論としては、使い道は大いにあると思います。**「このサービスのこの部分のように作ってほしい」というとき** に、これを利用すれば
+即プロジェクトで議論している中に引用することができ、チーム開発の生産性をさらに向上できると思いました。
+
+一方で、自分のように個人開発のケースについては参考にする用途が中心かな、と思った次第でした。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
