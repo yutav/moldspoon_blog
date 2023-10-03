@@ -2,20 +2,11 @@ import Head from 'next/head'
 import React, { useMemo } from 'react'
 import PostItem from './post-item'
 import { Configs } from 'lib/utils'
-import Link from 'next/link'
 import metadata from 'lib/data/metadata.json'
 import { useTheme } from '@geist-ui/core'
 import Pager from './pager'
-import { NextRouter, useRouter } from 'next/router'
+import { NextRouter } from 'next/router'
 
-const getMoreLink = (len: number): React.ReactNode => {
-  if (len < Configs.latestLimit) return null
-  return (
-    <Link href="/blog" passHref>
-      もっと見る
-    </Link>
-  )
-}
 
 const getPosts = (data: typeof metadata, page?: number, tag?: string) => {
   const postNode = data.find(item => item.name === 'posts');

@@ -5,8 +5,6 @@ import CategoryBox from 'lib/components/original/parts/CategoryBox'
 const Page: React.FC<unknown> = () => {
   const router = useRouter()
 
-  let isLatest = router.asPath == "/" ? true : false
-
   return (
     <Layout>
       <div className="mt-2 md:mt-8 

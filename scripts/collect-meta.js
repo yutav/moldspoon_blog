@@ -6,13 +6,20 @@ const docsDir = path.join(__dirname, '../pages')
 const targetPath = path.join(__dirname, '../lib/data/metadata.json')
 
 const getMetadata = async (files, parentPath) => {
+  const excludeDirs = ['tags']
+
   return Promise.all(
     files
       .filter(name => name.endsWith('.mdx') || !name.includes('.'))
       .map(async file => {
+
         const filePath = path.join(parentPath, file)
         const isDirectory = fs.statSync(filePath).isDirectory()
         if (isDirectory) {
+          if (excludeDirs.some(excludeDir => filePath.endsWith(excludeDir))) {
+            return { name: file, children: [] }
+          }
+
           const children = await fs.readdir(filePath)
           const childrenMetadata = await getMetadata(children, filePath)
           return { name: file, children: childrenMetadata }
@@ -60,15 +67,15 @@ const sortPosts = data => {
   })
 }
 
-;(async () => {
-  try {
-    const files = await fs.readdir(docsDir)
-    const data = await getMetadata(files, docsDir)
-    const sorted = sortPosts(data)
-    await fs.ensureFile(targetPath)
-    await fs.writeJson(targetPath, sorted)
-  } catch (e) {
-    console.log(e)
-    process.exit(1)
-  }
-})()
+  ; (async () => {
+    try {
+      const files = await fs.readdir(docsDir)
+      const data = await getMetadata(files, docsDir)
+      const sorted = sortPosts(data)
+      await fs.ensureFile(targetPath)
+      await fs.writeJson(targetPath, sorted)
+    } catch (e) {
+      console.log(e)
+      process.exit(1)
+    }
+  })()
