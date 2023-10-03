@@ -43,7 +43,7 @@ const Tags: React.FC<PostsProps> = () => {
           {getTitle()} - {Configs.title}
         </title>
       </Head>
-      <h2>{title}</h2>
+      <h3>このブログの「{title}」</h3>
       <div className="content">
         <ul>
           {Object.entries(tags).map(([tag, count], index) => (

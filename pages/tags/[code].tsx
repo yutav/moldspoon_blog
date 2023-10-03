@@ -19,7 +19,7 @@ const Page: React.FC<unknown> = () => {
 
   return (
     <Layout>
-      <Posts tag={tag} />
+      <Posts tag={tag} router={router} />
     </Layout>
   )
 }

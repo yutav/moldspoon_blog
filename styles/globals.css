@@ -175,3 +175,11 @@ img.overImage {
     background-color: #BD23A7;
   }
 }
+
+ul.MuiPagination-ul li:before {
+  content: '' !important;
+}
+
+ul.MuiPagination-ul li button {
+  cursor: pointer;
+}
