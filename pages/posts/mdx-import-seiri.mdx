@@ -1,0 +1,275 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【React/Next.js】並列に大量に作るページファイルのimportを少なくして、保守を省力化する方法',
+  date: '2023-10-03T09:13:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'ハック',
+    '保守'
+  ]
+}
+
+### 問題の背景
+
+本ブログは、[unix.bio](https://github.com/unix/unix.bio)をベースにしたNext.js製となっています。
+
+**unix.bio** は.mdx（mdファイルを拡張したファイル）を`pages/posts`以下に作成することで、１ブログ記事を構成することができる
+ブログのテンプレートのようなものなのですが、機能的には足りていないものが多く、Webエンジニアとしての個人的な経験を活かし、
+業務の合間を見て拡張を行なってきていました。
+
+ただ、そもそも肝心の.mdxファイルを使う上で不満が出てきました。
+
+### 突き当たった問題
+
+各.mdxファイル（ページファイル）は以下のような構成で作っていました。
+
+unix.bioに同梱されていた[.mdxファイルのサンプルファイル](https://github.com/unix/unix.bio/blob/template/pages/posts/about.mdx)と比べカスタマイズは
+加えてありますが、大きく変わらない構成です。
+
+<CodeBlockTitle title="pages/sample/base-blog.mdx" />
+
+```typescript
+import { Layout } from 'lib/components'
+import RichLink from "lib/components/original/parts/RichLink"
+import RichList from "lib/components/original/parts/RichList"
+import RichListNoBox from "lib/components/original/parts/RichListNoBox"
+import CodeBlockTitle from "lib/components/original/parts/CodeBlockTitle"
+import MdxImage from "lib/components/original/parts/MdxImage"
+
+export const meta = {
+  title: 'title',
+  date: '2023-10-03T00:00:00.000Z',
+  tags: [
+    'Blog',
+    'プログラミング'
+  ]
+}
+
+# 見出し
+本文がここに入ります。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+```
+
+大きく分けてこのファイルは４段構成となっています。
+
+
+<RichList
+  color="orange"
+  title="mdxファイルの４段構成"
+  list={
+  [
+    'コンポーネントのimport(読み込み)宣言',
+    'メタデータ（タイトルや作成日付など)',
+    'マークダウンのブログ本文（Reactコンポーネントも間に挟まる）',
+    '共通で呼び出されるレイアウトファイル'
+  ]
+} />
+
+#### メタデータ・本文・レイアウトは保守性に大きな影響がない。
+
+そもそも、ブログ本文はページごとに異なるものですから、後でメンテナンスが困るということは特にないでしょう。
+
+各ページの外側、ヘッダーやフッターを定義するレイアウトファイル（上記例で申しますと`lib/components/layout.tsx`）も一箇所を変更すれば
+全部変わるので、問題なしです。
+
+メタデータについては、先ほどのsample/blog-base.mdxを例に取りますと以下のように、**unix.bio**のオリジナルより拡張して使用していますが、
+後から追加した属性については、nullableオプションをつければ、**T呼び出す側のypescriptファイルでエラーが出ることはない** ので、これも保守性に悪影響がある
+わけではないですね。
+
+<CodeBlockTitle title="pages/sample/blog-base.mdx" />
+
+```javascript
+export const meta = {
+  title: 'title',
+  date: '2023-10-03T00:00:00.000Z',
+  updateDate: '2023-10-03T10:13:00.000.Z', // 更新日時をunix.bioのサンプルに対して追加
+  tags: [
+    'Blog',
+    'プログラミング'
+  ] // タグ一覧を追加
+}
+
+```
+
+以下は呼び出す側のサンプルです。（本ブログのsitemap出力処理）`?`がついており、nullも許容していることがご確認いただけるかと思います。
+
+<CodeBlockTitle title="pages/server-sitemap.xml/index.ts" />
+
+```typescript
+import { GetServerSideProps } from 'next'
+import { ISitemapField, getServerSideSitemapLegacy } from 'next-sitemap'
+import metadata from '../../lib/data/metadata.json' // ビルド時にjsonとして生成されるmetadataをオブジェクトの形でimport
+
+export const getServerSideProps: GetServerSideProps = async (ctx) => {
+  const fields: ISitemapField[] = []
+
+  // タグ
+
+  const tagsSet = new Set<string>();
+  metadata.forEach((item) => {
+    item.children?.forEach((child) => {
+      child?.meta?.tags?.forEach((tag) => { // tagsがない形でも「?」がついているのでエラーは出ません。
+        tagsSet.add(tag)
+      })
+    })
+  });
+  
+  // 以下、出力処理は省略。
+}
+
+export default function Sitemap() { }
+```
+
+#### 問題になるのはコンポーネントのimport
+
+よって、保守性の面で問題になるのは、importの宣言です。
+
+##### 例えば、phpであれば、継承元クラスで一括した読み込みを行える
+私がバックエンド開発の際に愛用しているphpの場合、**継承元のクラスでrequireなどを使ってあらかじめ必要な外部ファイルを読み込んでおくことができ** 配下に存在するクラスでもいちいち宣言を配慮する必要がありません。個人的に愛用している[Laravel](https://laravel.com/)や[CakePHP](https://cakephp.org/jp)などオブジェクト指向の
+フレームワークはみな、そうなっています。
+
+一方、Next.jsはTypescriptという明確な型判定を行う言語をその基礎に置いていますので、呼び出すファイル内でimportをしませんとエラーが出ます。
+
+### 解決策
+
+解決策というか妥協案になってしまうかもしれませんが、以下のアプローチが取れたのでご紹介します。
+
+#### 全ページファイルであらかじめ読み込んでおきたいコンポーネントは、同じディレクトリに置く。
+まず、Componentが別々のところに散らばっていれば、以下のように一箇所に格納します。
+
+（ちなみに以下のようなツリー構造を作りたい場合は[treeコマンド](https://qiita.com/kanuma1984/items/c158162adfeb6b217973)がMacの場合は便利ですね）
+
+```
+original
+   └── parts
+       ├── CategoryBox.tsx
+       ├── CodeBlockTitle.tsx
+       ├── IntroduceMyself.tsx
+       ├── MdxImage.tsx
+       ├── PrevNext.tsx
+       ├── RichLink.tsx
+       ├── RichList.tsx
+       ├── RichListNoBox.tsx
+       ├── ShareButtons.tsx
+       ├── SyntaxHighlight.tsx
+       ├── TagLinks.tsx
+       ├── ThanksComment.tsx
+       └── Toc.tsx
+```
+
+このアプローチでは散らばっていても対応できますが、**ディレクトリ構成が複雑になると実態が掴みにくくなると思うので
+極力同じところに置くことをお薦め** させていただきます。
+
+#### 呼び出し用のindex.tsを作る
+上記例で言うと、`parts`直下に`index.ts`を作り、ここで各Componentファイルを読み込んでおきます。
+
+<CodeBlockTitle title="original/parts/index.ts" />
+
+```typescript
+export { default as RichLink } from './RichLink';
+export { default as RichList } from './RichList';
+export { default as RichListNoBox } from './RichListNoBox';
+export { default as CodeBlockTitle } from './CodeBlockTitle';
+export { default as MdxImage } from './MdxImage';
+```
+
+これで、index.tsを経由して、各カスタムコンポーネントを呼び出せるようになります！
+
+#### index.tsによりimportを１行で書けるようになり、置換が簡単になる
+
+先ほどの、`pages/sample/base-blog.tsx`を例に取りますと、以下のように書くことができます。
+
+<CodeBlockTitle title="pages/sample/base-blog.mdx（変更後）" />
+
+```typescript
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'title',
+  date: '2023-10-03T00:00:00.000Z',
+  tags: [
+    'Blog',
+    'プログラミング'
+  ]
+}
+
+# 見出し
+本文がここに入ります。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+```
+
+呼び出しが１行になっていまして、全ファイルを変更しなければいけない時でも、VSCodeなどの一斉置換機能を使うことにより
+ほぼ手作業を生じさせず、メンテナンスが可能になりました。
+
+```
+例) pages以下に格納されている、全.mdxファイルの
+
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+を、
+
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, AddComponent } from "lib/components/original/parts";
+
+に一斉置換するだけ
+```
+
+これで、今回の問題は解決です。
+
+ファイルの先頭にimport文が長文で並ぶくらいなら、もっと**呼び出すための宣言ファイル** を積極的に作ってもいいのかなーと思った次第でした。
+
+### まとめ
+
+いかがでしたでしょうか。
+
+prebuildのタイミングでの置換処理等、複雑で難しいアプローチを取らずとも思ったより簡単に保守性を上げられる方法というのは他にもあるかなと思います。
+
+こうした方法を、エンジニア間でもっともっと共有できたら、よりハッピーなハッカーライフが実現できるな、と思った次第でした〜
+
+<br />
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
