@@ -21,7 +21,7 @@ export const meta = {
 本ブログは、[unix.bio](https://github.com/unix/unix.bio)をベースにしたNext.js製となっています。
 
 **unix.bio** は.mdx（mdファイルを拡張したファイル）を`pages/posts`以下に作成することで、１ブログ記事を構成することができる
-ブログのテンプレートのようなものなのですが、機能的には足りていないものが多く、Webエンジニアとしての個人的な経験を活かし、
+ブログのテンプレートのようなものなのですが、<span className="hoso">残念ながら機能的には足りていないものが多く</span>、Webエンジニアとしての個人的な経験を活かし、
 業務の合間を見て拡張を行なってきていました。
 
 ただ、そもそも肝心の.mdxファイルを使う上で不満が出てきました。
@@ -92,7 +92,7 @@ export default function Page({ children }) {
 全部変わるので、問題なしです。
 
 メタデータについては、先ほどのsample/blog-base.mdxを例に取りますと以下のように、**unix.bio**のオリジナルより拡張して使用していますが、
-後から追加した属性については、nullableオプションをつければ、**T呼び出す側のypescriptファイルでエラーが出ることはない** ので、これも保守性に悪影響がある
+後から追加した属性については、nullableオプションをつければ、**呼び出す側のypescriptファイルでエラーが出ることはない** ので、これも保守性に悪影響がある
 わけではないですね。
 
 <CodeBlockTitle title="pages/sample/blog-base.mdx" />
@@ -151,7 +151,7 @@ export default function Sitemap() { }
 
 ### 解決策
 
-解決策というか妥協案になってしまうかもしれませんが、以下のアプローチが取れたのでご紹介します。
+...というより、一種の妥協案になってしまうかもしれませんが、以下のアプローチが取れたのでご紹介します。
 
 #### 全ページファイルであらかじめ読み込んでおきたいコンポーネントは、同じディレクトリに置く。
 まず、Componentが別々のところに散らばっていれば、以下のように一箇所に格納します。
@@ -192,7 +192,7 @@ export { default as CodeBlockTitle } from './CodeBlockTitle';
 export { default as MdxImage } from './MdxImage';
 ```
 
-これで、index.tsを経由して、各カスタムコンポーネントを呼び出せるようになります！
+<span className="hoso">これで、index.tsを経由して、各カスタムコンポーネントを呼び出せるようになります！</span>
 
 #### index.tsによりimportを１行で書けるようになり、置換が簡単になる
 
@@ -255,7 +255,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, AddCompone
 
 prebuildのタイミングでの置換処理等、複雑で難しいアプローチを取らずとも思ったより簡単に保守性を上げられる方法というのは他にもあるかなと思います。
 
-こうした方法を、エンジニア間でもっともっと共有できたら、よりハッピーなハッカーライフが実現できるな、と思った次第でした〜
+<span className="hoso">こうした方法を、エンジニア間でもっともっと共有できたら、よりハッピーなハッカーライフが実現できるな</span>、と思った次第でした〜☺️
 
 <br />
 <br />

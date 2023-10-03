@@ -119,38 +119,59 @@ pre.language-html {
 }
 
 .balloon2-left:before {
-content: "";
-position: absolute;
-top: 50%;
-left: -24px;
-margin-top: -12px;
-border: 12px solid transparent;
-border-right: 12px solid #FFF;
-z-index: 2;
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -24px;
+  margin-top: -12px;
+  border: 12px solid transparent;
+  border-right: 12px solid #FFF;
+  z-index: 2;
 }
+
 @media (prefers-color-scheme: dark) {
-.balloon2-left:before {
-  border-right: 12px solid #111727;
-}
+  .balloon2-left:before {
+    border-right: 12px solid #111727;
+  }
 }
 
 
 .balloon2-left:after {
-content: "";
-position: absolute;
-top: 50%;
-left: -30px;
-margin-top: -14px;
-border: 14px solid transparent;
-border-right: 15px solid #555;
-z-index: 1;
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -30px;
+  margin-top: -14px;
+  border: 14px solid transparent;
+  border-right: 15px solid #555;
+  z-index: 1;
 }
 
 .balloon2-left p {
-margin: 0;
-padding: 0;
+  margin: 0;
+  padding: 0;
 }
+
 img.overImage {
   width: 100px !important;
   height: 100px !important;
+}
+
+.hoso {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+}
+
+.futo {
+  background-color: #FBB92F;
+}
+
+@media (prefers-color-scheme: dark) {
+  .hoso {
+    font-weight: bold;
+    background: linear-gradient(transparent 60%, #BD23A7 60%);
+  }
+  .futo {
+    background-color: #BD23A7;
+  }
 }
