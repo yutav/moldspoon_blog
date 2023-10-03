@@ -24,13 +24,11 @@ const Profile: React.FC<unknown> = React.memo(() => {
         <div className="flex justify-between w-full">
           <div className="flex-none w-128">
 
-            <NextLink href="/" passHref>
-              <Link>
-                <h1 className="w-56 sm:w-80 md:w-80 lg:w-full ">
-                  <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
-                  <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
-                </h1>
-              </Link>
+            <NextLink href="/">
+              <h1 className="w-56 sm:w-80 md:w-80 lg:w-full ">
+                <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
+                <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
+              </h1>
             </NextLink>
           </div>
           <div className='flex-none w-8'>
