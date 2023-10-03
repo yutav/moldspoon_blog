@@ -18,8 +18,6 @@ const Page: React.FC<unknown> = () => {
     )
   }
 
-  console.log(tag)
-
   return (
     <Layout>
       <Posts tag={tag} page={Number(page)} router={router} />

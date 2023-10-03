@@ -31,7 +31,6 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView })
       + ud.getDate().toString().padStart(2, "0") + "日"
       + " " + ud.getHours().toString().padStart(2, "0") + ":"
       + ud.getMinutes().toString().padStart(2, "0")
-    console.log(updateDate)
   }
 
   return (

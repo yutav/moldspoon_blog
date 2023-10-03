@@ -22,7 +22,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       changefreq: 'weekly',
       priority: 0.5,
     });
-    console.log(pageCount)
   }
 
   // タグ

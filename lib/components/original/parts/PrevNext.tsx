@@ -17,7 +17,6 @@ const PrevNext: React.FC<Prop> = ({ routerPathName }) => {
         }
 
         return subs.children.map((item, index) => {
-          console.log(item)
           if (item.url === routerPathName) {
             const nextPost = index > 0 ? subs.children[index - 1] : null;
             const prevPost = index < subs.children.length - 1 ? subs.children[index + 1] : null;
