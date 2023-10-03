@@ -8,6 +8,7 @@ const targetPath = path.join(__dirname, '../lib/data/metadata.json')
 const getMetadata = async (files, parentPath) => {
   const excludeDirs = ['tags']
 
+
   return Promise.all(
     files
       .filter(name => name.endsWith('.mdx') || !name.includes('.'))

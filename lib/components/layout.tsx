@@ -91,7 +91,8 @@ const defaultProps = {
     title: '',
     date: new Date().toISOString(),
     updateDate: new Date().toISOString(),
-    tags: []
+    tags: [],
+    description: '',
   },
 }
 
