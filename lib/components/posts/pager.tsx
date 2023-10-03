@@ -1,8 +1,6 @@
 import * as React from 'react';
 import Pagination from '@mui/material/Pagination';
-import Stack from '@mui/material/Stack';
 import { NextRouter } from 'next/router';
-import Link from 'next/link';
 import { Configs } from 'lib/utils';
 
 type Prop = {
@@ -16,7 +14,7 @@ const Pager: React.FC<Prop> = ({ router, postCount, tag, page }) => {
 
   const pageCount = Math.ceil(postCount / Configs.latestLimit)
 
-  const handleChange = (event: React.ChangeEvent<unknown>, value: number) => {
+  const handleChange = (_: React.ChangeEvent<unknown>, value: number) => {
     if (tag !== undefined) {
       router.push(process.env.baseUrl + "/tags/" + tag + "/page/" + value)
       return
