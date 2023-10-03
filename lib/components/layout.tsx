@@ -46,6 +46,7 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         <title>{BLOG.title}</title>
       )}
       {domain && <link rel="dns-prefetch" href={domain} />}
+      <link rel="icon" href={process.env.baseUrl + "/favicon.ico"}></link>
       <meta name="google" content="notranslate" />
       <meta name="referrer" content="strict-origin" />
       <meta property="og:site_name" content={BLOG.title} />

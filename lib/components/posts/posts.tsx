@@ -2,59 +2,59 @@ import Head from 'next/head'
 import React, { useMemo } from 'react'
 import PostItem from './post-item'
 import { Configs } from 'lib/utils'
-import NextLink from 'next/link'
+import Link from 'next/link'
 import metadata from 'lib/data/metadata.json'
 import { useTheme } from '@geist-ui/core'
+import Pager from './pager'
+import { NextRouter, useRouter } from 'next/router'
 
 const getMoreLink = (len: number): React.ReactNode => {
   if (len < Configs.latestLimit) return null
   return (
-    <NextLink href="/blog" passHref>
+    <Link href="/blog" passHref>
       もっと見る
-    </NextLink>
+    </Link>
   )
 }
 
-const getPosts = (data: typeof metadata, isLatest?: boolean, tag?: string) => {
-
+const getPosts = (data: typeof metadata, page?: number, tag?: string) => {
   const postNode = data.find(item => item.name === 'posts');
   const posts = (postNode || {}).children || [];
 
-  if (!tag) {
-    // tagが指定されていない場合、全てのポストを返す
-    if (!isLatest) return posts;
-    return posts.slice(0, Configs.latestLimit);
+  let filteredPosts = posts;
+  if (tag !== undefined) {
+    filteredPosts = posts.filter(post => {
+      const tags = (post.meta || {}).tags || [];
+      return tags.includes(tag);
+    });
   }
 
-  // tagが指定されている場合、tagが含まれているポストのみをフィルタリングして返す
-  const filteredPosts = posts.filter(post => {
-    const tags = (post.meta || {}).tags || [];
-    return tags.includes(tag);
-  });
+  let nowPage = page ? page : 1;
 
-  if (!isLatest) return filteredPosts;
-  return filteredPosts.slice(0, Configs.latestLimit);
+  const start = (nowPage - 1) * Configs.latestLimit;
+  const end = nowPage * Configs.latestLimit;
+
+  const postCount = filteredPosts.length; // ポストの総数を計算
+
+  const paginatedPosts = filteredPosts.slice(start, end);
+
+  return { postCount, posts: paginatedPosts };
 };
 
 export interface PostsProps {
-  isLatest?: boolean
+  page?: number
   tag?: string
+  router: NextRouter
 }
 
-const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
+const Posts: React.FC<PostsProps> = ({ page, tag, router }) => {
 
   const theme = useTheme()
-  let posts = []
   let title = ""
-  posts = useMemo(() => getPosts(metadata, isLatest, tag), [tag]);
+  let { postCount, posts } = useMemo(() => getPosts(metadata, page, tag), [page, tag]);
+
   if (tag !== undefined) {
     title = `「${tag}」 の記事一覧`
-  }
-  else if (isLatest) {
-    title = Configs.title
-  }
-  else {
-    title = Configs.labels.list + " - " + Configs.title
   }
 
   return (
@@ -64,12 +64,13 @@ const Posts: React.FC<PostsProps> = ({ isLatest = false, tag }) => {
           {title}
         </title>
       </Head>
-      {!isLatest && <h2 className="mb-8">{title}</h2>}
+      {title !== "" && <h2 className="mb-8">{title}</h2>}
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />
         ))}
-        {isLatest && <span className="more">{getMoreLink(posts.length)}</span>}
+        <Pager postCount={postCount} page={page} router={router} tag={tag} />
+        {/*isLatest && <span className="more">{getMoreLink(posts.length)}</span>*/}
       </div>
       <style jsx>{`
         section {

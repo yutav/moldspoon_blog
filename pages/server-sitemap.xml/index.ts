@@ -5,6 +5,9 @@ import metadata from '../../lib/data/metadata.json'
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const fields: ISitemapField[] = []
 
+  console.log(metadata)
+
+
   // タグ
 
   const tagsSet = new Set<string>();

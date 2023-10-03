@@ -20,7 +20,7 @@ const Page: React.FC<unknown> = () => {
       </div>
 
       <p className="text-base sm:text-2xl lg:text-3xl font-bold">新着記事</p>
-      <Posts isLatest={isLatest} />
+      <Posts page={1} router={router} />
 
     </Layout>
   )
