@@ -20,18 +20,11 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView })
     + " " + d.getHours().toString().padStart(2, "0") + ":"
     + d.getMinutes().toString().padStart(2, "0")
 
-  console.log(d)
-  console.log(date)
-  console.log(updateDate)
-
   let updateString
   let ud
   if (updateDate) {
     ud = useMemo(() => new Date(updateDate), [])
-    console.log(ud)
     if (`${ud}` === 'Invalid Date') return null
-
-    console.log(date)
 
     updateString = ud.getFullYear() + "年"
       + (ud.getMonth() + 1).toString().padStart(2, "0") + "月"
