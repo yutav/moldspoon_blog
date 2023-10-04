@@ -5,6 +5,9 @@ if (isProd && cdnPrefix) {
   console.log(`> You have customized the CDN prefix: ${cdnPrefix}.\n`);
 }
 
+const BundleAnalyzerPlugin =
+  require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
+
 const withMDX = require('@next/mdx')({
   extension: /\.(md|mdx)?$/,
   options: {
@@ -63,6 +66,7 @@ const nextConfig = {
   redirects() {
     return [];
   },
+  plugins: [new BundleAnalyzerPlugin()],
 };
 
 module.exports = withMDX(nextConfig);

@@ -8,7 +8,8 @@
     "post": "node scripts/create.js",
     "prettier": "prettier --write .",
     "collect": "node scripts/collect-meta.js",
-    "export": "npm run now-build && next export"
+    "export": "npm run now-build && next export",
+    "bundle-analyzer": "ANALYZE=true next build"
   },
   "prettier": "@geist-ui/prettier-config",
   "dependencies": {
@@ -63,6 +64,7 @@
     "prompt-sync": "^4.2.0",
     "rehype-join-line": "^1.0.2",
     "styled-jsx": "^4.0.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.5.5",
+    "webpack-bundle-analyzer": "^4.9.1"
   }
 }
