@@ -1,0 +1,215 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'サーバがなくてもMySQLが使える！PlanetScaleとNext.jsを組み合わせ速攻でDB構築する方法。',
+  date: '2023-10-04T09:00:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'MySQL',
+    'PlanetScale',
+    'Prisma',
+    'Next.js',
+    'インフラ',
+    'RDBMS'
+  ]
+}
+
+### 本記事の概要
+
+この記事では、MySQLをクラウドで立ち上げ、速攻で利用を開始できるIPaaSサービス、[PlanetScale](https://planetscale.com/)について
+Next.jsで利用する具体例を交えながら、利用準備が整うまでを順を追って解説します。
+
+ぜひ最後までご覧ください。
+
+先日本ブログにてご紹介した[Supabase](https://supabase.com/)はPostgreSQLで裏側のDBが構築されるサービスで
+コンセプトは似ています。よろしければこちらもご覧ください。
+
+参考記事: [Next.js製ブログにアクセスカウンターを追加する作業でSupabase使ってみた。](https://moldspoon.jp/blog/posts/add-supabase-access-counter-to-blog)
+
+### 作業
+
+まず、[PlanetScale](https://planetscale.com/)
+のトップページにアクセス。
+
+右上の、**「Sign in」** を選択します。
+
+<MdxImage month="202310" image="ps9.png" />
+
+メールアドレスでの登録もできますが、私は手軽さを重視して **「Github」** でのログインを選択。
+
+<MdxImage month="202310" image="ps1.png?n=0" />
+
+サービスを初めて使うので、引き継ぐべきDBもないですから **「Start With Empty Database」** を選択。
+
+<MdxImage month="202310" image="ps2.png" />
+
+[Github](https://github.com/)みたいなUIですが、必要な情報を入力していきます。
+
+<MdxImage month="202310" image="ps3.png" />
+
+今回はお試しということでプランから「Hobby」を選択。おそらくユーザーの身元確認と与信も兼ねて、
+クレジットカード情報の入力は避けられないようです。
+
+<MdxImage month="202310" image="ps4.png" />
+
+このあたりは、[Jira](https://www.atlassian.com/ja/software/jira)などの、[Atlassian](https://www.atlassian.com/ja)社の運営するサービスと使い勝手が似てますね。
+**いつのまにか無料枠を超えて、課金が生じる可能性もある** ので既にトラフィックがあるサービスでご利用の方はお気をつけいただければと思います。
+
+下にスクロールで進んで **「Create database」** を選択。
+
+次の画面で **「どの言語経由で接続するか？」** という選択肢が大量に出てきます。
+私は、Next.js に加え、データベースのスキーマ管理に[Prisma](https://www.prisma.io/stack)を使うので、これを選択。
+<MdxImage month="202310" image="ps5.png" />
+
+すると、接続完了するまでのチュートリアルがそのまま表示されます！これは楽ちんですね笑
+
+<MdxImage month="202310" image="ps7.png" />
+
+上記のように、画面の中程に表示されている中程に表示されている`.env`の中身を丸ごと、
+Next.jsプロジェクトのルートディレクトリ直下に`.env`をファイル作成した上でペーストします。
+
+これで、接続設定は完了です。（かんたん！）
+Vercelで本番運用するときなどは.envをgitにコミットせず、環境変数を使って移しましょう。
+
+参考記事: [Vercelで環境変数を設定する](https://www.snorerelax.com/posts/tech-vercel-environment/)
+
+#### Next.jsアプリケーションでの接続設定
+
+私の方では、Next.jsプロジェクトのエントリーポイントとなる`page/index.tsx`は以下のようになりました。
+
+<CodeBlockTitle title="page/index.tsx" />
+
+```typescript
+import { GetServerSideProps } from 'next';
+import Image from 'next/image'
+const { PrismaClient } = require('@prisma/client')
+
+const Page = ({ user }: { user: any }) => {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      ユーザー情報がここにJSON形式で表示されます: {user}
+    </main>
+  )
+}
+
+export default Page
+
+type Props = {
+  user: any // Typescriptの型判定を行うときは別途typeのライブラリが必要だが今回は省略
+}
+
+export const getServerSideProps: GetServerSideProps<Props> = async (context) => {
+
+  const prisma = new PrismaClient()
+
+  async function getUser() {
+    try {
+      const user = await prisma.user.findMany();
+      return user;
+    } catch (e) {
+      console.error(e);
+      await prisma.$disconnect();
+      throw e;
+    }
+  }
+
+  try {
+    const user = await getUser();
+    return {
+      props: {
+        user: JSON.stringify(user)
+      },
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      props: {
+        user: JSON.stringify([]), // DBに接続しないときは空配列を返します
+      },
+    };
+  }
+}
+
+```
+
+あらかじめ、`schema/prisma.schema.ts`を作成。
+
+に以下のテスト用`User`テーブルの定義を投げ込んでおき、
+プロジェクトルートでpushしてテーブルを作成しておきます。
+
+```plain
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+}
+```
+
+**コマンドコンソール** から以下のコマンドを実行。`.env`により、接続設定が正しく行えていれば
+データベースにUserテーブルが作成されるはずです。
+
+```
+prisma db push
+```
+
+[ダッシュボード](https://app.planetscale.com/) => プロジェクトを選択すると、ページ下部にログが出ており、
+テーブル作成のSQL文もログに出ているはず。
+
+ローカルからMySQL DBへの接続は、[Tableplus](https://tableplus.com/)をあらかじめ設定しておきましょう。
+
+先ほど設定した.envを
+```
+DATABASE_URL='mysql://[User]:[Password]@aws.connect.psdb.cloud/[Database]?sslaccept=strict'
+```
+
+このように設定して接続します。
+<MdxImage month="202310" image="ps6.png" />
+
+あらかじめUserテーブルにテストデータを書き込んでおきます。
+<MdxImage month="202310" image="ps8.png" />
+
+`yarn run dev`でNext.jsのローカルサーバを立ち上げ、`http://localhost:3000/`にアクセス。
+
+ちゃんと表示されました！
+<MdxImage month="202310" image="ps10.png" />
+
+### まとめ
+
+個人的にはPHP関連の開発をたくさんしていた&Wordpressなどでは大量にMySQL製のDBがある
+ということで、PostgresよりはMySQLの方が親しんでいて、触れやすいDBでした。
+
+#### 日本にはMySQLを使っているサービスがたくさんある
+
+2021年のポストなのでちょっと古いですが、日本ではMySQLのシェアがとても多いです。
+
+参考記事: [インフォグラフィック：2021年開発者エコシステムの現状](https://www.jetbrains.com/ja-jp/lp/devecosystem-2021/databases/)
+
+それゆえ、 **レガシー（過去の遺産）のデータベースをそのまま使用できるPlanetScaleはこれからいろいろ使い道がありそうだな** と
+思った次第でした。今度はダンプデータインポートの方法でも試してみたいと思います。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

@@ -23,7 +23,7 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
           <div className="socials">
             {Configs.email && (
               <Link aria-label="email" href={Configs.email} {...linkProps}>
-                Email
+                お問合せ
               </Link>
             )}
             {Configs.github && (
