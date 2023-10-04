@@ -21,6 +21,9 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
         {isDetailPage && <Divider h={0.5} />}
         <div className="between">
           <div className="socials">
+            <Link aria-label="email" href="#" {...linkProps}>
+              ページトップ
+            </Link>
             {Configs.email && (
               <Link aria-label="email" href={Configs.email} {...linkProps}>
                 お問合せ
