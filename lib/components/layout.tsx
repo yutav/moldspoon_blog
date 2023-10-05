@@ -182,7 +182,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         </div>
 
         {inDetailPage ? (<></>) : (
-          <div className="mt-6 ml-6 right-container hidden lg:block h-screen">
+          <div className="mt-6 ml-6 right-container hidden xl:block h-screen">
 
 
             <div className="right-container bg-white dark:bg-black lg:shadow rounded-lg fixed">
