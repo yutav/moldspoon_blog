@@ -1,0 +1,209 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。',
+  date: '2023-10-05T13:02:34.000Z',
+  tags: [
+    'Tips',
+    'プログラミング',
+    'Strapi',
+    'CMS',
+    'Wordpress',
+    'MySQL',
+    'RDBMS',
+    '入稿管理',
+  ],
+  description: '「Wordpressのような入稿管理システム」をエンジニアとしての知見を活かして探してリストアップしました。メリデメを整理した上でご紹介します。'
+}
+
+### やりたいこと
+
+個人開発のサービスを開発している中で、<span className="hoso">Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい</span>
+
+...というシチュエーションが出てきました。
+
+要件は以下。
+
+<RichListNoBox
+  color="red"
+  list={
+  [
+    'いまさらEC2のようなLinuxサーバ内のMySQLは使いたくない。WWWにポートを晒すとセキュリティも気になってしまう。',
+    '利用料金が安いか、ほとんどかからないもの(数百円/月〜かかるものは最初から除外)',
+    'というより、そもそも管理ツールのためにインスタンスを動かす必要がない（個人開発はなので）最初はローカルで動かせるのがベスト',
+    '昔のRedmineのようなインターフェースはもうきついので、ある程度以上は洗練されたUIを持つもの',
+    'できれば、自分のスキルセットにある言語製のものが望ましい（あとで万一拡張したい時を考慮）'
+  ]
+} />
+
+早速技術選定を行うこととしました。
+
+#### 今回はボツになった技術
+
+##### Drupal
+
+[Drupal](https://www.drupal.org/)
+PHP製の入稿管理システム。[Wikipedia](https://ja.wikipedia.org/wiki/Drupal)によるとなんと20年も実績があるようだ。
+元は[Redmine](https://redmine.jp/)と同様に、Linuxサーバにインストールして使うソフトウェアだったのかなと思うが、今は
+連携するサードパーティで立ち上げができるようです。
+
+[Acquia](https://www.acquia.com/)<br />
+[Pantheon](https://pantheon.io/)<br />
+[platform.sh](https://auth.api.platform.sh/)<br />
+
+などたくさん存在しているようだが、**管理ツールのためにインスタンスを立ち上げる（状況によっては有料になる）のがそもそも気が重い（気軽に使えない）** し、
+MySQLサーバを立ち上げる必要はないので除外としました。
+
+ただ、もしインスタンス+MySQLの両方をセットで立ち上げたい場合は[AWS Lightsail](https://aws.amazon.com/jp/lightsail/)からAMIの候補を探したほうが早いかも...。
+
+以下のページからご興味がある方は動きをチェックできるのでどうぞ。
+
+関連ページ:[Want to quickly see how Drupal works?](https://www.drupal.org/try-drupal)
+
+##### Joomla
+
+[Joomla](https://www.joomla.org/)
+昔からよく聞くPHP製CMSツール。
+オープンソース。
+
+利用実例は正直、周囲ではあまり聞かないです。今も昔も一部の人しか使っていない感じなのか、日本語がサポートされていないからか？
+
+[Joomla! Site](https://launch.joomla.org/)からサーバーレスで動かせるようなのですが、
+**なんかUIが古い感じで、利用に電話番号まで求められる** ので心理的に重くなり立ち上げを途中で辞めてしまいました。
+
+あるいはオープンソースであるため、これをローカルにダウンロードしDockerで動かすのでもよかったかもしれない...。
+
+ですが今回はDockerを用意することも億劫となってしまい、結論となったStrapiの方が楽だったため、今回は除外しました。
+
+##### microCMS
+
+日本のヘッドレスCMSサービス[microCMS](https://microcms.io/)
+
+オープンソースではなく、ベンダーとして提供するSaaSサービスという感じでしょうか。
+
+CMS自体はとても良くできていて利用の実例も周りでよく聞くのですが、今回はAPIを出口のデータストレージとしたいのではなく
+RDBMS（具体的にはMySQL）としたいので、要件に対して少々Fatかなということで除外しました。
+
+##### PhpMyAdmin
+
+MySQLということで、
+[PhpMyAdmin](https://www.phpmyadmin.net/)をDockerでローカル運用する方法もちょっと考えたのです、画像も入稿したいのですぐ除外しました。
+
+単にテキストだけの入稿で、かつphpMyAdminに慣れまくっている人であればいいのかもしれないですね。
+
+**実際に筆者はソシャゲの入稿を頻繁にphpMyAdminでやっている人を昔、みました。**
+<br />
+
+ググったら以下の記事が見つかりました。
+
+そうそう、<span class="hoso">知名度があるぶんこういう爆速のソリューションが出てきやすいのがいいところ</span>だよね〜
+
+関連記事: [phpMyAdmin on docker が便利すぎる](https://qiita.com/furu8ma/items/50718efebee20fd24517)
+
+※ ちなみに、オンプレミス・クラウドのLinuxサーバに置くにはphpMyAdminについては、Wordpress同様アタックのターゲットにされやすく危険なので避けたいなと思っています。
+
+#### 採用した技術
+
+今回は以下が答えでした。
+
+##### Strapi
+
+- Reactベース
+- デフォルトはSQLiteを受け皿とするが、既存のMySQLにも接続できる(Herokuとかにもいけるはず。DBの種類はPostgresもいけそう。FireStoreのプラグインもあるっぽい)
+- オープンソース=無料
+
+**一方で使うのにちょっと不安な点** があります。
+
+- 画面を生成するには既存のDBをそのまま読ませるだけではダメで、画面からテーブルを作る必要がありそう。
+- 入力カラムをGUIからぽちぽち設定していかなければいけない。できればカラムタイプを見て自動的に判別してくれた方が助かるが...
+- 全体的に動きがもっさりしている（今回はDBにアメリカに置かれてる[CloudSQL](https://cloud.google.com/sql?hl=ja)を使っているからレイテンシの問題が単に起きてるだけかも）
+
+この辺りは使い続けてまた本記事に追記していければ、と考えております。
+
+#### Strapi+CloudSQL(MySQL)を接続するにあたりちょっと引っかかったところ
+
+私は今回、CloudSQLをインフラとして採用したのですが、ローカルのStrapiから参照する場合はCloud SQL Proxyを
+使う必要があり、一般的な以下の要素
+
+```
+DATABASE_HOST=localhost
+DATABASE_PORT=3306
+DATABASE_NAME=database
+DATABASE_USERNAME=root
+DATABASE_PASSWORD=password
+```
+
+に加えて、socketの指定をしないと疎通しませんでした。
+
+具体的には、`config/database.js`を以下のように改変しました。
+
+<CodeBlockTitle title="config/database" />
+
+```javascript
+const path = require('path');
+
+module.exports = ({ env }) => {
+  const client = env('DATABASE_CLIENT', 'sqlite');
+
+  const connections = {
+    mysql: {
+      connection: {
+        connectionString: env('DATABASE_URL'),
+        host: env('DATABASE_HOST', 'localhost'),
+        port: env.int('DATABASE_PORT', 3306),
+        database: env('DATABASE_NAME', 'strapi'),
+        user: env('DATABASE_USERNAME', 'strapi'),
+        password: env('DATABASE_PASSWORD', 'strapi'),
+        ssl: env.bool('DATABASE_SSL', false) && {
+          key: env('DATABASE_SSL_KEY', undefined),
+          cert: env('DATABASE_SSL_CERT', undefined),
+          ca: env('DATABASE_SSL_CA', undefined),
+          capath: env('DATABASE_SSL_CAPATH', undefined),
+          cipher: env('DATABASE_SSL_CIPHER', undefined),
+          rejectUnauthorized: env.bool(
+            'DATABASE_SSL_REJECT_UNAUTHORIZED',
+            true
+          ),
+        },
+        // 以下の行を追加すると、ローカル -> Cloud SQL Auth Proxy -> Cloud SQL の順番で接続できる。
+        socketPath: '/Users/[username]/cloudsql/[cloudSqlInstanceName]:[region]:[database]' //この行を追加。
+        // ローカルで利用ということで直指定したが、もちろんenvにしてもよい。
+      },
+      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
+    },
+    // 中略...
+  }
+}
+```
+
+同じ問題で突き当たった人の参考になると幸いです。
+公式のドキュメントには答えはなかったのですが、以下のStrapiの**Github Issue** に回答があった次第でした。
+
+参考記事: [Support for mysql over unix socket #1714](https://github.com/strapi/strapi/issues/1714)
+
+### まとめ
+
+以上です。いかがでしょうか。
+
+**MySQLとの接続が行えるオープンソースプロジェクトは想像した以上に
+バリエーションと歴史があり、それぞれの進化を遂げているのでどれを使うか悩んでしまいます。**
+
+しかし、<span className="hoso">個人開発のように極端にリソースがない場合は、爆速でやりたいことを立ち上げられる技術選定が時間節約のために
+何よりも大事だよね</span>と思った次第でした。
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
