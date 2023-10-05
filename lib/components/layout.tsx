@@ -117,11 +117,23 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
   const router = useRouter()
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const isDetailPage = router.pathname.startsWith('/posts');
+  const isDetailPage = router.pathname.startsWith('/posts') as boolean;
 
   const [{ pageView }] = usePageCounter({
     slug: router.asPath
   })
+
+  const [composing, setComposition] = useState(false);
+  const startComposition = () => setComposition(true);
+  const endComposition = () => setComposition(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const handleSearch = () => {
+    const googleSearchUrl = `https://www.google.com/search?q=site:moldspoon.jp/blog+${encodeURIComponent(
+      searchQuery
+    )}`;
+    router.push(googleSearchUrl);
+  };
 
   if (!showAfterRender) {
     return (
@@ -141,31 +153,70 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   return (
     <section className="animate-fadeIn">
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
-      <div className="container p-0 lg:px-12 bg-white dark:bg-black lg:shadow">
-        <Spacer />
-        <Profile />
-        {inDetailPage ? (
+      <div className="flex">
+        <div className="container p-0 lg:px-12 bg-white dark:bg-black lg:shadow">
+          <Spacer />
+          <Profile />
+          {inDetailPage ? (
 
-          <>
-            <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
-            <TagLinks tags={meta.tags} />
+            <>
+              <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
+              <TagLinks tags={meta.tags} />
+              <div className="dynamic-content">
+                <IntroduceMyself />
+                {children}
+              </div>
+              <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+              <Toc body={childrenHtml} />
+
+            </>
+          ) : (
             <div className="dynamic-content">
-              <IntroduceMyself />
               {children}
             </div>
-            <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
-            <Toc body={childrenHtml} />
+          )}
+          <PrevNext routerPathName={router.pathname} />
 
-          </>
-        ) : (
-          <div className="dynamic-content">
-            {children}
+          <Spacer h={5} />
+          <Footer isDetailPage={!!inDetailPage} />
+        </div>
+
+        {inDetailPage ? (<></>) : (
+          <div className="mt-6 ml-6 right-container hidden lg:block h-screen">
+
+
+            <div className="mt-6 right-container bg-white dark:bg-black lg:shadow rounded-lg fixed">
+              <div className="m-6">
+                <h3 className="mb-6">検索</h3>
+                <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
+                  <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
+                  <input
+                    type="text"
+                    name="search"
+                    className={"w-full text-xl bg-transparent "}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      console.log(e.key)
+                      console.log(composing)
+                      switch (e.key) {
+                        case "Enter":
+                          if (composing) break;
+                          handleSearch();
+                          break;
+                      }
+                    }}
+                    onCompositionStart={startComposition}
+                    onCompositionEnd={endComposition}
+                  />
+                </div>
+                <p className="text-xs">※Google検索を使用しています。</p>
+
+              </div>
+            </div>
           </div>
         )}
-        <PrevNext routerPathName={router.pathname} />
 
-        <Spacer h={5} />
-        <Footer isDetailPage={!!inDetailPage} />
       </div>
 
 
@@ -229,6 +280,29 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           padding-left: 0.5rem;
           padding-bottom: 0.25rem;
           border-left: 5px solid #FFA500;
+        }
+
+        .right-container {
+          width: 300px;
+        }
+
+        .right-container :global(h3) {
+          font-size: 1.2rem;
+          padding-left: 0.25rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 3px solid #f0f0f0;        
+          position: relative; /* 親要素に対して相対的な位置を設定 */
+        }
+        
+        .right-container :global(h3)::after {
+          content: "";
+          display: block;
+          position: absolute;
+          bottom: -3px;
+          left: 0;
+          width: 100px;
+          height: 3px;
+          background-color: #FFA500;
         }
 
         @media only screen and (max-width: 1024px) {
