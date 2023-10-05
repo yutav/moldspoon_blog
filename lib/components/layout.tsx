@@ -132,7 +132,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     const googleSearchUrl = `https://www.google.com/search?q=site:moldspoon.jp/blog+${encodeURIComponent(
       searchQuery
     )}`;
-    router.push(googleSearchUrl);
+    window.open(googleSearchUrl, '_blank')
   };
 
   if (!showAfterRender) {
