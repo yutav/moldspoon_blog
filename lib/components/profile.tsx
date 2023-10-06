@@ -36,7 +36,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
             <div
               className={
                 openMenu
-                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out'
+                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out z-20'
                   : 'fixed right-[-100%]'
               }
             >
