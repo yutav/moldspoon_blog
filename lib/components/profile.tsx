@@ -25,10 +25,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
           <div className="flex-none w-128">
 
             <NextLink href="/">
-              <h1 className="w-56 sm:w-80 md:w-80 lg:w-full ">
+              <p className="w-56 sm:w-80 md:w-80 lg:w-full p-0 m-0">
                 <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
                 <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
-              </h1>
+              </p>
             </NextLink>
           </div>
           <div className='flex-none w-8'>
