@@ -1,0 +1,73 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '時代が追いついた？SQLiteを深掘り！公式ドキュメントに沿って長所・短所を要約します。',
+  date: '2023-10-09T14:38:00.000Z',
+  tags: [
+    'Blog',
+    'プログラミング',
+    'SQLite',
+  ],
+  'description': 'SQLite。サーバレスで軽量。もしかしたら時代が追いついたかも知れない、すごいRDBMSを公式ドキュメントに沿ってメリデメを整理しご紹介します。'
+}
+
+## はじめに
+SQLite、気になりますよね？
+
+大昔から利用されているRDBMSではありますが、**時代がSQLiteに追いついた...と言っても過言じゃない。** すごい
+ソフトウェアだと私は思っています。
+
+なんせ、[公式](https://www.sqlite.org/about.html)のドキュメントからして、**サーバーレス** のDBであると語っています。
+これは昨今流行っている個人開発や、Vercelなどのフロントエンドを土台としたWeb開発の時代にぴったり適合したキーワードではない
+でしょうか？
+
+おまけに、軽量で、スマホアプリでの利用も含めて実績は十分...ですが、こなれているがためどうしても目立ちにくいという技術ではあるのです。
+
+このSQLiteですが、他の技術と同じく、<span className="hoso">使い方を間違えるとえらい目にあうケースは残念ながら存在する</span>と思います。
+本記事では、SQLiteの強みと弱みを、公式ドキュメントを見ながら整理・ご紹介していきます。
+
+### SQLiteの癖、注意点、落とし穴
+
+[SQLiteの癖、注意点、落とし穴](https://www.sqlite.org/quirks.html)
+に以下のようにまとまっています。
+
+> 執筆中
+
+### SQLiteの適切な使用法
+
+[SQLiteの適切な使用法](https://www.sqlite.org/whentouse.html)
+に以下のように書かれています。
+
+> 執筆中
+
+### SQLiteはサーバーレスである
+
+[SQLiteはサーバーレスである](https://www.sqlite.org/serverless.html)
+に詳しく紹介されています。
+
+> 執筆中
+
+### まとめ
+
+いかがでしたでしょうか。個人的には、可搬性の高いDBってすごく好きですし、
+<span className="hoso">ユースケースをデータベースエンジニアがしっかりと考えた上で利用すれば、十分実用性があり、</span>
+再度ホットになる可能性がとても高い技術だと私は思っています。
+
+**引き続き本ブログではSQLite関連の技術についてキャッチアップを行ってまいりますので、
+よろしければご注目ください。**
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
