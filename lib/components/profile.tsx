@@ -25,10 +25,10 @@ const Profile: React.FC<unknown> = React.memo(() => {
           <div className="flex-none w-128">
 
             <NextLink href="/">
-              <h1 className="w-56 sm:w-80 md:w-80 lg:w-full ">
+              <p className="w-56 sm:w-80 md:w-80 lg:w-full p-0 m-0">
                 <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
                 <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
-              </h1>
+              </p>
             </NextLink>
           </div>
           <div className='flex-none w-8'>
@@ -36,7 +36,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
             <div
               className={
                 openMenu
-                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out'
+                  ? 'text-left fixed border-l-2 dark:bg-gray-900 bg-gray-700 -right-8 top-0 py-4 px-8 h-screen flex flex-col justify-start -translate-x-8 transition ease-in-out z-20'
                   : 'fixed right-[-100%]'
               }
             >
