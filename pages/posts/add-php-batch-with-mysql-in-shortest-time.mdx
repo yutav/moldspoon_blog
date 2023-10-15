@@ -1,0 +1,260 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Laravelでできる。ローカルからMySQL(CloudSQL)テーブルを更新するバッチを超速で開発。',
+  date: '2023-10-15T14:45:00.000Z',
+  tags: [
+    'Tips',
+    'プログラミング',
+    'PHP',
+    'CloudSQL',
+    'MySQL',
+    'RDBMS',
+    'バックエンド',
+    'Laravel'
+  ]
+}
+
+
+## 前提・直面した問題
+
+既に[CloudSQL](https://cloud.google.com/sql?hl=ja)で動いている**開発用DB** があり、
+ローカルからは、[Cloud SQL Auth Proxy](https://cloud.google.com/sql/docs/postgres/sql-proxy?hl=ja)を経由して、
+[TablePlus](https://tableplus.com/)を使って接続しに行けています。
+
+※Cloud SQL Auth Proxyについては、今度別記事を書きたいと思います。
+
+これ自体は何も問題ないのですが、今回バッチを使って、<span className="hoso">元からMySQL DBに入ったデータをちょっと格納したいニーズ</span>がでてきました。
+
+## 要件定義
+
+やりたいことは、**「もともと別の用途で加工され、テーブルへのカラム（行）追加しか許されていないテーブルで、前後列の内部IDへの参照をできるようにする」** です。
+今回でいうと、内部IDは`Scores.userId`となります。
+
+また、カーソル的なカラムを作らないで、アプリケーションで表示時にリアルタイムに参照すると言う方法ももしかしたらあり得るのかもしれません。しかし、こうした用途の場合、**現在私がメインで使っているNext.jsではその場でデータを加工しなければならず**、処理が複雑になりそうでした。また実際出来上がったシステムのパフォーマンス的にも
+効率が悪そうに見えましたので、あらかじめテーブルにデータを入れようと思った次第です。
+
+解説していくサンプルデータでは前提として、`Scores`と言うテーブルを作成し、LIKEをもらったユーザーの順位を入れた人気テーブル的なものとします。
+
+## 設計
+
+### 外部設計
+
+箇条書きとなりますが、以下を満たすバッチを作りたいです。
+
+- Macのローカルから、Unix Socketを通じてCloud SQLのMySQLに接続する（Winでも試してないが似たようなことができるはず）
+- `Scores`テーブルから、レコードを全件取得し、前後のuser_idを取得し、当該列にupdateをかける。
+
+### 内部設計
+
+具体的な`Users`および`Scores`テーブルの定義は以下のようになります。[Prisma](https://www.prisma.io/)のスキーマ形式です。
+
+```
+model Users {
+  id  Int        @id @default(autoincrement()) @db.UnsignedInt
+  name String    @db.VarChar(255)
+  created_at    DateTime?  @db.DateTime(6)
+  updated_at    DateTime?  @db.DateTime(6)
+}
+model Scores {
+  id            Int        @id @default(autoincrement()) @db.UnsignedInt
+  user_id       Int
+  score_ranking_position  Int
+  score_like    Int
+  before_user_id  Int?
+  after_user_id Int?
+  created_at    DateTime?  @db.DateTime(6)
+  updated_at    DateTime?  @db.DateTime(6)
+}
+```
+
+before_user_id / after_user_idはデータができた時点ではnullとして、本バッチを動かすことでuser_idが挿入されるようにします。
+
+### フィジビリティスタディ
+
+#### 具体的にどの技術を採用するか
+
+今回は既にCloud SQLが動いており、Dockerなどを使う必要はないと思いました。
+開発人員も自分だけですので。
+
+Macのローカルでサクッと動くものを作ると言っても、MySQLデータベースに接続するデータベースハンドルは何を使うかがまず頭に浮かびました。
+ローカルにインストールされているPHPはその場の必要に応じて入れ直したりしているもので、自分自身でも実態が把握できなくなることがあります。
+
+（よってグループで開発するなら絶対Dockerで環境をそろえます）
+
+#### 古典的なmysql_connect()で試みてみる
+
+今回、サクッと以下のような古典的な`mysql_connect()`をつかったスクリプトを作ろうと思ったのですが、
+
+<CodeBlockTitle title="test.php" />
+
+```php
+<?php
+
+$link = mysql_connect('localhost:/Users/macuser/dev/projectname/data/projectname:us-central1:projectname', 'root', 'password');
+var_dump($link);
+```
+
+データベースハンドルに繋ごうとした時点でエラーが出ました。
+
+```
+yuta@yutanoMacStudio data % php test.php
+PHP Fatal error:  Uncaught Error: Call to undefined function mysql_connect() in /Users/macuser/dev/projectname/data/test.php:3
+Stack trace:
+#0 {main}
+  thrown in /Users/macuser/dev/projectname/data/test.php on line 3
+
+Fatal error: Uncaught Error: Call to undefined function mysql_connect() in /Users/macuser/dev/projectname/data/test.php:3
+Stack trace:
+#0 {main}
+  thrown in /Users/macuser/dev/projectname/data/test.php on line 3
+```
+
+おそらく、MacにインストールされているPHPに`php-mysql`が入っていないのでしょう。
+ですが、原因究明に時間を使いたくないところで、そもそもLaravelを使えばいいことに気づきました。
+
+#### Laravelの新規プロジェクトをサクッと作り面倒ごとは任せる
+
+LaravelはさまざまなWebアプリケーションの構築ができる大規模なフレームワークで、Migrationの管理やDockerサーバへのラッパーツールまでビルトインされていて
+今回のサクッとバッチ開発には大袈裟すぎる気がしなくもないですが、プロジェクト自体は一瞬でスカフォールドを組めますし、
+以前にローカルからDBに接続しているプロジェクトがあれば、接続はかなりしやすいです。
+
+MySQLへのデータベース接続ライブラリも最初から組み込まれており、
+
+- 他のバッチを追加したい
+- 定期実行したい
+
+というニーズにも応えられそうです。Macのローカルで使う上で、過去の事例も揃っております。
+
+## 実装
+
+ここまでで調査を終わり、具体的には以下のように作業を進めました。
+
+#### ローカルで新規プロジェクトを立ち上げ
+
+```
+composer create-project laravel/laravel projectname-laravel
+```
+
+参考にしたURL: [Installation](https://laravel.com/docs/10.x/installation)
+
+#### .envにデータベース接続設定を追加（今回はCloudSQL)
+
+下記はローカルからCloudSQLを使う事例で、<span className="hoso">DB_SOCKETの指定がポイント</span>です。
+
+```
+# 前後略
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=projectname
+DB_USERNAME=root
+DB_PASSWORD=password
+DB_SOCKET=/Users/macuser/dev/projectname/data/cloudsql/projectname:us-central1:projectname
+
+```
+
+#### モデルを作成
+
+今回の事例では既にCloud SQL上のMySQLにテーブルがありますので、モデルだけ作ります。
+プロジェクトルートで以下を実行
+
+```
+php artisan make:model Score
+```
+
+#### バッチの枠を作成し、実装
+
+```
+php artisan make:command updateBeforeAndAfterUserId
+```
+
+`app/Console/Commands/updateBeforeAndAfterUserId.php`をIDE(VSCodeなど)で開き、
+以下のように実装します。
+
+<CodeBlockTitle title="app/Console/Commands/updateBeforeAndAfterUserId.php" />
+
+```php
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+// この行を追加し忘れやすいので忘れず。モデルを使う時はuseが必要。
+use App\Models\Score; 
+
+class updateBeforeAndAfterUserId extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:update-before-and-after-user-id';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Command description';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $scores = Score::query()
+            ->orderBy('score_ranking_position', 'asc') // 順位が1,2,....と末尾まで降順にソートされます
+            ->get();
+        foreach ($scores as $score) {
+                // 1位のユーザーとドベのユーザーの場合、データがnullになることも考慮。
+                $beforeUserObj = isset($scores[$index - 1]) ? $scores[$index - 1] : null;
+                $afterUserObj = isset($scores[$index + 1]) ? $scores[$index + 1] : null;
+
+                $score->before_user_id = $beforeUserObj ? $beforeUserObj->user_id : null;
+                $score->after_user_id = $afterUserObj ? $afterUserObj->user_id : null;
+
+                $station->save(); // すぐ当該行をセーブ
+        }
+    }
+}
+
+```
+
+こんな感じでサクッと実装。
+
+#### バッチを実行・できたデータの確認
+
+```
+php artisan app:update-before-and-after-user-id
+```
+
+を実行してしばらく待つだけ。
+更新状況を確認し、無事想定通りのデータが作れました。
+
+## まとめ
+
+ローカルでサクッと組みたい程度でも、もはやフレームワークは手放せないんだーと感じた次第でした。
+あるいは、[AWS Lambda](https://aws.amazon.com/jp/lambda/)を使うなら別かもしれませんが、Lambdaって
+稼働のために必要なライブラリを**layer**として追加しなければいけなかったり、開発人員が少ないプロジェクトでは<span className="hoso">意外に環境整備のために本来必要なのか？という時間を使っちゃう</span>んですよね。
+
+なので、<span className="hoso">ミドル層のライブラリの仕事を丸投げしちゃうために、フレームワークを（大袈裟に見えても）使ってみちゃうのは発想としてアリだな</span>と改めて思った次第でしたー。
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
