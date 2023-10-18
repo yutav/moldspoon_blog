@@ -96,7 +96,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
       <style jsx>{`
        
         .item {
-          margin-bottom: calc(1.35 * ${theme.layout.gapHalf});
+          margin-bottom: calc(1.35 * ${theme.layout.gap});
           overflow: hidden;
           max-width: 100vw;
         }
