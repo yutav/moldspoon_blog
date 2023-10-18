@@ -39,7 +39,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
         <div className="p-3">
           <div className="flex flex-wrap">
             {post.meta?.tags?.includes('Tips') && (
-              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
                 <Link href={`/tags/Tips`} target="_blank" className={getTagColor('Tips') +
                   " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"
                 }>
@@ -48,7 +48,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
               </div>
             )}
             {post.meta?.tags?.includes('Blog') && (
-              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
                 <Link href={`/tags/Blog`} target="_blank"
                   className={getTagColor('Blog') + " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   Blog
@@ -56,7 +56,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
               </div>
             )}
             {post.meta?.tags?.includes('経験者向け') && (
-              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
                 <Link href={`/tags/%E7%B5%8C%E9%A8%93%E8%80%85%E5%90%91%E3%81%91`} target="_blank"
                   className={getTagColor('経験者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   経験者向け
@@ -64,7 +64,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
               </div>
             )}
             {post.meta?.tags?.includes('初級者向け') && (
-              <div className="px-2 mb-2 md:mb-2 dark:bg-gray-900 text-center">
+              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
                 <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85%E5%90%91%E3%81%91`} target="_blank"
                   className={getTagColor('初級者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
                   初級者向け
