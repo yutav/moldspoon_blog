@@ -17,7 +17,8 @@ const RichLink: React.FC<Prop> = ({ url, icon, moldspoonIcon, title, subtitle, t
           <>
             <p className="mr-2 text-sm">参考記事:</p>
             <div className="border rounded-lg p-5">
-              <Image src={process.env.baseUrl + "/assets/moldspoonblog_short.png"} width="160" height="40" alt="モルドスプーンアイコン" className="mr-2 mb-2" />
+              <Image src={process.env.baseUrl + "/assets/moldspoonblog_short.png"} width="160" height="40" alt="モルドスプーンアイコン" className="mr-2 mb-2 dark:hidden block" />
+              <Image src={process.env.baseUrl + "/assets/moldspoonblog_short_white.png"} width="160" height="40" alt="モルドスプーンアイコン" className="mr-2 mb-2 dark:block hidden" />
               <div>
                 <div className="rich-link-title">{title}</div>
                 <div className="rich-link-subtitle">{subtitle}</div>
