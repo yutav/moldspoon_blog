@@ -42,6 +42,9 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
             <Link aria-label="about" href={process.env.baseUrl + "/about"} {...linkProps}>
               このブログについて
             </Link>
+            <Link aria-label="about" href={process.env.baseUrl + "/privacy"} {...linkProps}>
+              プライバシーポリシー
+            </Link>
           </div>
         </div>
 
