@@ -184,3 +184,8 @@ ul.MuiPagination-ul li:before {
 ul.MuiPagination-ul li button {
   cursor: pointer;
 }
+@media (prefers-color-scheme: dark) {
+  ul.MuiPagination-ul li button {
+    background: #333;
+  }
+}
