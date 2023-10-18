@@ -13,9 +13,10 @@ interface Prop {
   width?: number;
   height?: number;
   classStr?: string;
+  annotation?: string
 }
 
-const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr }) => {
+const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr, annotation }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { isMedium } = useIsMobile()
   const baseUrl = process.env.baseUrl || ''; // ベースURLを適切に設定する必要があります
@@ -47,6 +48,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
               layout="fill"
               objectFit="contain"
             />
+            {annotation && <p className="text-xs text-center italic">{annotation}</p>}
           </div>
           {lightboxOpen && (
             <Lightbox

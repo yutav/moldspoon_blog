@@ -1,0 +1,20 @@
+[Filtering and Sorting](https://www.prisma.io/docs/concepts/components/prisma-client/filtering-and-sorting)
+
+#### where column is null
+```typescript
+const posts = await prisma.post.findMany({
+  where: {
+    content: null,
+  },
+})
+```
+
+#### where column is not null
+
+```typescript
+const posts = await prisma.post.findMany({
+  where: {
+    content: { not: null },
+  },
+})
+```

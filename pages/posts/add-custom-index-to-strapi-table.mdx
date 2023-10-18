@@ -1,0 +1,220 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Strapiで作成したテーブルにインデックスを永続的に貼る方法',
+  date: '2023-10-18T06:30:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Strapi',
+    'Strapi v4',
+    'カスタマイズ',
+    'CMS',
+    'MySQL',
+    'バックエンド'
+  ]
+}
+
+### 問題
+
+[Strapi](https://strapi.io/)で作成したMySQLテーブルに、事後的にインデックスを貼ろうとしましたが、
+貼っても貼っても消えてしまいます。
+
+#### 貼っても貼ってもインデックスが消えてしまう。
+
+どうやら、<span className="hoso">デフォルトではStrapiの画面からテーブル定義を変更すると、もれなく消えるようになっている</span>模様。
+
+一方で、[Prisma](https://www.prisma.io/)ではUniqueインデックスを貼っていないとTypescriptの型ファイルを
+出力しようとする時にエラーが出て、動かない問題が起きて、**両方を解決しなければならなくなりました。**
+
+なお、**今回の事例はUnique Indexでしたが、どうも通常のIndexも同様になる** ようです。
+
+<MdxImage month="202310" image="strapi01.png" annotation="手で追加したUnique index。このあと消えちゃう" />
+<br />
+
+なお、Strapi導入の際に検討を行った記事は以下となりますので、もしよろしければご覧になってください。
+
+<RichLink
+url="https://moldspoon.jp/blog/posts/first-using-strapi" 
+moldspoonIcon={true}
+title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。" 
+subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
+targetBlank={true}
+/>
+
+### 解決方法を調査
+
+本問題を解決するためにGoogle検索を行ったところ、英語で以下の記事がヒットしました。
+
+#### StackOverFlowのポスト...「バグじゃない、仕様だ」
+
+[Strapi removing custom indexes from db](https://stackoverflow.com/questions/76169449/strapi-removing-custom-indexes-from-db)
+
+>this is not a bug, this is the way strapi performs migrations internally. E.g. if it finds something that is not defined in schema.json or not created via strapi file system it erases it (tables, columns etc.) it's maybe possible to add custom columns via migration scripts
+
+翻訳すると「これはバグではなく、strapiが内部的にマイグレーションを実行する方法です。例えば、schema.jsonで定義されていないか、strapiファイルシステムで作成されていないものを見つけると、それを消去します(テーブル、カラムなど)。」
+
+とあります。
+
+まあそうだよねーとは思っていました。**indexを勝手に消すって大事** ですからね。そこをStrapiの開発者の皆様が考えていないわけないよなーと。
+
+#### Strapi Forumのポスト...「開発環境では手でつけなおせ」
+
+お次は安心の本件のフォーラムサイトでのポスト。
+
+以下のポスト（接続先は[MongoDB](https://www.mongodb.com/ja-jp)のようですが）によると、**開発環境ではスキーマの再構築時に常時定義にないindexは消されるので、手で付け直すしかない**
+と言われます。
+
+[Best approaching for adding custom Indexes?](https://forum.strapi.io/t/best-approaching-for-adding-custom-indexes/888/12)
+
+しかし、定義ファイルのある、`src/api/tableName/content-types/tableName/schema.json`を以下のように書き換えても結局indexは消されてしまいます。
+
+```
+    "line_cd": {
+      "type": "integer",
+      "index": true,
+      "unique": true
+    },
+```
+
+Prismaを使って表側を開発している以上、この結論は納得いかなくてめんどくさすぎます...😭
+
+#### Github issueのポスト...「v3系なら xxx.settings.json に追記すれば消えないよ」
+
+次もある意味本家、StrapiのGitレポジトリのIssueから。
+
+[Github Issue](https://github.com/strapi/strapi/issues/8799#issuecomment-782880352)
+このポストのリプライによると、
+
+(以下は、一部のみ、マークダウン形式でエラーが出るため改変しています。)
+
+>Here is my solution, I have to manually edit the settings.json file inside folder /api/xxx/xxx.settings.json
+>
+>add this line
+>"index": true
+
+ここにindex: trueを追加すればいけるとのこと。ただ、<span className="hoso">v3ではなくv4を使っているのでこの解決方法はちょっと許容しにくい</span>ですかね。
+v3は使ったことはないですが、古そうなので、メンテもされなくなるでしょうしね。
+
+### 自力で解決
+残念なことですが基本的に諦め系のポストが多かったので、なんとか自力で解決する方法を探ります。
+
+#### Strapi本体をforkする形で改修するか？
+
+これは厳しそうでした。できなくはないと思いますが、コードリーディングする量が多く、<span className="hoso">そうした時間を節約したいからStrapiを使っている</span>ので。
+
+#### 何か逃げる方法を使うか？ => これを採用
+
+先程のGithub Issueの中の[こちらの方](https://github.com/strapi/strapi/issues/8799#issuecomment-1061658943)のリプライが参考になりました。
+
+マリーアントワネットのコペルニクス的転回とでも申しましょうか。**事後的にindex貼っちゃえばいいじゃない！** というわけです笑😀
+
+v3では`bootstrap.js`だったようですが、v4では`src/index.js`に`bootstrap()`というメソッドがありこれが起動時によばれそうです。
+起動時だからといって毎回スキーマの変更が動いているわけではないので、一応既にindexが貼られていないかを確認する必要があります。
+
+
+##### mysql2を追加
+
+```
+yarn add mysql2
+```
+をプロジェクトルートで実行。`mysql2`を接続ライブラリとして使用します。
+
+<CodeBlockTitle title="src/index.ts" />
+
+```typescript
+'use strict';
+
+module.exports = {
+  /**
+   * An asynchronous register function that runs before
+   * your application is initialized.
+   *
+   * This gives you an opportunity to extend code.
+   */
+  register(/*{ strapi }*/) {
+    console.log("### register")
+
+  },
+
+  /**
+   * An asynchronous bootstrap function that runs before
+   * your application gets started.
+   *
+   * This gives you an opportunity to set up your data model,
+   * run jobs, or perform some special logic.
+   */
+  bootstrap(/*{ strapi }*/) {
+    const mysql = require('mysql2/promise');
+
+    async function addUniqueIndex() {
+      try {
+        console.log('◇...事前処理を開始');
+
+        // @ts-ignore
+        const connection = await mysql.createConnection({
+          host: process.env.DATABASE_HOST,
+          port: process.env.DATABASE_PORT,
+          user: process.env.DATABASE_USERNAME,
+          password: process.env.DATABASE_PASSWORD,
+          database: process.env.DATABASE_NAME,
+          // socketPath: process.env.LOCAL_SOCKET // これが必要なのは私の環境だけかも
+        });
+
+        console.log('◇...MySQLに接続');
+
+        const query = "ALTER TABLE `tableName` ADD UNIQUE INDEX tableName_line_cd_unique (line_cd)";
+        await connection.query(query);
+
+        console.log('◇...事前処理を正常終了');
+
+        await connection.end();
+      } catch (error) {
+        console.log('◇...既にindexが存在するか、エラーが発生したため事前処理を終了')
+        console.log(error)
+      }
+    }
+
+    // 処理を実行。他にあれば順次追加。
+    addUniqueIndex();
+  },
+};
+```
+
+セーブして、`yarn run develop`でStrapiを再起動。すると...
+
+<MdxImage month="202310" image="strapi02.png" annotation="無事indexが貼られた" />
+<br />
+indexが貼ってある状態で起動しても、エラーハンドリング(catch)に移動して起動処理そのものはそのまま続きます。
+
+<MdxImage month="202310" image="strapi03.png" annotation="既に貼られているとしてエラーが出るものの利用に支障なし" />
+<br />
+
+特に問題なさそうですね。
+
+## まとめ
+
+どうもStrapiでは、**2つのテーブルの結合をさせたいときは中間テーブルを使用する形に振り切っている** らしく、
+そちらでは2つのキーに複合でユニークインデックスが貼られます。
+
+**例外的な対応をどんどん認めていくとこういったオープンソースのCMSの保守運営では問題が噴出するので対応としては理解できます。**
+
+ただ私のユースケースのように、<span className="hoso">既に設計済みで、直接結合している設計のテーブルにも対応できるオプションを今後用意してくれると
+嬉しいな</span>とは思いました。
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
