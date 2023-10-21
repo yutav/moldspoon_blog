@@ -31,7 +31,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             borderRadius: '12.5px'
           }} className='hidden md:block hover:opacity-80'
           />
-          <Image src={process.env.baseUrl + "/api/og?v=3&title=" + encodeURI(post.name)} width="100" height="44" alt={post.name} style={{
+          <Image src={process.env.baseUrl + "/api/og?v=4&title=" + encodeURI(post.name)} width="100" height="44" alt={post.name} style={{
             borderRadius: '5px'
           }} className='hidden sm:block md:hidden hover:opacity-80'
           />
