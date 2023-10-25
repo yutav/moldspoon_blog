@@ -8,6 +8,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Route53のtxtレコードに追記する',
   date: '2023-07-26T14:55:18.000Z',
+  updateDate: '2023-10-25T00:38:31.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -28,10 +29,10 @@ export const meta = {
 #### 素直に追加しようとしても、txtレコードが追加できない
 
 本ブログを[Google Search Console](https://search.google.com/search-console)に追加したいと思ったのですが、
-DNSのtxtレコードに、認証用の文字列の追加が必要なのでした。
+その際に、DNSのtxtレコードに、認証用の文字列の追加が必要となりました。
 
-AWSの提供するDNSサービス[Route53](https://aws.amazon.com/jp/route53/)ですが、
-すでにレコードが存在するとこのようにエラーが出ます。
+本ブログのドメインを管理しているのはAWSの提供するDNSサービス[Route53](https://aws.amazon.com/jp/route53/)ですが、
+すでにtxtレコードが存在するとこのようにエラーが出ます。
 
 <MdxImage month="202307" image="txt-record-exists.png" month="202307" />
 
@@ -45,18 +46,19 @@ txtレコードを押して編集画面に行ってみました。
 
 すると、なんということでしょう。**「複数の値を個別の行に入力します。」** との記入があるではないですか。
 
-<MdxImage month="202307" image="txt-record-add-multiple.png" month="202307" />
+<MdxImage month="202307" image="txt-record-add-multiple.png" month="202307" annotation="注意書きはよく読もう"/>
 
-あっさり解決、今回追加する**サチコン**のtxtレコードも改行して追加。
+あっさり解決、今回追加する[Google Search Console](https://search.google.com/search-console)のtxtレコードも改行して追加。
 
 - さくらのメールボックス
 - Google Search Console
 
-の両方が正常に動くかを動作確認して、作業完了です。
+の両方で、サービスが正常に動くかを動作確認して、作業が完了しました。
 
 ### まとめ
 
-ドキュメントに当たるのはとても重要ですが、先に動かしてみた方が答えが出ることもあります。
+<span className="hoso">ドキュメントに当たるのはとても重要ですが、先に動かしてみた方が答えが出ることもあります。</span>
+
 最も今回は弊社のコーポレートサイトという比較的優先順位が低いものの設定だから許されることであり、
 **クライアント様のDNS設定の場合は軽はずみに動かせないでしょう。**
 

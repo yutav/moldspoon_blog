@@ -40,9 +40,9 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
     <div className={styles.imageContainer + ' ' + (addClass ? addClass : '')}>
       {month ? (
         <>
-          <div onClick={openLightbox}>
+          <div onClick={openLightbox} className='my-10'>
             <Image
-              className={`${styles.image} my-10 border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
+              className={`${styles.image} border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
               src={imageUrl}
               alt={alt}
               layout="fill"
