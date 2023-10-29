@@ -217,8 +217,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <p className="text-xs">※Google検索を使用しています。</p>
               </div>
 
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2 max-h-20">
-                <p>Ads</p>
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2"
+                style={{ minHeight: '400px', maxHeight: "550px" }}
+              >
+                <p>Ads:</p>
                 {/* blog-top-square */}
                 {process.env.NODE_ENV == 'production' && (
                   <GoogleAdsense
@@ -298,7 +300,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         }
 
         .right-container {
-          width: 300px;
+          width: 360px;
         }
 
         .right-container :global(h3) {
