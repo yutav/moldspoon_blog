@@ -17,6 +17,7 @@ import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
+import DetailAds from './original/parts/DetailAds'
 
 export type PostMetadata = {
   title: string
@@ -169,6 +170,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <IntroduceMyself />
                 {children}
               </div>
+              <DetailAds />
               <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
               <Toc body={childrenHtml} />
 
@@ -218,12 +220,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2 max-h-20">
                 <p>Ads</p>
                 {/* blog-top-square */}
-                <GoogleAdsense
-                  client="ca-pub-1104475365452915" //
-                  slot="1717621406"
-                  style={{ display: 'block' }}
-                />
-
+                {process.env.NODE_ENV == 'production' && (
+                  <GoogleAdsense
+                    client="ca-pub-1104475365452915" //
+                    slot="1717621406"
+                    style={{ display: 'block' }}
+                  />
+                )}
               </div>
             </div>
           </div>

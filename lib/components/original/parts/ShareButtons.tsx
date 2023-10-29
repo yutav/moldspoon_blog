@@ -9,9 +9,10 @@ type Prop = {
 const ShareButtons: React.FC<Prop> = ({ url, title }) => {
 
   const fullTitle = changeTitle({ title: title })
-  const [opacity, setOpacity] = useState(0);
+  const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
+    /*
     // スクロール位置を監視し、400px以上スクロールしたらopacityを1に、400px未満の場合は0に設定する
     const handleScroll = () => {
       const triggerHeight = 200; // 200px以上スクロールしたら表示
@@ -26,6 +27,7 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
       // コンポーネントがアンマウントされるときにリスナーを削除
       window.removeEventListener("scroll", handleScroll);
     };
+    */
   }, []);
 
   return (
