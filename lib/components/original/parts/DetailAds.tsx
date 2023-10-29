@@ -4,14 +4,13 @@ type Prop = {
 
 const DetailAds: React.FC<Prop> = () => {
 
-
-
   return (
     <div
-      className="block lg:fixed lg:left-6 lg:top-6"
+      className="detailAdBox"
+
     >
       <div className="px-6 py-2 max-h-20"
-        style={{ minWidth: '300px' }}
+        style={{ minWidth: '250px' }}
       >
         {/* blog-top-square */}
         {process.env.NODE_ENV == 'production' && (
@@ -23,7 +22,19 @@ const DetailAds: React.FC<Prop> = () => {
         )}
 
       </div>
-
+      <style jsx>{`
+        .detailAdBox {
+          position: relative;
+        }
+        @media (min-width: 1536px) {
+          .detailAdBox {
+            position: fixed;
+            left: 2rem;
+            top: 2rem;
+          }
+        }
+      `}
+      </style>
     </div>
   )
 }
