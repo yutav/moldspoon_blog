@@ -20,7 +20,7 @@ const DetailAds: React.FC<Prop> = () => {
         {process.env.NODE_ENV == 'production' && (
           <GoogleAdsense
             client="ca-pub-1104475365452915" //
-            slot="1717621406"
+            slot="6371182287"
             style={{ display: 'block' }}
           />
         )}
