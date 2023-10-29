@@ -6,7 +6,7 @@ const DetailAds: React.FC<Prop> = () => {
 
   return (
     <div
-      className="detailAdBox"
+      className="detailAdBox z-10"
 
     >
       <div className="px-6 py-2 max-h-20"
