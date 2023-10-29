@@ -16,6 +16,7 @@ import { usePageCounter } from 'hooks/usePageCounter'
 import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
+import GoogleAdsense from './original/parts/GoogleAdsense'
 
 export type PostMetadata = {
   title: string
@@ -214,20 +215,15 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <p className="text-xs">※Google検索を使用しています。</p>
               </div>
 
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6">
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 max-h-20">
                 <p>Ads</p>
                 {/* blog-top-square */}
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
-                  crossOrigin="anonymous"></script>
-                <ins className="adsbygoogle"
-                  style={{ display: "block" }}
-                  data-ad-client="ca-pub-1104475365452915"
-                  data-ad-slot="1717621406"
-                  data-ad-format="auto"
-                  data-full-width-responsive="true"></ins>
-                <script>
-                  (adsbygoogle = window.adsbygoogle || []).push({ });
-                </script>
+                <GoogleAdsense
+                  client="ca-pub-1104475365452915" //
+                  slot="1717621406"
+                  style={{ display: 'block' }}
+                />
+
               </div>
             </div>
           </div>
