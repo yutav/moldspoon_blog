@@ -33,7 +33,7 @@ const GoogleAdsense = ({ client, slot, style }: GoogleAdsenseProps) => {
 
   return (
     <div
-
+      style={{ textAlign: 'center' }}
     >
       <ins className="adsbygoogle" style={style} data-ad-client={client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true"></ins>
     </div>
