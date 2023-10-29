@@ -1,6 +1,6 @@
 import { changeTitle } from "lib/utils";
 import { TwitterShareButton, FacebookShareButton, LineShareButton, HatenaShareButton, TwitterIcon, FacebookIcon, LineIcon, HatenaIcon } from "react-share";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 type Prop = {
   url: string
   title: string
@@ -9,7 +9,6 @@ type Prop = {
 const ShareButtons: React.FC<Prop> = ({ url, title }) => {
 
   const fullTitle = changeTitle({ title: title })
-  const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
     /*
@@ -33,7 +32,6 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
   return (
     <div
       className="block lg:fixed lg:-ml-32 lg:top-1/2"
-      style={{ opacity: opacity }}
     >
       <div className="px-2 lg:px-0 py-5 w-full lg:w-12 grid grid-cols-6 md:grid-cols-10 lg:grid-cols-1 md:grid-rows-8 gap-4 justify-items-center lg:bg-white lg:dark:bg-black lg:dark:border lg:dark:border-gray-300 lg:rounded-2xl">
         <p className="text-lg lg:text-xs font-bold text-center lg:text-orange-500">Share Me!</p>
