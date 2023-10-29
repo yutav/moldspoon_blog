@@ -300,7 +300,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         }
 
         .right-container {
-          width: 360px;
+          width: 340px;
         }
 
         .right-container :global(h3) {
