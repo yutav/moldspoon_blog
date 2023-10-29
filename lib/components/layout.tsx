@@ -187,10 +187,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         </div>
 
         {inDetailPage ? (<></>) : (
-          <div className="mt-6 ml-6 right-container hidden xl:block h-screen">
+          <div className="mt-2 ml-6 right-container hidden xl:block h-screen">
 
             <div className="right-container fixed z-2">
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-6">
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-2">
                 <h3 className="mb-6">検索</h3>
                 <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
                   <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
