@@ -186,9 +186,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         {inDetailPage ? (<></>) : (
           <div className="mt-6 ml-6 right-container hidden xl:block h-screen">
 
-
-            <div className="right-container bg-white dark:bg-black lg:shadow rounded-lg fixed z-2">
-              <div className="m-6">
+            <div className="right-container fixed z-2">
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-6">
                 <h3 className="mb-6">検索</h3>
                 <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
                   <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
@@ -213,7 +212,22 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                   />
                 </div>
                 <p className="text-xs">※Google検索を使用しています。</p>
+              </div>
 
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6">
+                <p>Ads</p>
+                {/* blog-top-square */}
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
+                  crossOrigin="anonymous"></script>
+                <ins className="adsbygoogle"
+                  style={{ display: "block" }}
+                  data-ad-client="ca-pub-1104475365452915"
+                  data-ad-slot="1717621406"
+                  data-ad-format="auto"
+                  data-full-width-responsive="true"></ins>
+                <script>
+                  (adsbygoogle = window.adsbygoogle || []).push({ });
+                </script>
               </div>
             </div>
           </div>
