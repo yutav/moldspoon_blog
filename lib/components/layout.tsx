@@ -220,7 +220,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2"
                 style={{ minHeight: '400px', maxHeight: "550px" }}
               >
-                <p className='text-xs py-1'>Ads:</p>
+                <p className='text-xs py-1 my-0'>Ads:</p>
                 {/* blog-top-square */}
                 {process.env.NODE_ENV == 'production' && (
                   <GoogleAdsense
