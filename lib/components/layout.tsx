@@ -79,6 +79,8 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         name="viewport"
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
+        crossOrigin="anonymous"></script>
     </Head >
   )
 }
