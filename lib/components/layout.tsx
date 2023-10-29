@@ -215,7 +215,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <p className="text-xs">※Google検索を使用しています。</p>
               </div>
 
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 max-h-20">
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2 max-h-20">
                 <p>Ads</p>
                 {/* blog-top-square */}
                 <GoogleAdsense
