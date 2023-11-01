@@ -15,7 +15,7 @@ const DetailLeftBox: React.FC<Prop> = ({ detailContents }) => {
         .detailLeftBox {
           position: relative;
         }
-        @media (min-width: 1536px) {
+        @media (min-width: 1600px) {
           .detailLeftBox {
             position: fixed;
             left: 0.5rem;

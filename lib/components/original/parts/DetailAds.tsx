@@ -26,7 +26,7 @@ const DetailAds: React.FC<Prop> = () => {
         .detailAd {
           position: relative;
         }
-        @media (min-width: 1536px) {
+        @media (min-width: 1600px) {
           .detailAd {
             margin-top: 1rem;
           }
