@@ -170,10 +170,12 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <IntroduceMyself />
                 {children}
               </div>
+              <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+
               <DetailLeftBox detailContents={
                 <div>
 
-                  <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-2">
+                  <div className="bg-white dark:bg-black xl:shadow rounded-lg p-0 xl:p-6 mb-2">
                     <h3 className="!mt-0 mb-6">検索</h3>
                     <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
                       <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
@@ -201,7 +203,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                   </div>
                 </div>
               } />
-              <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
               <Toc body={childrenHtml} />
 
             </>
