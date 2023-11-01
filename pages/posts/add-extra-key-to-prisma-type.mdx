@@ -1,0 +1,316 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Prismaで吐き出したTypescriptの型ファイルに独自キーを追加して「拡張」利用する方法。',
+  date: '2023-11-01T00:22:12.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'Prisma',
+    'フロントエンド',
+  ]
+}
+
+## 本記事のゴール
+
+[Prisma](https://www.prisma.io/)で吐き出されたTypescriptの型ファイルに、独自のカラム（キー）を追加したうえで
+**APIから結果を受け取り、以後拡張したクラスのオブジェクトとして、色々なところで使いたい。** 
+
+<br />
+なお、弊ブログでは**Prisma**について以下の記事も執筆しておりますのでよろしければご覧になってください。
+
+参考記事: [サーバがなくてもMySQLが使える！PlanetScaleとNext.jsを組み合わせ速攻でDBに接続する方法。](http://moldspoon.jp/blog/posts/add-planetscale-to-nextjs-project)
+
+## 現状の問題点
+
+Prismaはさまざまなデータベースシステムの型ファイルを出力してくれ、Typescript環境のプロジェクトで利用するのに
+それはそれはとても便利なORM(ORマッパー)ライブラリ...なのですが、DBの現状を
+
+```
+npx prisma pull
+```
+
+で、ローカルの`schema.prisma`に反映し、
+
+```
+npx prisma generate
+```
+
+で型ファイルとして出力する...という**機械的な手順で反映する** ため、<span className="hoso">場合によっては、DBにないカラムをクラスに追加できない</span>ということになりかねません。
+
+##### 前提
+
+- 追加するキーの名称は「job」とします。1: 正社員 2: パート 3: アルバイト のように数字が入ります。
+- 本記事では[Prisma Client](https://www.prisma.io/docs/concepts/components/prisma-client)を使わず**RestfulAPI** を呼ぶ想定です。<br />Prisma Clientも、Javascriptのライブラリのように、DBレイヤを意識せずに(SQLなども使わずに)、結果を呼び出すことができてとても便利です。が、今回は既存のRestfulAPIを活かす形で、あくまでPrismaは[Prisma Migrate](https://www.prisma.io/docs/concepts/components/prisma-migrate)のみを使用します。
+- [Next.js 13](https://nextjs.org/blog/next-13)を使用したプロジェクトで、[axios](https://github.com/axios/axios)を利用しRestfulAPIにリクエストをかけています。
+
+- プロジェクト構成は以下のようにしています。（掲題に関係ない部分は省略。）今回はデザインパターンのうち、**レポジトリーパターン**を使って実装します。
+
+```
+src
+├── app
+│   └── user
+│       └── page.tsx
+├── models
+│   └── optionals
+│       └── user_with_job.ts // 今回作成するPrismaのクラスを拡張したクラス
+└── lib
+    └── repositories
+        ├── apiHelper.ts
+        └── user.ts // http://apidomain/api/userへリクエスト
+
+```
+
+### 解決策1: APIから結果を受け取る
+
+一番シンプルなのは、以下のように**axiosで受け取るレスポンスのキーを2つにしてしまう**ことです。
+
+##### 解決策1のレポジトリー層
+
+<CodeBlockTitle title="src/lib/repositories/user.ts" />
+
+```typescript
+import { axiosWithBearerToken } from '@/lib/apiHelper';
+import { User } from '@prisma/client';
+import axios, { AxiosResponse } from 'axios';
+
+export async function getUser(): Promise<{
+  user: User,
+  job: number
+}> {
+  try {
+    const axiosInstance = axiosWithBearerToken();
+    const response: AxiosResponse<
+    {
+      user: User, 
+      job: number
+    }> = await axiosInstance.get('/user');
+
+    const { user, job } = response.data
+
+    return { user, job }
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+```
+
+##### 解決策1のレポジトリー層・ベースクラス
+
+リクエストを行う`axios`を呼び出す処理は`apiHelper.ts`に集約し、さまざまな処理で使えるようにしておきます。
+
+- API_BASE_URL
+- BEARER_TOKEN
+
+は、Next.jsプロジェクトのルートディレクトリに置いた`.env`に実際に使うものを記述してください。
+(BEARER_TOKENが不要な場合はこの行をコメントアウトしてください。)
+
+<CodeBlockTitle title="src/lib/repositories/apiHelper.ts" />
+
+```typescript
+import axios from 'axios';
+
+export const axiosWithBearerToken = () => {
+  const instance = axios.create({
+    baseURL: process.env.API_BASE_URL,
+    headers: {
+      Authorization: `Bearer ${process.env.BEARER_TOKEN}`,
+    },
+  });
+
+  return instance;
+};
+```
+
+prismaで自動的に吐かれた、`user`の型は以下のようなキー構成となります。（実際には関数ジャンプで飛べる `index.d.ts`はずっと複雑ですがわかりやすさを重視し、例示しています。）
+
+```typescript
+export type User = {
+  id: number
+  name: string | null
+  created_at: Date | null
+  updated_at: Date | null
+}
+```
+
+##### 解決策1のページファイル
+
+ページファイルでは以下のように使用します。
+
+<CodeBlockTitle title="src/app/page.tsx" />
+
+```typescript
+import { User } from "@prisma/client"
+import { getUser } from "@/repositories/places"
+
+const Page = async () => {
+
+  let user: User | null = null;
+  let job: number | null = null;
+
+   try {
+    const response = await getUser();
+    if (response) {
+      job = response.job;
+      user = response.user
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (user == null) {
+    return <main>ロード中...</main>
+  }
+
+  return (
+    <main>
+      ユーザー名: {user.name}
+      職業番号: {user.job}
+    </main>
+  )
+}
+
+export default Page
+```
+
+Prisma Migrateで自動生成されたキー以外は、**クラスとは別の変数で管理することになり、キーを必要に応じて気軽に追加しやすい** 反面、
+数が増加する一方になるので、<span className="hoso">データを渡したいコンポーネントがある場合、引数が増えるほど保守性が落ちることになりかねません。</span>
+<br />
+下記のような感じですね。**（パラメータがずらずらと...）**
+
+```
+let user: User | null = null;
+let job: number | null = null;
+let sex: number | null = null;
+let yearsOld: number | null = null;
+// 以下も増えていく！
+
+try {
+  const response = await getUser();
+  if (response) {
+    job = response.job
+    user = response.user
+    sex = response.sex
+    yearsOld = response.yearsOld
+    // 以下も増えていく！
+  }
+} catch (e) {
+  console.error(e);
+}
+
+// 中略...
+
+<TestComponent user={user} job={job} sex={sex} yearsOld={yearsOld} {/*追加するほど後に続く！*/}/>
+```
+
+こちらを解決するのが下で解説する、2.の方法となります。
+
+### 解決策2: 「拡張」クラスを作成する。
+
+便利なPrisma Migrateが利用できなくなるため、Prismaの型を直接変更するわけにはいかない。
+一方で、引き回す変数は極力少なくしたい...
+
+これを実現するのが<span className="hoso">もとのPrismaで生成したクラスを「拡張」する方法</span>です。
+
+先ほどと同じ、`user`クラスでに`job`というパラメータを入れる事例で説明しますと以下のようになってきます。
+
+
+##### 解決策2のレポジトリー層
+
+戻り値の型指定がよりシンプルになりましたし、<span className="hoso">行数も少なくできて、メンテナンス性も向上した</span>ことがお分かりいただけると思います。
+
+<CodeBlockTitle title="src/lib/repositories/user.ts" />
+
+```typescript
+import { axiosWithBearerToken } from '@/lib/apiHelper';
+import { UserWithJob } from '@/models/options/user_with_job';
+import axios, { AxiosResponse } from 'axios';
+
+export async function getUser(): Promise<user: UserWithJob> {
+  try {
+    const axiosInstance = axiosWithBearerToken();
+    const response: AxiosResponse<UserWithJob> = await axiosInstance.get('/user');
+    return response.data
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+```
+
+##### 解決策2のレポジトリー層・ベースクラス
+
+上の、`apiHelper.ts`と同じものを使います。
+
+##### 解決策2の拡張したクラス定義
+
+`src/models/optionals/user_with_job.ts`を新たに作り、prismaで出力された`user`を拡張します。
+こうすることでMVCフレームワークで申しますと、Controllerにあたるページファイルに、拡張定義をしなくてよくなります。
+
+<CodeBlockTitle title="src/models/optionals/user_with_job.ts" />
+
+```typescript
+import { user } from "@prisma/client";
+
+export type UserWithJob = user & { job: number
+// 必要なものがあればここに追加して拡張していく。
+};
+```
+
+##### 解決策2のページファイル
+
+変更後のページファイルは以下になります。
+
+<CodeBlockTitle title="src/app/page.tsx" />
+
+```typescript
+import { UserWithJob } from "@/models/optionals/user_with_job.ts";
+
+const Page = async () => {
+
+  let user: UserWithJob | null = null;
+
+   try {
+    const user = await getUser();
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (user == null) {
+    return <main>ロード中...</main>
+  }
+
+  return (
+    <main>
+      ユーザー名: {user.name}
+      職業番号: {user.job}
+    </main>
+  )
+}
+
+export default Page
+```
+
+## まとめ
+
+Prismaを実用的に使っていて、今回の問題に当たりました。商用のプロジェクトで保守性をどう維持しながら開発するか、もっというと**いかに適度にリファクタリングしながら開発していくか。** というのはどのフレームワークを使っていても必ず起こる問題ですし、<span className="hoso">意外にPrismaにおいてこれ関連のポストが少ないと思った</span>ので今回まとめてみた次第でした。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
