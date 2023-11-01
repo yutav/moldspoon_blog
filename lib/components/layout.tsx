@@ -18,6 +18,7 @@ import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import DetailAds from './original/parts/DetailAds'
+import DetailLeftBox from './original/parts/DetailLeftBox'
 
 export type PostMetadata = {
   title: string
@@ -170,7 +171,37 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 <IntroduceMyself />
                 {children}
               </div>
-              <DetailAds />
+              <DetailLeftBox detailContents={
+                <div>
+
+                  <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-2">
+                    <h3 className="!mt-0 mb-6">検索</h3>
+                    <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
+                      <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
+                      <input
+                        type="text"
+                        name="search"
+                        className={"w-full text-xl bg-transparent "}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          console.log(e.key)
+                          console.log(composing)
+                          switch (e.key) {
+                            case "Enter":
+                              if (composing) break;
+                              handleSearch();
+                              break;
+                          }
+                        }}
+                        onCompositionStart={startComposition}
+                        onCompositionEnd={endComposition}
+                      />
+                    </div>
+                    <p className="text-xs">※Google検索を使用しています。</p>
+                  </div>
+                </div>
+              } />
               <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
               <Toc body={childrenHtml} />
 

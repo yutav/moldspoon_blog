@@ -6,7 +6,7 @@ const DetailAds: React.FC<Prop> = () => {
 
   return (
     <div
-      className="detailAdBox z-10"
+      className="detailAd"
 
     >
       <div className="px-6 py-2 max-h-20"
@@ -23,14 +23,12 @@ const DetailAds: React.FC<Prop> = () => {
 
       </div>
       <style jsx>{`
-        .detailAdBox {
+        .detailAd {
           position: relative;
         }
         @media (min-width: 1536px) {
-          .detailAdBox {
-            position: fixed;
-            left: 2rem;
-            top: 2rem;
+          .detailAd {
+            margin-top: 1rem;
           }
         }
       `}
