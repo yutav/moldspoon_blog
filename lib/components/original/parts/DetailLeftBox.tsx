@@ -1,5 +1,4 @@
 import DetailAds from "./DetailAds";
-import GoogleAdsense from "./GoogleAdsense";
 type Prop = {
   detailContents: React.ReactNode
 }
