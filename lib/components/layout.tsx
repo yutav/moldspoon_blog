@@ -17,7 +17,6 @@ import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
-import DetailAds from './original/parts/DetailAds'
 import DetailLeftBox from './original/parts/DetailLeftBox'
 
 export type PostMetadata = {
