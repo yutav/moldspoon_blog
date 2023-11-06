@@ -14,9 +14,10 @@ interface Prop {
   height?: number;
   classStr?: string;
   annotation?: string
+  isHalf?: boolean
 }
 
-const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr, annotation }) => {
+const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr, annotation, isHalf }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { isMedium } = useIsMobile()
   const baseUrl = process.env.baseUrl || ''; // ベースURLを適切に設定する必要があります
@@ -42,13 +43,13 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
         <>
           <div onClick={openLightbox} className='my-10'>
             <Image
-              className={`${styles.image} border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
+              className={`${isHalf ? styles.imageHalf : styles.image} border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
               src={imageUrl}
               alt={alt}
               layout="fill"
               objectFit="contain"
             />
-            {annotation && <p className="text-xs text-center italic">{annotation}</p>}
+            {annotation && <p className={(isHalf && "w-1/2") + " text-xs text-center italic"}>{annotation}</p>}
           </div>
           {lightboxOpen && (
             <Lightbox

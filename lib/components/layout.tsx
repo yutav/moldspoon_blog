@@ -166,7 +166,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
             <>
               <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
               <TagLinks tags={meta.tags} />
-              <div className="dynamic-content">
+              <div className="dynamic-content detail-body">
                 <IntroduceMyself />
                 {children}
               </div>

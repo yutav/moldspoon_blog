@@ -189,3 +189,33 @@ ul.MuiPagination-ul li button {
     background: #333;
   }
 }
+
+/* only in detail page */
+.detail-body ul {
+  @apply !my-12 p-6 rounded border-2 border-black dark:border-white;
+  margin: 0px;
+}
+
+.detail-body ul li {
+  padding-left: 20px;
+}
+
+.detail-body ul li:before {
+  @apply text-black dark:text-white inline-block;
+  content: '⚫︎';
+  margin-left: -20px;
+}
+
+.detail-body ul li ul {
+  @apply !m-3 p-0 !border-none;
+}
+
+/* only in detail page */
+.detail-body ol {
+  @apply !my-12 p-6 pl-12 rounded border-2 border-black dark:border-white;
+  margin: 0px;
+}
+
+.detail-body ol li {
+  @apply m-0 leading-loose;
+}
