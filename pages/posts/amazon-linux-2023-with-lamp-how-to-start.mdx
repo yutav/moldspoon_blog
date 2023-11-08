@@ -2,7 +2,7 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-  title: 'Amazon Linux 2023 in LightsailをLAMPで運用開始できるまでを丁寧に解説。第1回 サーバ起動編。',
+  title: 'Amazon Linux 2023@Lightsail+Wordpressを運用開始できるまでを丁寧に解説。第1回 サーバ立ち上げ編。',
   date: '2023-11-05T13:37:39.000Z',
   udpateDate: '2023-11-08T11:09:54.000Z',
   tags: [
@@ -28,8 +28,7 @@ export const meta = {
 
 ### 本連載のゴール
 
-Amazon Linux2023カーネルのLightsailインスタンス(サーバ)で、LAMP構成のアプリケーションを
-独自ドメインから呼び出せるようにしたい。
+Amazon Linux2023カーネルのLightsailインスタンス・サーバで、インストール済みのWordpressにアクセスできるようにする。
 
 ### 対象読者
 
@@ -197,8 +196,27 @@ yuta@yutanoMacStudio ~ % ssh ec2-user@13.112.240.0 -i ~/.ssh/LightsailDefaultKey
 ## まとめ
 
 いかがでしたでしょうか。ここまで**GUI（画面から操作するインターフェース）だけで、簡単にサーバを立ち上げることができました。**
-Wordpressほど簡単ではないものの、比較的自由度が高くかつ難易度も低めのLamp環境での、Amazon Linux2023をOSとして採用した環境を立ち上げる方法を
-第2回では解説してまいりますのでぜひフォローアップくださいませ。
+
+この環境は **「LightsailのWordpressイメージ」** ほど立ち上げが簡単ではないものの
+
+- 自由度が高く
+- 保守性が長期的に保て
+- バックエンドとしては習得難易度も低めのLAMP環境
+
+このような環境で、メリットも大きいです。
+引き続き、第2回でも解説しておりますのでぜひフォローアップくださいませ。
+
+↓下記に続く。
+
+<br />
+<br />
+<RichLink 
+url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-middleware-install" 
+icon='ri-link-fill'
+title="Amazon Linux 2023@Lightsail+Wordpressを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。" 
+subtitle="第2回はこちらからご覧いただけます。"
+targetBlank={true}
+ />
 
 <br />
 
