@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Amazon Linux 2023 in LightsailをLAMPで運用開始できるまでを丁寧に解説。第1回 サーバ起動編。',
   date: '2023-11-05T13:37:39.000Z',
+  udpateDate: '2023-11-08T11:09:54.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -25,9 +26,10 @@ export const meta = {
 今回、Lightsailの2023年度版イメージである**Amazon Linux2023** をLAMP構成で運用開始できるまでを、画像付きで丁寧に解説していきます。
 本日は第1回、Lightsailインスタンスの立ち上げから、sshでログインできるところまでを書きます。
 
-### 本記事のゴール
+### 本連載のゴール
 
-Markdownで書いた項目を、Next.jsプロジェクト内でカンタンに呼び出せるようにしたい。
+Amazon Linux2023カーネルのLightsailインスタンス(サーバ)で、LAMP構成のアプリケーションを
+独自ドメインから呼び出せるようにしたい。
 
 ### 対象読者
 
