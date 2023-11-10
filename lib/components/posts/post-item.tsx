@@ -36,7 +36,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
           }} className='hidden sm:block md:hidden hover:opacity-80'
           />
         </Link>
-        <div className="p-3">
+        <div className="p-0 md:p-3">
           <div className="flex flex-wrap">
             {post.meta?.tags?.includes('Tips') && (
               <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">

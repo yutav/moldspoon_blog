@@ -3,7 +3,7 @@
 @import "tailwindcss/utilities";
 
 * {
-  @apply text-black dark:text-white;
+  @apply text-black dark:text-white text-sm leading-relaxed md:text-base md:leading-normal;
   font-family: var(--stk-base-font-family, "游ゴシック", "Yu Gothic", "游ゴシック体", "YuGothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif);
 }
 
