@@ -4,10 +4,12 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Amazon Linux 2023@Lightsail+Wordpressを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。',
   date: '2023-11-08T12:00:00.000Z',
+  updateDate: '2023-11-11T15:28:39.000Z',
   tags: [
     'Blog',
     '初級者向け',
     'プログラミング',
+    '連載',
     'LAMP',
     'AmazonLinux2023',
     'Amazon Lightsail',
@@ -48,7 +50,7 @@ Amazon Linux2023カーネルのLightsailインスタンス・サーバで、イ�
 ssh ec2-user@[インスタンスの固定IP] -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
 ```
 
-<MdxImage month="202311" image="aws100.png" annotation="" />
+    <MdxImage month="202311" image="aws100.png" annotation="" />
 
 現時点ではAmazon Linux2023のまっさらの状態で入ったことになるので、必要なミドルウェアを順次インストールし、
 PHP製の最も代表的なアプリケーションであるWordpressの動作確認ができるまでを辿っていきます。
@@ -78,10 +80,10 @@ sudo dnf update -y
 sudo dnf install -y httpd wget php-fpm php-mysqli php-json php php-devel php-mysqlnd
 ```
 
-<MdxImage month="202311" image="aws101.png" annotation="" />
+    <MdxImage month="202311" image="aws101.png" annotation="" />
 インストールが始まります。`-y`オプションをつけたことで、自動的にインストール完了までいきます。
 
-<MdxImage month="202311" image="aws102.png" annotation="" />
+    <MdxImage month="202311" image="aws102.png" annotation="" />
 
 無事完了しました。
 
@@ -110,7 +112,7 @@ sudo systemctl enable httpd
 sudo systemctl is-enabled httpd
 ```
 
-<MdxImage month="202311" image="aws103.png" annotation="enabled とでます" />
+    <MdxImage month="202311" image="aws103.png" annotation="enabled とでます" />
 
 
 #### 2-5.GUIからhttpリクエストができるかを確認する。
@@ -122,11 +124,11 @@ Lightsailも同様にポートの解放を設定する画面があります。
 
 インスタンスの画面から、**ネットワーキング** をクリック
 
-<MdxImage month="202311" image="aws104.png" annotation="" />
+    <MdxImage month="202311" image="aws104.png" annotation="" />
 
 80番ポートが**制限なしで解放されている** ことを確認します。（デフォルトは下記のようになっています）
 
-<MdxImage month="202311" image="aws105.png" annotation="" />
+    <MdxImage month="202311" image="aws105.png" annotation="" />
 
 画像内に説明があるように、<span className="hoso">独自ドメインで接続を行いたい場合は、https用の接続ポートである443ポートを必ず開けておいてください。</span>
 
@@ -285,12 +287,12 @@ find /var/www -type f -exec sudo chmod 0664 {} \;
 
 サーバの固定IPにリクエストすると、以下のようにApacheに疎通できていることが確認できます。
 
-<MdxImage month="202311" image="aws106.png" annotation="" />
+    <MdxImage month="202311" image="aws106.png" annotation="" />
 
 現時点では、IPのドキュメントルートは`/var/www/html`に設定されているのですが、
 ここには「It Works!」のhtmlファイルは置かれていません。
 
-<span className="hoso">では実態となるhtmlファイルはどこに置かれているのか...</span>と言いますと、
+    <span className="hoso">では実態となるhtmlファイルはどこに置かれているのか...</span>と言いますと、
 `/usr/share/httpd/noindex/index.html`
 が、<span className="hoso">403エラー時の飛び先として指定されています。</span>
 
@@ -327,7 +329,7 @@ Alias /system_noindex_logo.png /usr/share/httpd/icons/system_noindex_logo.png
 
 次回の第3回では、**Wordpressをインストールし、疎通するまでを引き続き解説してまいります** ので、ぜひフォローアップくださいませ。
 
-<br />
+    <br />
 
 この記事が何かのお役に立てれば幸いです。<br />
 最後までお読みいただきありがとうございました！
