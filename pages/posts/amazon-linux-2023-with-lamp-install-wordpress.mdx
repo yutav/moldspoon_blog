@@ -2,8 +2,9 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-  title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第3回(最終回) Wordpress導入編。',
+  title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第3回 Wordpress導入編。',
   date: '2023-11-12T02:50:39.000Z',
+  updateDate: '2023-11-15T02:53:00.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -256,10 +257,22 @@ sudo chown -R apache:ec2-user /var/www/projects/wordpress
 - ドメインをhttpsで疎通できるようにする(https://hogehoge.comでアクセスしたい。Let's Encryptをつかう)
 - utf8ではなく**utf8_mb4** を文字セットにし、絵文字でも入力できるようにする。
 - Wordpressを**日本語化** する
+- **Amazon Linux2** にはインストールされていたが、Amazon Linux 2023にはデフォルトで入っていないミドルウェアを必要に応じて入れる。
 
-とはいえ、**最低限ブログが始められるようにできました。** もし、さらなるカスタマイズ記事の需要がありそうでしたら、本記事に追記する形で記事を書いていこうと思います。
+とはいえ、**最低限ブログが始められるようにできました。** 
 
-本ブログでは引き続き、このようなより新しい技術を、平易にわかりやすくご紹介ができるように努力して参りますので、ぜひフォローアップくださいませ。
+続きは以下の第４回の記事でご説明しています。
+ぜひご覧くださいませ。
+
+↓第４回はこちら
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-domain-setting"
+          icon='ri-link-fill'
+          title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第4回（最終回）ドメイン編。"
+          subtitle="第4回はこちらからご覧いただけます。"
+          targetBlank={true}
+        />
     <br />
 
 この記事が何かのお役に立てれば幸いです。<br />
