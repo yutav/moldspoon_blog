@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使ってらくらくバリデーション',
   date: '2023-08-21T08:30:00.000Z',
+  updateDate: '2023-11-10T14:58:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -22,13 +23,13 @@ export const meta = {
 Next.jsプロジェクトに、サクッとバリデーション処理を追加したい。
 でき上がりのサンプルプロジェクトは下記にあります。
 
-<RichLink 
-url="https://github.com/moldspoon/demo-nextjs-zod-sample" 
-icon='ri-github-fill'
-title="demo-nextjs-zod-sample" 
-subtitle="githubのサンプルプロジェクト"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/moldspoon/demo-nextjs-zod-sample"
+          icon='ri-github-fill'
+          title="demo-nextjs-zod-sample"
+          subtitle="githubのサンプルプロジェクト"
+          targetBlank={true}
+        />
 
 ### 作業
 
@@ -57,13 +58,13 @@ yarn add zod react-hook-form @hookform/resolvers
 ```
 最後の`@hookform/resolvers`は、react-hook-formでzodを利用するために必ず必要なのでもれなくインストールしてください。
 
-<RichLink 
-url="https://github.com/react-hook-form/resolvers#zod" 
-icon='ri-github-fill'
-title="react-hook-form/resolvers#zod" 
-subtitle="ここでzodでの用法を確認できます。"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/react-hook-form/resolvers#zod"
+          icon='ri-github-fill'
+          title="react-hook-form/resolvers#zod"
+          subtitle="ここでzodでの用法を確認できます。"
+          targetBlank={true}
+        />
 
 インストールが完了したら、ルートで
 ```
@@ -84,7 +85,7 @@ yarn run dev
 
 ##### 1.対象のComponentでライブラリをインポート。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 "use client";
@@ -106,7 +107,7 @@ import { useState } from 'react';
 PHP系フレームワーク（バックエンドで私がよく使う）のこういうバリデーション処理って、`retype_password`のバリデーション定義で一致もそのまま書けるイメージがありますが、Zodでは
 `refine()`というメソッドを後付けで追加してバリデーションします。少し癖があるので要注意です。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 const schema = z.object({
@@ -127,17 +128,17 @@ react-hook-formは通常のhtmlに、バリデーション処理を簡便に注�
 もし興味があれば、以下のリンクを参照してみてください。
 
 
-<RichLink 
-url="https://github.com/react-hook-form/resolvers#quickstart" 
-icon='ri-github-fill'
-title="react-hook-form/resolvers#quickstart" 
-subtitle="それぞれのリソルバの書き味を比較できます。ただこれだけだと比較上物足りない面も。本来的に比較するには、モック的に実装してみるしかないかも...？"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/react-hook-form/resolvers#quickstart"
+          icon='ri-github-fill'
+          title="react-hook-form/resolvers#quickstart"
+          subtitle="それぞれのリソルバの書き味を比較できます。ただこれだけだと比較上物足りない面も。本来的に比較するには、モック的に実装してみるしかないかも...？"
+          targetBlank={true}
+        />
 
 私の方では、公式ドキュメントに載っている一般的なやり方で実装していきます。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 const Page = () => {
@@ -179,7 +180,7 @@ const Page = () => {
 最終的に、Next.jsプロジェクトのエントリーポイントとなる`src/app/page.tsx`のソースコードは以下となります。
 先述の通りNext 13プリインの**tailwindcss**をそのまま使っているので、1ファイルでほぼ処理が完結しています。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 "use client";
@@ -281,6 +282,42 @@ export default Page
 
 Next.js + react-hook-form + zodの組み合わせで、一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。
 ただ、DBと連関する処理や認証処理などは別途用意せねばなりませんので、用途によってはという注意書きはつきますが、少なくとも初学者などには非常に向いているソリューションだと思いました。
+
+##### 補足: 本ブログのNext.js関連記事
+
+※ 2023.11.19 追記
+
+ブログを色々書き進めて、React/Next.js関連の記事がちょっと増えてきたので、
+こちらに併記させていただきます。もしよろしければお読みくださいませ。
+
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/react-hook-form-and-zod"
+        icon='ri-link'
+        title="react-hook-formと組み合わせるバリデーションライブラリ５選"
+        subtitle="ここでzodでの用法を確認できます。ReactやNext.jsでフォームのバリデーションを行いたいけれど..."
+        targetBlank={true}
+      />
+  <br />
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/add-planetscale-to-nextjs-project"
+        icon='ri-link'
+        title="サーバがなくてもMySQLが使える！PlanetScaleとNext.jsを組み合わせ速攻でDBに接続する方法。"
+        subtitle="この記事では、MySQLをクラウドで立ち上げ、速攻で利用を開始できるIPaaSサービス、PlanetScaleについて..."
+        targetBlank={true}
+      />
+      <br />
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/add-toc-to-blog"
+        icon='ri-link'
+        title="Next.js製ブログにオリジナルの目次を追加する。"
+        subtitle="今回は、Next.jsで作られているこのブログにオリジナルの目次を追加しようと思いました。..."
+        targetBlank={true}
+      />
+
+
+以上でございます。
+    <br />
+
 
 この記事が何かのお役に立てれば幸いです。
 最後までお読みいただきありがとうございました！

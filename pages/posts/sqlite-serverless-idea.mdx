@@ -38,13 +38,13 @@ SQLite、気になりますよね？
 まずは、他の**RDBMS** と異なるSQLite特有のポイントを抑えたいと思い、
 **SQLiteの癖、注意点、落とし穴**
 
-<RichLink
-url="https://www.sqlite.org/quirks.html" 
-icon='ri-database-2-line'
-title="Quirks, Caveats, and Gotchas In SQLite" 
-subtitle="SQLiteの公式ドキュメントに移動します"
-targetBlank={true}
- />
+    <RichLink
+          url="https://www.sqlite.org/quirks.html"
+          icon='ri-database-2-line'
+          title="Quirks, Caveats, and Gotchas In SQLite"
+          subtitle="SQLiteの公式ドキュメントに移動します"
+          targetBlank={true}
+        />
 
 
 を見ていきました。
@@ -61,8 +61,8 @@ Integer型（数字）のカラムに、文字列を入れてもそのままエ�
 これはバグではなく機能であると書かれています。
 
 SQLiteから他のDB、たとえばPostgreSQLに移行する際に問題になってくることがある、と書かれていますね。
-<span className="hoso">運営しているWebサービスが、万一同時接続がとても大きいサービスに成長した場合は、移行に問題がある可能性があると言っているも
-同然</span>でここはバリデーションなどアプリケーション側のエラーハンドリングをしっかりできるかどうかが試されていると思います。
+    <span className="hoso">運営しているWebサービスが、万一同時接続がとても大きいサービスに成長した場合は、移行に問題がある可能性があると言っているも
+          同然</span>でここはバリデーションなどアプリケーション側のエラーハンドリングをしっかりできるかどうかが試されていると思います。
 
 そんな大変な目に遭いたくない〜という場合は、最初からMySQLなどのクライアント/サーバ型のDB利用を検討した方がいいでしょうね😅
 
@@ -91,13 +91,13 @@ SQLiteから他のDB、たとえばPostgreSQLに移行する際に問題にな�
 
 次に**SQLiteの適切な使用法**
 
-<RichLink 
-url="https://www.sqlite.org/whentouse.html" 
-icon='ri-database-2-line'
-title="Appropriate Uses For SQLite" 
-subtitle="SQLite is not directly comparable to client/server SQL database engines such as MySQL, Oracle, PostgreSQL, or SQL Server since SQLite is trying to solve a different problem."
-targetBlank={true}
- />
+    <RichLink
+          url="https://www.sqlite.org/whentouse.html"
+          icon='ri-database-2-line'
+          title="Appropriate Uses For SQLite"
+          subtitle="SQLite is not directly comparable to client/server SQL database engines such as MySQL, Oracle, PostgreSQL, or SQL Server since SQLite is trying to solve a different problem."
+          targetBlank={true}
+        />
 
 を見ていきます。
 
@@ -110,7 +110,7 @@ SQLを利用できるデータベースシステムというところに共通�
 
 **面白いこと言ってますね。** ようするに、**SQLiteはファイルシステムの進化系と考えてくれ。という訳です。** 結構野心的な主張かなと思いますし、個人的には好きです笑
 
-<span className="hoso">昨今のフロントエンドフレームワークから直参照みたいな流れが増えていることから考える</span>と
+    <span className="hoso">昨今のフロントエンドフレームワークから直参照みたいな流れが増えていることから考える</span>と
 **fopen** の延長という主張は時代が追いついてきたな、と個人的に思う次第です。
 
 #### SQLiteが適した状況は？
@@ -133,7 +133,7 @@ SQLを利用できるデータベースシステムというところに共通�
 > 10万PV/日 以下のサイトがSQLiteに適している
 
 とのことですが、これは保守的な推計値であり、10倍のトラフィックでも動作することが保証されている、とのこと。
-<span className="hoso">ニュースサイトなどのRead中心のサイトでは実績も十分ある</span>ということだと思いました。
+    <span className="hoso">ニュースサイトなどのRead中心のサイトでは実績も十分ある</span>ということだと思いました。
 
 ##### データ分析
 
@@ -148,10 +148,10 @@ S3に置くだけでなくて、本文中にあるようなUSBメモリ...はち
 
 ##### キャッシュサーバとして
 
-<span className="hoso">RDBMSの前段のキャッシュサーバとしてSQLiteを使うケース。</span>うーん、これは微妙かなあ。事例として書かれているような企業データのReadだけの用途であればSQLiteを入れるほどではないですし。
+    <span className="hoso">RDBMSの前段のキャッシュサーバとしてSQLiteを使うケース。</span>うーん、これは微妙かなあ。事例として書かれているような企業データのReadだけの用途であればSQLiteを入れるほどではないですし。
 
 ただ、**ネットワーク停止中にキャッシュデータを表示する** というユースケースはかなりアリ。ですね。
-<span className="hoso">ファイルとして同一サーバに置かれている可能性が高いSQLiteのメリットをいかせている使い方じゃないか</span>と思いました。
+    <span className="hoso">ファイルとして同一サーバに置かれている可能性が高いSQLiteのメリットをいかせている使い方じゃないか</span>と思いました。
 
 ##### 圧縮されていることを活かし、ZIPの代わりとして
 
@@ -183,7 +183,7 @@ SQLiteが悪いわけではないが、防ぐ方法がないとのことでし�
 SQLiteは1つのデータファイルにデータを格納し、多くのファイルシステムでは、SQLiteの上限である281テラバイトよりも小さい値が上限となるとのこと。
 よってデータが巨大な場合は通常のRDBMSなどシャーディングやDB分割が行えるRDBMSの方が向いているようです。
 
-<span className="hoso">オンライン・ソーシャルゲームなど多数のアクセス・ログデータが存在するシステム</span>はすぐにデータ量が膨大なものになりそうですのでSQLiteは向いてなさそうですね。
+    <span className="hoso">オンライン・ソーシャルゲームなど多数のアクセス・ログデータが存在するシステム</span>はすぐにデータ量が膨大なものになりそうですのでSQLiteは向いてなさそうですね。
 （そもそも、上記の「同時にユーザーが多数アクセスしてくる」に一致しますけどね）
 
 ##### 瞬時に書き込みが必要な状況
@@ -212,13 +212,13 @@ SQLiteは通常アプリケーションと同じサーバでの利用を想定�
 最後に、
 **SQLiteはサーバーレスである**
 
-<RichLink 
-url="https://www.sqlite.org/serverless.html" 
-icon='ri-database-2-line'
-title="SQLite Is Serverless" 
-subtitle="SQLiteの公式ドキュメントに移動します。"
-targetBlank={true}
- />
+    <RichLink
+          url="https://www.sqlite.org/serverless.html"
+          icon='ri-database-2-line'
+          title="SQLite Is Serverless"
+          subtitle="SQLiteの公式ドキュメントに移動します。"
+          targetBlank={true}
+        />
 
 を見ていきます。
 
@@ -235,12 +235,12 @@ MySQLなどのクライアント/サーバ型RDBMSではSQLにエラーがある
 クラシックなサーバレス...本当にサーバレス。アプリケーションがファイルとしてDBを同じプロセスの中で取り扱う。
 ネオ・サーバレス...ファイルシステムのように見せるが、裏側ではクライアント/サーバ型のデータベースが別サーバで動いており、サーバレスの「ように」扱える。
 
-<span className="hoso">SQLiteはクラシックなサーバレスである</span>ということです。確かに、**昨今の文脈だと「サーバレス」はほぼ100%「ネオ・サーバレス」を指しているように思えますね。**
+    <span className="hoso">SQLiteはクラシックなサーバレスである</span>ということです。確かに、**昨今の文脈だと「サーバレス」はほぼ100%「ネオ・サーバレス」を指しているように思えますね。**
 
 #### ページのまとめ
 
 個人的には<span className="hoso">ネオ・サーバレスは、オールマネージドで利便性がとても高いが、結局それを保守する企業(クラウドプラットフォームを運営する企業）に多額の費用を払っている。
-と考えられる</span>と思います。(AWS S3は安いが)
+      と考えられる</span>と思います。(AWS S3は安いが)
 例えば、NoSQL系のデータベースは無料枠を超えると従量課金でトラフィック・使用データ量の双方に料金がかかってきます。([Firebase](https://firebase.google.com/)/[DynamoDB](https://aws.amazon.com/jp/dynamodb/)/[Supabase](https://supabase.com/)/[PlanetScale](https://planetscale.com/))
 
 それが為、<span className="hoso">単なるファイルとも考えられる、クラシックサーバレスのSQLiteが個人開発や中小企業のオウンドWebなどのごく小規模なユースケース（数の上では一番多い）で見直されるのではないか</span>と改めて感じました。
@@ -248,13 +248,13 @@ MySQLなどのクライアント/サーバ型RDBMSではSQLにエラーがある
 ### まとめ
 
 いかがでしたでしょうか。個人的には、可搬性の高いDBってすごく好きですし、
-<span className="hoso">ユースケースをデータベースエンジニアがしっかりと考えた上で利用すれば、十分実用性があり、
-再度ホットになる可能性がとても高い技術だ</span>と私は思っています。
+    <span className="hoso">ユースケースをデータベースエンジニアがしっかりと考えた上で利用すれば、十分実用性があり、
+          再度ホットになる可能性がとても高い技術だ</span>と私は思っています。
 
 **引き続き本ブログではSQLite関連の技術についてキャッチアップを行ってまいりますので、
 よろしければご注目ください。**
 
-<br />
+    <br />
 この記事が何かのお役に立てれば幸いです。<br />
 最後までお読みいただきありがとうございました！
 
