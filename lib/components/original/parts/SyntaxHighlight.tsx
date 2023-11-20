@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, ReactNode } from 'react';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/dark.css';
+import 'highlight.js/styles/stackoverflow-dark.css';
 
 export const SyntaxHighlight = (
   { children }: { children: ReactNode },

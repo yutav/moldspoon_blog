@@ -17,7 +17,6 @@ const withMDX = require('@next/mdx')({
       require('rehype-pretty-code'),
       /** @type {Partial<import("rehype-pretty-code").Options>} */
       ({
-        theme: "github-light",
         getHighlighter: require('shiki').getHighlighter,
       })],
   },

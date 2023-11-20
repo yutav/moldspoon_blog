@@ -6,7 +6,7 @@ import { Loading } from '@geist-ui/core'
 const Page: React.FC<unknown> = () => {
   const router = useRouter()
 
-  const page = Array.isArray(router.query.id) ? router.query.id[0] : router.query.id;
+  const page = Array.isArray(router.query.pageNum) ? router.query.pageNum[0] : router.query.pageNum;
 
   if (page == undefined) {
     return <Layout>
