@@ -1,0 +1,360 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編',
+  date: '2023-11-22T16:08:44.000Z',
+  tags: [
+    'Blog',
+    '連載記事',
+    '経験者向け',
+    'プログラミング',
+    'Laravel',
+    'Filament',
+    'Sail',
+    'PHP',
+    'バックエンド'
+  ],
+  description: 'DockerやLaravel Laravel+Filamentでらくらく管理画面を構築する方法を丁寧に説明する連載記事の第1回となります。'
+}
+
+
+徐々に寒くなってきましたが、皆様お元気にお過ごしでしょうか。
+
+1日が短く感じるこんな時期は**効率的に開発して、生産的な活動に有限な時間を回していきたい**ものですね。
+
+## 概要
+
+**管理画面を楽に作れるツールは続々と登場します**ね。当ブログでは、以前にNext.js製のCMSツール
+[Strapi](https://strapi.io/)の導入手順についてもご紹介しました。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/first-using-strapi"
+          icon='ri-link-fill'
+          title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。"
+          subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
+          targetBlank={true}
+        />
+
+
+今回は、本記事にてPHPの管理画面作成ライブラリ[Filament](https://filamentphp.com/)について、**インストールから開発環境での疎通ができるまで**をご説明してまいります。
+
+**どうぞ最後までお付き合いください。**
+
+### 本連載のゴール
+
+Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できるまで整える。
+
+### 対象読者
+
+- git/PHP/Laravel/Dockerについて基本的な知識を持っている、**プログラミング中級者以上**の方
+- 管理画面を少ない手順で構築しようとしている方
+
+## 要件定義
+
+今回はあくまで**技術的な評価を行うため、サンプルプロジェクトを作製します**が、前提として以下のように要件を定義します。
+
+- 構築するのはSaaSサービスの管理画面
+- サービスの利用者=一般ユーザーの基本情報を管理者ユーザーにより編集したい。
+- 他、サービスでユーザーが登録したデータの閲覧を行えるようにしたい。
+
+## 設計
+
+上記の要件を基づいて、簡単に設計を行います。
+
+- 開発環境で、WWWを経由せずとも、Dockerがあればデータベースに接続し動くようにする。開発環境を立ち上げる`php artisan serve` と[Laravel sail](https://readouble.com/laravel/9.x/ja/sail.html)を使うことにより実現可能。
+- Filamentをインストールし、`/admin`でアクセスできるようにする。
+
+## 実装: Laravelプロジェクトへの疎通まで
+
+### Githubのレポジトリ作成
+
+何はともあれ、Githubのレポジトリ作成から行います。
+[こちら](https://github.com/new)から適当な名称で`private`レポジトリの作成を実施。
+
+
+### Laravelのインストール
+
+以下はお手元のローカル環境(Macを想定)で行います。
+[Composer](https://getcomposer.org/download/)が未インストールの方はあらかじめご用意ください。
+
+Laravelの最新版をインストールしていきます。
+
+```
+cd /User/username/dev/
+
+# laravelのプロジェクトをインストール
+composer create-project laravel/laravel test-filament
+cd test-filament
+```
+
+### Laravel Sailのインストール
+
+開発環境では、仮想環境として**Laravel Sail**を利用します。
+中身は**Docker** ですが、ユーザーからすると意識しないくらい、コマンドを打つだけでできるくらいに抽象化されています。
+Dockerを未インストールの方は[こちら](https://laravel.com/docs/10.x/sail)からいれておきましょう
+
+```
+# プロジェクトのルートで実行。sailをinstall
+$ composer require laravel/sail --dev
+$ php artisan sail:install
+
+# ここで、mysqlを選択してください
+ ┌ Which services would you like to install? ───────────────────┐
+ │ mysql                                                        │
+ └──────────────────────────────────────────────────────────────┘
+
+Sail scaffolding installed successfully.
+[+] Running 1/1
+ ⠿ mysql Pulled                                                                                                                                                                                                                                                          2.5s
+Sail images installed successfully.
+[+] Building 1.8s (16/16) FINISHED
+# ここでDocker Imageをダウンロード。省略 ...                                                                                                                                                                                                                               0.0s
+Sail build successful.
+```
+
+#### SailのMySQLコンテナへの疎通設定
+
+`.env`の以下の設定部分を変更します。
+
+```
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+```
+
+#### Sail 起動
+
+以下のコマンドで、Dockerコンテナをビルドします(DB/user/passwordも`.env`の設定で作られるはず)
+すでにdockerの操作に慣れていらっしゃる方も多いかと思いますが基本的なコマンドを列記いたします。
+どのようなコマンドが他にあるかは、`sail help`でもご確認いただけます。
+
+```
+# sail 起動
+sail up -d
+
+# 起動状況の確認
+sail ps
+
+# webサーバに入る
+sail bash
+exit # 出る
+
+# mysqlクライアントに入る
+sail mysql
+> exit # 出る
+
+# 初期テーブルをマイグレーション
+sail artisan migrate
+
+# sail 終了
+sail down
+```
+
+`sail up -d`が成功しないときは、すでに作成してしまったMySQLコンテナのボリュームを削除してください。
+(誤って他のプロジェクトの削除はしないようお気をつけください)
+    <MdxImage month="202311" image="filament2.png" annotation="" />
+
+```
+% sail artisan migrate
+
+  INFO  Preparing database.
+
+Creating migration table ............................................................................................................... 47ms DONE
+
+  INFO  Running migrations.
+
+2014_10_12_000000_create_users_table ................................................................................................... 44ms DONE
+2014_10_12_100000_create_password_reset_tokens_table ................................................................................... 41ms DONE
+2019_08_19_000000_create_failed_jobs_table ............................................................................................. 34ms DONE
+2019_12_14_000001_create_personal_access_tokens_table .................................................................................. 39ms DONE
+```
+
+**DBへの疎通が無事行え、マイグレーションを行うとこのようにログが出ます。**
+
+    <br />
+Chrome等のブラウザに`http://localhost/`を打ち込むと
+
+    <MdxImage month="202311" image="filament1.png" annotation="" />
+
+無事Laravelプロジェクトのトップページが表示されました。
+
+## 実装: Filamentをインストール
+
+Laravelプロジェクトをすでに運用中の方はよろしければこちらからお読みください。
+
+### filamentのインストール
+
+公式サイトの[Get Started](https://filamentphp.com/docs/3.x/panels/installation)を参照します。
+2023/11/22現在で最新の**Filament v3.0**を選択していきます。
+
+```
+sail composer require filament/filament:"^3.0-stable" -W
+```
+
+ところで、バージョン記号をつけなくても、v3系は入るようです...まあこの辺りは公式に沿ってということで。
+
+### Panelを作成
+
+Filamentのインスールが無事すみましたら、**Panel**を作製します。
+Panelとは要するにダッシュボードのようです。
+
+ドキュメントの表示に沿って「admin」を入力しエンターを押します。
+
+```
+$ sail artisan filament:install --panels
+
+# ここでパネル名を入れます。
+ ┌ What is the ID? ─────────────────────────────────────────────┐
+ │ admin                                                        │
+ └──────────────────────────────────────────────────────────────┘
+
+# 以下自動的に必要なファイルが生成されます。
+
+   INFO  Filament panel [app/Providers/Filament/AdminPanelProvider.php] created successfully.
+
+   WARN  We've attempted to register the AdminPanelProvider in your [config/app.php] file as a service provider. If you get an error while trying to access your panel then this process has probably failed. You can manually register the service provider by adding it to the [providers] array.
+
+  ⇂ public/js/filament/forms/components/color-picker.js
+  ⇂ public/js/filament/forms/components/date-time-picker.js
+  ⇂ public/js/filament/forms/components/file-upload.js
+  ⇂ public/js/filament/forms/components/key-value.js
+  ⇂ public/js/filament/forms/components/markdown-editor.js
+  ⇂ public/js/filament/forms/components/rich-editor.js
+  ⇂ public/js/filament/forms/components/select.js
+  ⇂ public/js/filament/forms/components/tags-input.js
+  ⇂ public/js/filament/forms/components/textarea.js
+  ⇂ public/js/filament/tables/components/table.js
+  ⇂ public/js/filament/widgets/components/chart.js
+  ⇂ public/js/filament/widgets/components/stats-overview/stat/chart.js
+  ⇂ public/js/filament/filament/app.js
+  ⇂ public/js/filament/filament/echo.js
+  ⇂ public/js/filament/notifications/notifications.js
+  ⇂ public/js/filament/support/async-alpine.js
+  ⇂ public/js/filament/support/support.js
+  ⇂ public/css/filament/forms/forms.css
+  ⇂ public/css/filament/support/support.css
+  ⇂ public/css/filament/filament/app.css
+
+   INFO  Successfully published assets!
+
+   INFO  Configuration cache cleared successfully.
+
+   INFO  Route cache cleared successfully.
+
+   INFO  Compiled views cleared successfully.
+
+   INFO  Successfully upgraded!
+
+# 気が向いたら、GithubのレポジトリのStarをつけるのに同意いたしましょう
+ ┌ All done! Would you like to show some love by starring the Filament repo on GitHub? ┐
+ │ YES                                                                                 │
+ └─────────────────────────────────────────────────────────────────────────────────────┘
+
+```
+
+### Filamentログイン用のユーザーを生成
+
+下記を入力してログインユーザーを作ります。
+
+```
+$ sail artisan make:filament-user
+
+ ┌ Name ────────────────────────────────────────────────────────┐
+ │ yuta                                                         │
+ └──────────────────────────────────────────────────────────────┘
+
+ ┌ Email address ───────────────────────────────────────────────┐
+ │ yuta@hogehogehoge.com                                        │
+ └──────────────────────────────────────────────────────────────┘
+
+ ┌ Password ────────────────────────────────────────────────────┐
+ │ ••••••••••••••••                                             │
+ └──────────────────────────────────────────────────────────────┘
+
+   INFO  Success! yuta@hogehogehoge.com may now log in at http://localhost/admin/login.
+```
+
+無事ログインユーザーができました。
+
+### ドメインの制限解除設定
+
+Filament独自の制約なのですが、**ログイン時のメールアドレスの制限解除設定を行わないとログインが完了しません。** これは、WebサーバにFilamentを設置した時の **最低限のフェールセーフ** と思います。
+
+    <span className="hoso">Basicなどをおかずに裸で置いた場合、ブルートフォース攻撃で突破される可能性が非常に高いから</span>だと思われます。
+
+このままでは使えませんので設定作業を進めます。
+具体的には
+
+- 継承など呼び出しを追加する。
+- `app/Models/User.php`に、`canAccessPanel`メソッドを追加する。**yourdomain.com**の部分を、作成したユーザーのドメインに変更します。
+
+必要があります。
+
+```
+ <?php
+ 
+namespace App\Models;
+ 
+# 下記行のuseを追加する
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+ 
+# 下記行で、implements FilamentUserを追加する
+class User extends Authenticatable implements FilamentUser
+{
+    // ...
+ 
+    public function canAccessPanel(Panel $panel): bool
+    {
+		# 下記の行のyourdomain.com部分を変える
+        return str_ends_with($this->email, '@hogehogehoge.com') && $this->hasVerifiedEmail();
+    }
+}
+```
+
+### Filamentへのログイン
+
+こちらまで行って
+
+```
+http://localhost/admin/login
+```
+
+にアクセス。
+
+ID/パスワードを入力し、
+
+    <MdxImage month="202311" image="filament3.png" annotation="" />
+
+**ログインが完了すると、ダッシュボードのトップページが表示されます。**
+
+Filamentへのログインがひとまず、行えました。
+
+    <MdxImage month="202311" image="filament4.png" annotation="" />
+
+    <span className="hoso">先述の閲覧制限解除が完了していませんと、404エラーが出るのでくれぐれもご注意ください。</span>
+
+## まとめ
+
+記事が長くなってまいりましたので、Filamentでどのように管理画面構築を行うかは、次回記事に内容として回したいと思っております。<br />
+お待たせを致しますが、第2回の掲載まで少々お待ちくださいませ。
+    <br />
+    <br />
+**連載記事を最後までお読みいただきありがとうございました！** <br />
+引き続き当ブログをよろしくお願いいたします。<br />
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

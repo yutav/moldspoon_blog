@@ -192,7 +192,7 @@ ul.MuiPagination-ul li button {
 
 /* only in detail page */
 .detail-body ul {
-  @apply !my-12 p-6 rounded border-2 border-black dark:border-white;
+  @apply !my-12 p-6 pb-4 rounded border-2 border-black dark:border-white;
   margin: 0px;
 }
 
