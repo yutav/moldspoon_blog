@@ -1,0 +1,348 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第2回 画面構築の基本編',
+  date: '2023-11-26T14:26:28.000Z',
+  tags: [
+    'Blog',
+    '連載記事',
+    '経験者向け',
+    'プログラミング',
+    'Laravel',
+    'Filament',
+    'Sail',
+    'PHP',
+    'バックエンド'
+  ],
+  description: 'Laravel+Filamentでらくらく管理画面を構築する方法の連載記事の第2回。スカフォールディングにより一般的なブログの入稿画面を作れるまでを解説します。'
+}
+
+応援しているJリーグのサッカーチームが勝利した週末は嬉しいものですが、
+シーズンが終わりそうで寂しさも感じているこの頃。Hackerの皆様はいかかお過ごしでおられますでしょうか。
+
+お休みはしっかり休んで、**仕事はきっちりと能率的に行うものとしたい**ものですね。
+
+## 概要
+
+本連載は、Laravel+Filamentというフレームワーク＆ライブラリの組み合わせを通じて、**インストールから入りひとまず簡単に
+開発環境で管理画面開発を短時間で始められることを目的**にしています。
+
+    <br />
+過去にNext.jsのCMS「Strapi」の記事も書いてありますのでよろしければご参考になさってください。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/first-using-strapi"
+          icon='ri-link-fill'
+          title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。"
+          subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
+          targetBlank={true}
+        />
+
+    <br />
+
+⇩第1回の記事は以下からご覧いただけます。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
+          moldspoon={true}
+          title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
+          subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
+          targetBlank={true}
+        />
+
+    <br />
+
+第2回の今回は**基本的なブログの入稿・一覧画面構築を行えるところまで**を解説します。
+
+それではどうぞ最後までお付き合いください。
+
+### 本連載のゴール
+
+Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できるまで整える。
+
+### 対象読者
+
+- git/PHP/Laravel/Dockerについて基本的な知識を持っている、**プログラミング中級者以上**の方
+- 管理画面を少ない手順で構築しようとしている方
+
+## 前回のおさらい
+
+第1回の記事では、**ローカルでの開発環境構築**をひとまず完了したかと思います。
+
+```
+http://localhost/admin/login
+```
+
+にアクセスすれば、管理画面にログインでき、ログイン後はダッシュボードが表示できるところまでをご紹介しました。
+今日はそこから始めていきます。
+
+   <MdxImage month="202311" image="filament4.png" annotation="" />
+
+## 画面構築
+
+今回は**Posts**というテスト用のテーブルを作り、<span className="hoso">ブログ記事のように入稿できるシステムを構築</span>していきます。
+
+### マイグレーションファイルの作成
+
+```
+sail artisan make:migration create_posts_table
+```
+でマイグレーションファイルを作成。
+
+用意したLaravelのmigrationファイルは以下になります。
+
+```
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('posts', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('body');
+            $table->integer('type')->comment('0:blog 1:Tips 2:Other');
+            $table->dateTime('published')->nullable();
+            $table->integer('delete_flg')->default(0)->comment('削除フラグ');
+            $table->timestamps();
+        });
+    }
+
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('posts');
+    }
+};
+
+```
+
+```
+sail artisan migrate
+```
+
+このコマンドを実行して、あらかじめLaravel Sail(Docker)上のMySQLデータベースにテーブルを作っておきます。
+
+   <MdxImage month="202311" image="filament206.png" annotation="実際にできていることをTablePlus(MySQL接続アプリ)から確認。" />
+
+
+### モデルの作成・前提を整える
+
+#### モデルの作成
+
+以下のコマンドを実行します
+
+```
+sail artisan make:model Post
+```
+
+#### ガード割当を無効にする
+
+[公式サイト](https://filamentphp.com/docs/3.x/panels/getting-started#unguarding-all-models)の記述にしたがい、`app/Providers/AppServiceProvider.php`の一括割当を無効にします。
+
+一括割当=Key-Valueの配列を渡すことで、**丸ごと中身を更新できるような方法は無効にする**ということです。
+    <span className="hoso">具体的にどのようなケースで一括割当が弊害になるかは、体感としてまだ分かっていません</span>が、従います。
+
+まだドキュメントに**説明をこのガイドでは簡潔にするため**、とありますので、後で戻すのかもしれません。
+
+```
+use Illuminate\Database\Eloquent\Model;
+ 
+public function boot(): void
+{
+    Model::unguard();
+}
+```
+
+### 「リソース」を作る
+
+**Post**というテーブルを、***Filamentで呼べるようにするための必要なファイル=Resource リソースを**自動作成する
+コマンドがあり、実行します。
+
+```
+ % php artisan make:filament-resource Post
+
+   INFO  Filament resource [app/Filament/Resources/PostResource.php] created successfully.
+```
+
+このとおり、`app/Filament/Reosources`以下に
+
+```
+.
++-- PostResource.php
++-- PostResource
+|   +-- Pages
+|   |   +-- CreatePost.php
+|   |   +-- EditPost.php
+|   |   +-- ListPost.php
+```
+
+管理画面によくある構成の、
+
+- 作成画面
+- 編集画面
+- 一覧画面
+
+と対応するらしきファイルが自動でババっと生成されました。
+
+この時点で`http://localhost/admin`を再度訪問すると、
+*Posts*という画面ができています。
+
+    <MdxImage month="202311" image="filament201.png" annotation="" />
+
+しかし、中身はまだ空でした。
+
+    <MdxImage month="202311" image="filament202.png" annotation="一覧画面" />
+
+    <MdxImage month="202311" image="filament203.png" annotation="作成画面" />
+
+ここに、<span className="hoso">順次必要なパーツを定義して追加していく</span>のだと思うと、
+**Wordpressのソースコードによってサクサク作っていける版** みたいな感じでわかりやすそうです...
+
+ほぼ**[モデル名]Resources.php** に定義を書いていく形で、最低限の画面をスカフォールディングするだけなら学習コストは低そうです。
+（逆に難しくした時の書き味が気になります。。）
+
+### 作成画面にパーツを追加
+
+先ほどの**Post**にタイトル欄の入力フォームを追加します。
+公式サイトの例に沿って、以下のように`PostResource.php`に書いていきます。
+
+元々空になっているformメソッドに記述を入れていく感じです。Beforeがこちら。
+```
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                //
+            ]);
+    }
+```
+
+Afterはこちら。
+```
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                # タイトル　通常の入力欄
+                Forms\Components\TextInput::make('title')
+                    ->required()
+                    ->maxLength(255),
+                # 記事タイプ select box
+                Forms\Components\Select::make('type')
+                    ->options([
+                        '0' => '通常',
+                        '1' => 'Tips',
+                        '2' => 'その他'
+                    ]),
+                # 投稿日時 入力なしで下書きとすることもできるが、入力した場合には現在以降を指定しないとエラー
+                Forms\Components\DateTimePicker::make('published')
+                    ->minDate(now()),
+            ]);
+    }
+
+```
+
+このようにバリデーションまで入れました。
+
+**追記して、ブラウザをリロードするだけ** で表示が変わりました。
+
+    <MdxImage month="202311" image="filament204.png" annotation="これはいい感じですね" />
+
+必要項目を入力するとレコードが無事できました。
+ただ、一覧にタイトルなど必要な表示がまだありません。
+
+### 一覧画面に表示項目を追加
+
+`PostResource.php`の`table()`メソッドを以下のように変えて、表示ができるようにします。
+
+```
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('title'),
+                Tables\Columns\TextColumn::make('published'),
+            ])
+            ->filters([
+                // 下記のようにすると、投稿済みのもののみ絞り込める
+                //Tables\Filters\Filter::make('published')
+                //    ->query(fn (Builder $query): Builder => $query->whereNotNull('published')),
+
+            ])
+            ->actions([
+                // 編集画面へのリンクなど、単発レコードへのリンクが出せる
+                Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                // 一斉削除など、まとめてアクションを行える
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+```
+
+    <MdxImage month="202311" image="filament205.png" annotation="項目が見えました" />
+
+**無事、表示ができました。**
+
+他にも、
+
+- `filters`で、絞り込み機能をサクッと作れたり、
+- `actions`で、１レコードに対してのアクションを作れたり
+- `bulkActions` でまとめて複数レコードへのアクションを行えたり(削除や、チェックを入れたもののCSVダウンロードなど)
+
+ができるとのこと。この辺りは作り込んでいくとより分かってくると思います。
+とりあえず本日は**CRUD** の最低限ができた、ということでここまでとします。
+
+### 補足: Livewireについて
+
+Filamentは、[Laravel Livewire](https://laravel-livewire.com/)を土台にして利用して作られています。
+
+公式ページによるとLivewireとは
+
+```
+Livewire is a full-stack framework for Laravel that makes building dynamic interfaces simple, without leaving the comfort of Laravel.
+
+>LivewireはLaravelのためのフルスタックフレームワークで、Laravelの快適さをそのままに、ダイナミックなインターフェースを簡単に構築できます。
+```
+とのこと。
+
+要するに<span className="hoso">Laravelの利便性・拡張性はそのまま、さらに開発しやすくするフレームワーク</span>のようです。
+
+今回はLivewireについては深掘りしないですが、今後時間があればこれもフルスクラッチでプロジェクトを立ち上げてみて試してみたいなと思っています。
+
+## まとめ
+
+更なる画面の作り込みについては、第3回以降で説明を行ってまいります。<br />
+上記でご説明したCSVダウンロードなどもそちらでサンプルを作れればと思っています。<br />
+    <br />
+投稿までしばしお待ちいただけますと、幸いに存じます...。
+    <br />
+    <br />
+**連載記事を最後までお読みいただきありがとうございました！** <br />
+引き続き当ブログをよろしくお願いいたします。<br />
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
