@@ -2,20 +2,20 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-  title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第2回 画面構築の基本編',
-  date: '2023-11-26T14:26:28.000Z',
-  tags: [
-    'Blog',
-    '連載記事',
-    '経験者向け',
-    'プログラミング',
-    'Laravel',
-    'Filament',
-    'Sail',
-    'PHP',
-    'バックエンド'
-  ],
-  description: 'Laravel+Filamentでらくらく管理画面を構築する方法の連載記事の第2回。スカフォールディングにより一般的なブログの入稿画面を作れるまでを解説します。'
+    title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第2回 画面構築の基本編',
+    date: '2023-11-26T14:26:28.000Z',
+    tags: [
+        'Blog',
+        '連載記事',
+        '経験者向け',
+        'プログラミング',
+        'Laravel',
+        'Filament',
+        'Sail',
+        'PHP',
+        'バックエンド'
+    ],
+    description: 'Laravel+Filamentでらくらく管理画面を構築する方法の連載記事の第2回。スカフォールディングにより一般的なブログの入稿画面を作れるまでを解説します。'
 }
 
 応援しているJリーグのサッカーチームが勝利した週末は嬉しいものですが、
@@ -32,24 +32,24 @@ export const meta = {
 過去にNext.jsのCMS「Strapi」の記事も書いてありますのでよろしければご参考になさってください。
 
     <RichLink
-          url="https://moldspoon.jp/blog/posts/first-using-strapi"
-          icon='ri-link-fill'
-          title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。"
-          subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
-          targetBlank={true}
-        />
+                url="https://moldspoon.jp/blog/posts/first-using-strapi"
+                icon='ri-links-line'
+                title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。"
+                subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
+                targetBlank={true}
+            />
 
     <br />
 
 ⇩第1回の記事は以下からご覧いただけます。
 
     <RichLink
-          url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
-          moldspoon={true}
-          title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
-          subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
-          targetBlank={true}
-        />
+                url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
+                moldspoon={true}
+                title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
+                subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
+                targetBlank={true}
+            />
 
     <br />
 
@@ -337,12 +337,12 @@ Livewire is a full-stack framework for Laravel that makes building dynamic inter
 引き続き当ブログをよろしくお願いいたします。<br />
 
 export default function Page({ children }) {
-  return (
-    <Layout meta={meta}>
-      <>
-        {children}
-      </>
-    </Layout>
-  )
+    return (
+        <Layout meta={meta}>
+            <>
+                {children}
+            </>
+        </Layout>
+    )
 }
 

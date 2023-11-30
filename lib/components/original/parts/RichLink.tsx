@@ -1,5 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
+import "remixicon/fonts/remixicon.css";
 
 type Prop = {
   url: string
