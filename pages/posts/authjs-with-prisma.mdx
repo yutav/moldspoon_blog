@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'NextAuth+Prisma+Next.jsによるDB認証が実用的でないのでなんとかした件',
   date: '2023-11-30T01:33:51.000Z',
+  updateData: '2023-11-30T05:56:41.000Z',
   tags: [
     'Tips',
     '経験者向け',
@@ -375,11 +376,13 @@ export const options: NextAuthOptions = {
     },
     session: async ({ session, token, user, trigger, newSession }) => {
 
+      prisma.$connect()
       const userAccount = await prisma.account.findFirst({
         where: {
           userId: user.id
         }
       })
+      prisma.$disconnect()
 
       return {
         ...session,
