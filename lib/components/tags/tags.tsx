@@ -6,6 +6,7 @@ import metadata from 'lib/data/metadata.json'
 import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
 const getTags = (data: typeof metadata) => {
+
   const postsNode = data.find(item => item.name === 'posts'); // Find the node with name 'posts'
   const posts = (postsNode || {}).children || []; // Get the children of the 'posts' node
 
@@ -20,7 +21,13 @@ const getTags = (data: typeof metadata) => {
     });
   });
 
-  return tagsCountArray;
+  const tagsCountArrayPairs = Object.entries(tagsCountArray);
+  tagsCountArrayPairs.sort((a, b) => b[1] - a[1]);
+
+  const sortedTagsCountArray = Object.fromEntries(tagsCountArrayPairs);
+
+  return sortedTagsCountArray;
+
 };
 
 const getTitle = (): string => {
