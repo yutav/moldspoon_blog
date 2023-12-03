@@ -14,7 +14,7 @@ const IntroduceMyself: React.FC<Prop> = () => {
          md:h-auto
       ">
             <p className="leading-tight sm:leading-loose text-xs sm:text-sm">こんにちは、Webサービス開発者の<Link href="https://twitter.com/yuku_tas">yuku_tas</Link>です。</p>
-            <p className="text-xs">簡単なプロフィール:&nbsp;開業から13年、業界に携わって17年。Webサイト/iOS/Androidアプリ開発から、<br className="hidden sm:block" />データ分析業務・コンサル業務、ベンチャーから保険会社まで様々な案件を個人会社の形で請け負ってまいりました。<br className="hidden sm:block" />詳しくは<Link href="/about" target="_blank">こちら</Link></p>
+            <p className="text-xs">簡単なプロフィール:&nbsp;MoldSpoon Inc.代表。開業から13年、業界に携わって17年。Webサイト/iOS/Androidアプリ開発から、<br className="hidden sm:block" />データ分析業務・コンサル業務、ベンチャーから保険会社まで様々な案件を個人会社の形で請け負ってまいりました。<br className="hidden sm:block" />詳しくは<Link href="/about" target="_blank">こちら</Link></p>
           </div>
         </div>
       </div>
