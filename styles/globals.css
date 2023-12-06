@@ -161,12 +161,39 @@ img.overImage {
 .hoso {
   font-weight: bold;
   background: linear-gradient(transparent 60%, #FBB92F 60%);
+  background-size: 200% 200%;
+  animation: makerUp 3s ease-in-out forwards; /* アニメーション設定 */
+}
+.hoso-infinite {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+  background-size: 200% 200%;
+  animation: makerUp 3s ease-in-out infinite; /* アニメーション設定 */
+}
+
+@keyframes makerUp {
+  0% {
+    background-position: 
+  }
+  100% {
+    background-size: 100% 100%;
+  }
+}
+
+.hoso-noanimation {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+}
+
+.hoso2 {
+  font-weight: bold;
+  background: linear-gradient(#ff0 50%, #00f 50%);
 }
 
 .futo {
-  background-color: #FBB92F;
+  font-weight: bold;
+  background:linear-gradient(transparent 20%, #FBB92F 20%);
 }
-
 @media (prefers-color-scheme: dark) {
   .hoso {
     font-weight: bold;

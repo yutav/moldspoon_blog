@@ -1,0 +1,122 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【CSSハック】マーカーで引いた装飾をアニメーションで動くようにする',
+  date: '2023-12-06T07:10:23.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'CSS',
+    'html',
+    'フロントエンド',
+    'ハック'
+  ]
+}
+
+## 概要
+
+**今日は小ネタ**です。
+
+たまにデザインが優秀なブログ様（技術が関係ないジャンル含め）を参考にさせていただくことがあります。<br />
+（いつもありがとうございます...！）
+
+その中で、気になっていたのは、
+    <br />
+    <span className="hoso-noanimation">こんな感じ</span><br />
+
+    <br />
+
+の**マーカーを引いたような装飾がアニメーションするような装飾**です。今回はこれを調査し、独自に実装してみようと思いました。
+
+## 本記事のゴール
+
+マーカーで引いた装飾を装飾するようにする。
+
+## 作業
+
+### マーカーで引いた装飾のおさらい
+
+すでにこのブログでも実装していたのですが、<span className="hoso-noanimation">マーカーで引いたような装飾</span>は背景色をつける**background**のグラデーションを指定する
+**linear-gradient**で実現します。
+
+```
+.hoso {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+}
+```
+
+ちょっとグラデーションを聞かせるときの概念は分かりにくいのですが
+ウェブ標準のためのドキュメントである[MDN Web Docsのlinear-gradiend](https://developer.mozilla.org/ja/docs/Web/CSS/gradient/linear-gradient)のページによると、
+
+- linear-gradientとは**直線に沿った色の変化**を意味する。
+- 1つ目の項目（引数）は始点の色
+- 2つ目の項目（引数）は終点の色
+
+を指すようです。よって、これらを調整することで色は変えられます。
+
+例えば、以下のように指定できます。
+
+```
+.hoso2 {
+  font-weight: bold;
+  background: linear-gradient(#ff0 50%, #00f 50%); // 黄色、青の順番に指定
+}
+```
+    <span className="hoso2">上は黄色で下は青</span>
+
+```
+.futo {
+  font-weight: bold;
+  background:linear-gradient(transparent 20%, #FBB92F 20%);
+}
+```
+    <span className="futo">太くしようとすれば、このようにします。</span>
+
+### アニメーションを追加
+
+さて、このような整理の中で、上記の**hoso**というクラスにアニメーションを追加していきます。
+いったんJavascriptを利用しないで済むように、[CSSアニメーション](https://developer.mozilla.org/ja/docs/Web/CSS/animation)を使用していきたいと思います。
+
+```
+.hoso {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+  background-size: 200% 200%;
+  animation: makerUp 3s ease-in-out infinite; /* アニメーション設定 */
+}
+
+@keyframes makerUp {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-size: 100% 100%;
+  }
+}
+```
+
+結果として、<span className="hoso-infinite">このようになります。</span>
+何度も繰り返す=無限ループにするのではなく、一方通行のアニメーションをご希望の場合は**infinite**のところを**forwards**に変更してください。
+
+## まとめ
+
+今回は下からせり上がるタイプのアニメーションを採用しましたが、できれば、マーカーペンを引いたように<span className="hoso-infinite">左から右に色がつく</span>
+アニメーションを実現したいと思いました。これについては**Javascriptを併用しないとできない可能性もありそう**で、調査が行え次第本記事に追記していこうと思っております！
+    <br />
+    <br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
