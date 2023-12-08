@@ -1,0 +1,371 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第3回(最終回) CSVダウンロード',
+  date: '2023-12-08T9:01:00.000Z',
+  tags: [
+    'Blog',
+    '連載記事',
+    '経験者向け',
+    'プログラミング',
+    'Laravel',
+    'Filament',
+    'Sail',
+    'PHP',
+    'バックエンド',
+    'CSVダウンロード'
+  ],
+  description: 'Laravel+Filamentでらくらく管理画面を構築する方法の連載記事の第3回。CSVダウンロード機能を実装する具体的方法を解説します。'
+}
+
+クリスマスや年越しの話題が次々に賑わう師走の今日この頃。こんな季節は気持ちまでつい走ってしまいそうですが、**開発作業はミスなく、着実にこなしていきたいものです。**
+
+Hackerの皆様はいかかお過ごしでおられますでしょうか。
+
+## 概要
+
+本連載は、Laravel+Filamentというフレームワーク＆ライブラリの組み合わせを通じて、**インストールから入りひとまず簡単に
+開発環境で管理画面開発を短時間で始められることを目的**にしています。
+
+    <br />
+過去にNext.jsのCMS「Strapi」の記事も書いてありますのでよろしければご参考になさってください。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/first-using-strapi"
+          icon='ri-links-line'
+          title="入稿管理システム「Strapi」をMySQL DBで運用する方法。類似サービスも交えて紹介。"
+          subtitle="個人開発のサービスを開発している中で、Wordpressのようなインターフェースで、コンテンツをガンガン入稿したい..."
+          targetBlank={true}
+        />
+
+    <br />
+
+⇩第1回の記事は以下からご覧いただけます。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
+          moldspoon={true}
+          title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
+          subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
+          targetBlank={true}
+        />
+
+    <br />
+
+⇩第2回の記事は以下からご覧いただけます。
+
+   <RichLink
+         url="https://moldspoon.jp/blog/posts/laravel-filament-panel-making"
+         moldspoon={true}
+         title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第2回 画面構築の基本編"
+         subtitle="本連載は、Laravel+Filamentというフレームワーク＆ライブラリの組み合わせを通じて、インストールから入りひとまず簡単に 開発環境で..."
+         targetBlank={true}
+       />
+
+今回は**CSVダウンロード機能をFilament上で作成し、利用できるようになるまで**を解説します。
+
+それではどうぞ最後までお付き合いください。
+
+### 本連載のゴール
+
+Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できる＆CSVダウンロード機能を利用できるようになるまで整える。
+
+### 対象読者
+
+- git/PHP/Laravel/Dockerについて基本的な知識を持っている、**プログラミング中級者以上**の方
+- 管理画面を少ない手順で構築しようとしている方
+
+## 前回のおさらい
+
+第2回の記事では、**Posts（ブログのポスト）** のリソースを作成し、最低限表示・編集・削除の基本動作ができる機能を作成したと思います。
+
+   <MdxImage month="202312" image="filament301.png" annotation="" />
+
+- Docker(Sail)の立ち上げ方
+- ログイン手順
+- Posts画面までの移動方法
+
+などをもし把握されていない場合は、お手数ですが第1回・第2回をご覧ください。
+
+それでは始めていきます。
+
+## 作業の推移
+
+### バルク処理について
+
+この画面の左上に「Bulk Actions」というボタンがついているのがわかると思いますが、
+このボタンから**1件以上のレコードをまとめて処理できます。**
+
+前回の処理で、以下のように`PostResource.php`に一斉削除機能はすでに実装しています。
+
+    <CodeBlockTitle title="app/Filament/Resources/PostResource.php" />
+
+```php
+<?php
+
+namespace App\Filament\Resources;
+
+// 略
+
+class PostResource extends Resource
+{
+    // 前略
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            .. 略
+            ->bulkActions([
+                // 一斉削除など、まとめてアクションを行える
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    // 後略
+}
+```
+
+**DeleteBulkAction** というのが、一斉削除ボタンを表示する部分です。
+これが書かれていると、
+
+ページの左上に一斉削除ボタンが表示されます。
+
+消したいレコードを入れて、削除ボタンを押すと...
+
+   <MdxImage month="202312" image="filament302.png" annotation="" />
+
+確認ダイアログが出て
+
+   <MdxImage month="202312" image="filament303.png" annotation="" />
+
+実際に削除が行われ「Deleted」がティッカー表示されます。
+
+   <MdxImage month="202312" image="filament304.png" annotation="" />
+
+このような一斉処理=**バルク機能** をCSVダウンロードでも使っていきます。
+**一から実装するとこの機能は案外面倒くさい** ので、助かりますね...！
+
+### 実装方針を調査
+
+[公式ドキュメント](https://filamentphp.com/docs/3.x/tables/actions#bulk-actions)のactionsのページによると
+すでに事前に作られているバルク機能は
+
+- 削除
+- 強制削除（物理削除）
+- 復元（削除の解除）
+- コピー
+
+などあるようですが、CSVダウンロードはまだありません。よって、**自分で作らねばなりません**。
+
+一括削除機能のソースコード`vendor/filament/table/src/Actions/DeleteBulkAction.php`を参考にしたところ、
+    <span className="hoso">メソッドをチェーンのようにしてUIを作っていく形</span>のようです。
+
+**しかし、同じようにBulkActionを継承したカスタムクラスを作る例を探したところすぐには出てこない...** 
+
+そこでGoogleでも検索したところ、2023/12現在最新ではないものの、version2のFilamentの公式ドキュメントで
+[似たような処理をしているページ](https://v2.filamentphp.com/tricks/add-bulk-action-to-table-to-export-selected-record-as-json-file-within-a-zip-archive)を見つけました。
+やはりBulkActionを使う形で、しかも`PostResource.php`に実装する形で実現できるようなので、よりかんたんです。
+
+```
+Tables\Actions\BulkAction::make('アクション名')
+// 前提を書く
+->action(function(Collection $records) {
+  // ここで$recordsを処理して、結果をレスポンスとして返す。
+})
+```
+
+`action()`をフィルター的に使えるようです。これはわかりやすい。
+こちらを大いに参考にさせていただき、CSVダウンロード処理を作ります。
+
+### 具体的な実装内容
+
+結果的に以下のように`PostResource.php`の実装を行いました。
+上に書いたように、**BulkAction::make('アクション名')** から**メソッドチェーン** にする形で
+必要な定義を追加していきます。
+
+    <CodeBlockTitle title="app/Filament/Resources/PostResource.php" />
+
+```
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Models\Post;
+// 略、変更なし
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class PostResource extends Resource
+{
+    protected static ?string $model = Post::class;
+
+    // この部分は変更なし、省略
+    
+    public static function table(Table $table): Table
+    {
+        return $table
+            // ここも一切変更なし、省略。
+            ->bulkActions([
+                // 一括削除ボタンのUIを作る=BulkActionGroup
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('csvDownload')
+                        ->icon('heroicon-s-arrow-down-on-square-stack') // s...はsolid download部分が、heroicons.comで調べて出た部分
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('CSVダウンロード')
+                        ->modalDescription('CSVをダウンロードします。よろしいですか？')
+                        ->modalSubmitActionLabel('はい')
+                        ->modalCancelActionLabel('いいえ')
+                        ->action(function (Collection $posts) {
+
+                            // ヘッダー行
+                            $csvHeader = ['id', 'title', 'body', 'type', 'published'];
+
+                            // 不要なキーを削除して$csvDataにつめる
+                            $csvData = $posts->map(function ($post) {
+                                return [
+                                    'id' => $post->id,
+                                    'title' => $post->title,
+                                    'body' => $post->body,
+                                    'type' => $post->type,
+                                    'published' => $post->published,
+                                ];
+                            })->toArray();
+
+                            // CSV出力処理
+                            $response = new StreamedResponse(function () use ($csvHeader, $csvData) {
+                                $handle = fopen('php://output', 'w');
+                                fputcsv($handle, $csvHeader); // ヘッダー行を出力
+                                foreach ($csvData as $row) {
+                                    fputcsv($handle, $row);
+                                }
+                                fclose($handle);
+                            }, 200, [
+                                'Content-Type' => 'text/csv',
+                                'Content-Disposition' => 'attachment; filename="posts.csv"',
+                            ]);
+                            return $response;
+                        })
+                        ->deselectRecordsAfterCompletion() // CSVダウンロード後、すべてのチェックをリセット
+                ]),
+            ]);
+    }
+    // 後略、この部分は変更なし
+}
+
+```
+
+ポイントをかいつまんで説明します。
+
+#### ダウンロードボタンへのアイコンの指定
+
+Filamentには、[heroicon](https://heroicons.com/)が組み込まれています。
+ダウンロードボタンのLavelは`->color('success')`で、アイコンは下記の部分で指定しています。
+
+```
+->icon('heroicon-s-arrow-down-on-square-stack') // s...はsolid download部分が、heroicons.comで調べて出た部分
+```
+
+`s`の部分は「solid」を意味するのは分かったのですが、そのあとの部分は、**なんか使えるアイコンと使えないアイコンがあるような...？**
+この辺りはもう少し深掘りしないとわからないですが、使えるものを使ってみました。
+
+#### モーダルのUIを描く
+
+下記の部分で**確認モーダルのUI** を出力しています。
+私がググって出てきたソースはfilament v2の古い書き方だったようで、その点はv3のものに合わせて書く必要があると思います。
+
+```
+->requiresConfirmation()
+->modalHeading('CSVダウンロード')
+->modalDescription('CSVをダウンロードします。よろしいですか？')
+->modalSubmitActionLabel('はい')
+->modalCancelActionLabel('いいえ')
+```
+
+#### CSVダウンロードを実際に実行
+
+下記の部分で実際にCSVダウンロードを行っています。<span className="hoso">Collectionではすべてのキーが取れてしまうので、必要なものだけにカットして出力するように</span>しましょう。
+
+```
+ ->action(function (Collection $posts) {
+
+    // ヘッダー行
+    $csvHeader = ['id', 'title', 'body', 'type', 'published'];
+
+    // 不要なキーを削除して$csvDataにつめる
+    $csvData = $posts->map(function ($post) {
+        return [
+            'id' => $post->id,
+            'title' => $post->title,
+            'body' => $post->body,
+            'type' => $post->type,
+            'published' => $post->published,
+        ];
+    })->toArray();
+
+    // CSV出力処理
+    $response = new StreamedResponse(function () use ($csvHeader, $csvData) {
+        $handle = fopen('php://output', 'w');
+        fputcsv($handle, $csvHeader); // ヘッダー行を出力
+        foreach ($csvData as $row) {
+            fputcsv($handle, $row);
+        }
+        fclose($handle);
+    }, 200, [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => 'attachment; filename="posts.csv"',
+    ]);
+    return $response;
+})
+->deselectRecordsAfterCompletion() // CSVダウンロード後、すべてのチェックをリセット
+```
+
+ところで、`fputcsv()`の利用はダブルクオーテーション付きでCSVを出力するにあたり問題がありそうで、
+**商用のサービスには使わない方がいいかもしれません。** 
+    <br />
+この点は本題から逸れるため深掘りせず、参考URLを貼らせていただくのみとしたいと思います。
+
+参考資料: [【PHP】csvを自前で作った話 | ダブルコーテーション問題でfputcsvは使わず実装](https://qiita.com/non0311/items/b812aff80213f627d36b)
+参考資料: [PHPで高速・省メモリ・確実に日本語CSVを扱う方法](https://zenn.dev/wakaba/articles/2b1b53f1755758)
+
+
+### 動作確認
+
+実装が終わったので、実行してみるとこのようになります。
+
+   <MdxImage month="202312" image="filament305.gif" annotation="サクッとダウンロードできている" isHalf={true} />
+
+   <MdxImage month="202312" image="filament306.png" annotation="" isHalf={true} />
+
+ダウンロードしたCSVを**LibreOffice** で開いたところ想定通り出力できています。ただし、上記ソースコードでは文字コードを**UTF8** で出力しているので、
+    <span className="hoso">Microsoft Excelで開けるようにしたい場合は、SJISへの変換処理を入れてみてください。</span>
+
+参考URL: [LibreOffice](https://ja.libreoffice.org/)
+
+## まとめ
+
+    <span className="hoso">無事CSV一括ダウンロード処理を実装できました。</span>
+
+ただ、**各ResourceクラスがこのままではActionが増えていき、ファット(ソースコードの量が多いファイル)になってしまいそう** なので
+どこかで**カスタムクラスを作成する方法を調べ、具体的な実装方法もわかれば本記事に追記していきたいと思います**。どうぞ、よろしくお願いいたします。
+
+    <br />
+**連載記事を最後までお読みいただきありがとうございました！** <br />
+引き続き当ブログをよろしくお願いいたします。<br />
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

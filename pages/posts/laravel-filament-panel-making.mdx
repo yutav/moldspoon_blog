@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
     title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第2回 画面構築の基本編',
     date: '2023-11-26T14:26:28.000Z',
+    updateDate: "2023-12-08T13:12:34.000Z",
     tags: [
         'Blog',
         '連載記事',
@@ -59,7 +60,7 @@ export const meta = {
 
 ### 本連載のゴール
 
-Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できるまで整える。
+Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できる＆CSVダウンロード機能を利用できるようになるまで整える。
 
 ### 対象読者
 
@@ -327,13 +328,23 @@ Livewire is a full-stack framework for Laravel that makes building dynamic inter
 
 ## まとめ
 
-更なる画面の作り込みについては、第3回以降で説明を行ってまいります。<br />
-上記でご説明したCSVダウンロードなどもそちらでサンプルを作れればと思っています。<br />
+次回の第3回は、<span className="hoso">CSV一括ダウンロード機能について実装を行い、丁寧に解説を行います。</span>
+宜しければ最後までお付き合いいただけますととても嬉しいです。
     <br />
-投稿までしばしお待ちいただけますと、幸いに存じます...。
+
+#### 2023/12/08追記。第3回を投稿しました！
+
+ <RichLink
+             url="https://moldspoon.jp/blog/posts/laravel-filament-csv-download"
+             moldspoon={true}
+             title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第3回(最終回) CSVダウンロード"
+             subtitle="本連載は、Laravel+Filamentというフレームワーク＆ライブラリの組み合わせを通じて、インストールから入りひとまず簡単に..."
+             targetBlank={true}
+         />
+
     <br />
     <br />
-**連載記事を最後までお読みいただきありがとうございました！** <br />
+**連載記事をお読みいただきありがとうございました！** <br />
 引き続き当ブログをよろしくお願いいたします。<br />
 
 export default function Page({ children }) {
