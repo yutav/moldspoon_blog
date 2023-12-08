@@ -159,11 +159,18 @@ img.overImage {
 }
 
 .hoso {
+  background:linear-gradient(transparent 50%, #FBB92F 50%);
+  display: inline;
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
   font-weight: bold;
-  background: linear-gradient(transparent 60%, #FBB92F 60%);
-  background-size: 200% 200%;
-  animation: makerUp 3s ease-in-out forwards; /* アニメーション設定 */
+  transition:background-size 1.5s;
 }
+
+.hoso.on {
+  background-size: 100% 100%;
+}
+
 .hoso-infinite {
   font-weight: bold;
   background: linear-gradient(transparent 60%, #FBB92F 60%);
@@ -171,14 +178,6 @@ img.overImage {
   animation: makerUp 3s ease-in-out infinite; /* アニメーション設定 */
 }
 
-@keyframes makerUp {
-  0% {
-    background-position: 
-  }
-  100% {
-    background-size: 100% 100%;
-  }
-}
 
 .hoso-noanimation {
   font-weight: bold;
@@ -198,6 +197,13 @@ img.overImage {
   .hoso {
     font-weight: bold;
     background: linear-gradient(transparent 60%, #BD23A7 60%);
+    display: inline;
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    transition:background-size 1.5s;
+  }
+  .hoso.on {
+    background-size: 100% 100%;
   }
   .futo {
     background-color: #BD23A7;

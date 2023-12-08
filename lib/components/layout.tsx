@@ -18,7 +18,7 @@ import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import DetailLeftBox from './original/parts/DetailLeftBox'
-
+import "../../scripts/marker.js";
 export type PostMetadata = {
   title: string
   date: string
