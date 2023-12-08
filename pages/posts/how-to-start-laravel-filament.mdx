@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: '【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編',
   date: '2023-11-22T16:08:44.000Z',
-  updateDate: '2023-11-26T12:09:38.000Z',
+  updateDate: '2023-12-08T9:04:38.000Z',
   tags: [
     'Blog',
     '連載記事',
@@ -38,13 +38,13 @@ export const meta = {
         />
 
 
-今回は、本記事にてPHPの管理画面作成ライブラリ[Filament](https://filamentphp.com/)について、**インストールから開発環境での疎通ができるまで**をご説明してまいります。
+本連載では、PHPの管理画面作成ライブラリ[Filament](https://filamentphp.com/)について、**インストールから開発環境での疎通を行い、CSVダウンロード機能が利用できるようになるまで**を極力丁寧に、画像付きで解説して参ります。
 
 **どうぞ最後までお付き合いください。**
 
 ### 本連載のゴール
 
-Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できるまで整える。
+Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ローカルで開発環境が利用できる＆CSVダウンロード機能を利用できるようになるまで整える。
 
 ### 対象読者
 
@@ -58,6 +58,7 @@ Laravel+Filamentを使い、DockerでMySQLデータベースを立て、ロー�
 - 構築するのはSaaSサービスの管理画面
 - サービスの利用者=一般ユーザーの基本情報を管理者ユーザーにより編集したい。
 - 他、サービスでユーザーが登録したデータの閲覧を行えるようにしたい。
+- ユーザー一覧をCSVでダウンロードできるようにしたい。
 
 ## 設計
 
