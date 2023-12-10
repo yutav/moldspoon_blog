@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使ってらくらくバリデーション',
   date: '2023-08-21T08:30:00.000Z',
-  updateDate: '2023-11-10T14:58:00.000Z',
+  updateDate: '2023-12-10T16:23:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -278,9 +278,27 @@ const Page = () => {
 export default Page
 ```
 
+### その他zodのバリデーション
+
+以下に、私のほうで実際に使ったさまざまなバリデーションパターンを逆引きできる方法で、気づき次第追記していきます。
+
+#### URLのバリデーションをするには？
+
+```
+  url: z.string().url({ message: 'URLを入力してください' }),
+```
+
+実際に試したところ、`http://`または`https://`が入力されているかどうかが条件で、`.com`などのドメイン形式となっているかどうかは
+判定条件ではないようです。よって、**ドメインのバリデーションが必要な場合** は以下のように正規表現を使います。
+
+```
+    .regex(/^https?:\/\/(.+?)\.(.+?)/, { message: 'URLを入力してください' }),
+
+```
+
 ### まとめ
 
-Next.js + react-hook-form + zodの組み合わせで、一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。
+Next.js + react-hook-form + zodの組み合わせで、<span classNme="hoso">一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。</span>
 ただ、DBと連関する処理や認証処理などは別途用意せねばなりませんので、用途によってはという注意書きはつきますが、少なくとも初学者などには非常に向いているソリューションだと思いました。
 
 ##### 補足: 本ブログのNext.js関連記事
