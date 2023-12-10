@@ -278,9 +278,9 @@ const Page = () => {
 export default Page
 ```
 
-### その他zodのバリデーション
+### バリデーションの逆引き一覧
 
-以下に、私のほうで実際に使ったさまざまなバリデーションパターンを逆引きできる方法で、気づき次第追記していきます。
+以下に、私のほうで実際に使ったさまざまなバリデーションパターンを逆引き形式で、気づき次第追記していきます。
 
 #### URLのバリデーションをするには？
 
@@ -293,7 +293,26 @@ export default Page
 
 ```
     .regex(/^https?:\/\/(.+?)\.(.+?)/, { message: 'URLを入力してください' }),
+```
 
+#### 値が数値のセレクトボックスのバリデーションをするには？
+
+以下のようにします。ポイントは、`valueAsNumber`をオプションで指定し、<span className="hoso">数字としてzodで判定するようにする</span>こと。
+
+```
+<select name="pref" {...register('pref',{ valueAsNumber: true })}>
+  <option value={0}>未選択</option>
+  <option value={1}>北海道</option>
+  <option value={2}>青森県</option>
+  // 中略
+  </option value={47}>沖縄県</option>
+</select>
+```
+
+こうすることで、未選択を0として扱い、**1以上をバリデーション通過**というシンプルな形で判定が可能です。
+
+```
+ pref: z.number().min(1, { message: '都道府県を選択してください' }),
 ```
 
 ### まとめ
