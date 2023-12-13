@@ -6,7 +6,7 @@ export const config = {
 };
 
 const font = fetch(
-  process.env.baseUrl + "/assets/GenJyuuGothic-P-Hevy.ttf"
+  process.env.baseUrl + "/assets/TsunagiGothic.ttf"
 ).then((res) => res.arrayBuffer());
 
 
