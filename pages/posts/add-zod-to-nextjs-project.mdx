@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使ってらくらくバリデーション',
   date: '2023-08-21T08:30:00.000Z',
-  updateDate: '2023-12-10T16:23:00.000Z',
+  updateDate: '2023-12-13T07:29:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -295,6 +295,21 @@ export default Page
     .regex(/^https?:\/\/(.+?)\.(.+?)/, { message: 'URLを入力してください' }),
 ```
 
+#### 相対パスのバリデーションをするには？
+
+`./`で始まるURLのバリデーションをするには以下のように正規表現を使います。
+`./hogehoge`や`./hogehoge/fugafuga`といった多階層の相対パスも一致します。
+
+```
+  path: z.string().regex(/^\.\/(.*)/, { message: 'パスを相対パスの形式で入力してください。' }),
+```
+
+ちなみに絶対パスのバリデーションをしたい時も大きな変更はないです。`\.`を取るだけです。
+
+```
+  path: z.string().regex(/^\/(.*)/, { message: 'パスを絶対パスの形式で入力してください。' }),
+```
+
 #### 値が数値のセレクトボックスのバリデーションをするには？
 
 以下のようにします。ポイントは、`valueAsNumber`をオプションで指定し、<span className="hoso">数字としてzodで判定するようにする</span>こと。
@@ -313,6 +328,25 @@ export default Page
 
 ```
  pref: z.number().min(1, { message: '都道府県を選択してください' }),
+```
+
+#### 利用規約などチェックボックスのバリデーションをするには？
+
+下記のようなチェックボックスタイプのパーツは、
+
+```
+<div className="flex items-start mb-1">
+  <div className="flex items-center h-5">
+    <input id="term" type="checkbox" {...register('term', { required: true })} value="" className={border border-gray-300 w-4 h-4 rounded bg-gray-50"} />
+  </div>
+  <label htmlFor="term" className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"><Link href="/term" className="text-blue-600 hover:underline dark:text-blue-500">ご利用規約</Link>に同意する</label>
+</div>
+```
+
+このように、`refine()`を使って判定を行います。
+
+```
+  term: z.boolean().refine((value) => value === true, { message: '注意事項・利用規約をお読みいただき同意してください。' }),
 ```
 
 ### まとめ
