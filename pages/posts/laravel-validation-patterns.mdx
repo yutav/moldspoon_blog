@@ -35,16 +35,16 @@ Laravelって本当に便利なフレームワークですね。ただ、バリ�
 ## 動作確認用のサンプルファイル
 
     {/*下記のgitレポジトリに集約しています。
-                                   (皆様のlaravelプロジェクトに加えてお試しください)
+                                      (皆様のlaravelプロジェクトに加えてお試しください)
 
-                                      <RichLink
-                                            url="https://github.com/react-hook-form/resolvers#zod"
-                                            icon='ri-github-fill'
-                                            title="react-hook-form/resolvers#zod"
-                                            subtitle="ここでzodでの用法を確認できます。"
-                                            targetBlank={true}
-                                          />
-                                   */}
+                                         <RichLink
+                                               url="https://github.com/react-hook-form/resolvers#zod"
+                                               icon='ri-github-fill'
+                                               title="react-hook-form/resolvers#zod"
+                                               subtitle="ここでzodでの用法を確認できます。"
+                                               targetBlank={true}
+                                             />
+                                      */}
 
 構成ファイルは以下の3つとなります。
 
@@ -84,6 +84,7 @@ class PostController extends Controller
   public function show(): \Illuminate\Http\Response
   {
     // TODO: 本来は登録完了後のデータを出すページですが、一旦完了ページとします。
+    
     return response('バリデーションが通り、登録完了しました。本来はViewを使って結果を表示します。');
     //    return view('post.show');
   }
