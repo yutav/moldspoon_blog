@@ -1,0 +1,465 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Laravelの様々なバリデーションパターンをわかりやすい実例付きで解説',
+  date: '2023-12-13T07:41:20.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'バックエンド',
+    'フレームワーク'
+  ]
+}
+
+お休みにクリスマスツリーの飾り付けを家族でしました。そういえば、クリスマスが来るのがもっと楽しみになったような...。
+**シチュエーションって大事**ですよね。
+
+
+Hackerの皆様はいかがお過ごしでしょうか。
+
+## 本記事の概要
+
+前提として、**2023/12現在最新のLaravel 10.x**を対象に記述いたします。
+
+- Laravelで、ユーザーが入力した入力値をチェックするバリデーション機能がある
+- 公式サイトの記述のみではパッとやりたいこととパターンが一致しない
+- あまり知名度がないバリデーションルールも存在する
+- 個人的な備忘としても、わかりやすく整理して後で使えるようにする
+
+Laravelって本当に便利なフレームワークですね。ただ、バリデーションのような<span className="hoso">サービスの作り込みと直接関係ないようなところではできるだけ作業は省力化したい</span>ところかなと思います。
+
+## 動作確認用のサンプルファイル
+
+    {/*下記のgitレポジトリに集約しています。
+                                   (皆様のlaravelプロジェクトに加えてお試しください)
+
+                                      <RichLink
+                                            url="https://github.com/react-hook-form/resolvers#zod"
+                                            icon='ri-github-fill'
+                                            title="react-hook-form/resolvers#zod"
+                                            subtitle="ここでzodでの用法を確認できます。"
+                                            targetBlank={true}
+                                          />
+                                   */}
+
+構成ファイルは以下の3つとなります。
+
+1. PostController.php
+2. routes/web.php
+4. resources/views/Post/create.ctp
+
+[公式サイト](https://laravel.com/docs/10.x/validation)の記述に沿って作成し、<span className="hoso">日本語化やわかりやすい変更を加えていますので</span>
+よろしければ、お手元のLaravelプロジェクトに追加し、お試しください。
+
+ローカルであれば、
+```
+php artisan serve
+```
+
+で起動し`http://localhost/post`からご確認をいただけます。
+
+### PostController.php
+
+validation処理を、登録処理を実施する`store()`にゴリゴリ書いていきます。
+    <span className="hoso">バリデーションが通ったら仮の完了表示を出すように</span>しています。
+```
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+use Illuminate\Validation\Rule; // 追加が必要
+
+
+class PostController extends Controller
+{
+
+  public function show(): \Illuminate\Http\Response
+  {
+    // TODO: 本来は登録完了後のデータを出すページですが、一旦完了ページとします。
+    return response('バリデーションが通り、登録完了しました。本来はViewを使って結果を表示します。');
+    //    return view('post.show');
+  }
+
+  /**
+   * Show the form to create a new blog post.
+   */
+  public function create(): View
+  {
+    return view('post.create');
+  }
+
+  /**
+   * Store a new blog post.
+   */
+  public function store(Request $request): RedirectResponse
+  {
+
+    // var_dump($request->all());
+    // exit;
+
+    $request->validate([
+      'hissu_text' => ['required', 'string'],
+      'user_name' => ['required', 'string', 'alpha_num:ascii'], // 英字のみがいい場合はalpha:ascii 英字に加えてダッシュも許容する場合は alpha_dash:ascii
+      'email' => ['required', 'email'], // ドコモなどRFCに沿わないものでも受け付けるような、厳格にやりたい場合は正規表現を使う必要あるかも
+      // NOTE: 以下のような様々なパターンがあり。
+      // rfc: RFCValidation
+      // strict: NoRFCWarningsValidation
+      // dns: DNSCheckValidation
+      // spoof: SpoofCheckValidation
+      // filter: FilterEmailValidation
+      // filter_unicode: FilterEmailValidation::unicode()
+      'id8_20' => ['required', 'string', 'alpha_num:ascii', 'min:8', 'max:20'], // 8文字以上20文字以内のアスキー文字列 betreen:8,20 ともかける
+      'from_date' => ['required', 'before:6month', 'after:today'],
+      'decimal' => ['required', 'decimal:1,2'],
+      'intValue' => ['required', 'digits_between:2,8'],
+      'avatar' => [
+        'required',
+        'extensions:jpeg,jpg,png', // gifは拒否。あくまで名称としてチェックするので、mimeTypeも併用しないと正確には判定できない。
+        Rule::dimensions()->maxWidth(1000)->maxHeight(500), // 大きくても1000x500以下でないとエラー
+      ],
+      'colorFavorite' => ['required', 'in:red,blue,black'],
+      'user_password' => ['required', 'ascii', 'same:retype_password'], // NOTE: DB認証が必要なバリデーションは別記事にてあらためて。
+      'retype_password' => ['required', 'ascii'],
+      'term' => ['required', 'boolean']
+    ]);
+
+    // TODO: データベースのテーブルへのsave()処理を書きます。
+
+    //    return to_route('post.show', ['post' => $post->id]);
+    return to_route('post.show');
+  }
+}
+
+```
+
+### routes/web.php
+
+シンプルに公式ドキュメントと同様、少しエンドポイントを追加したくらいです。
+
+```
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PostController;
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/post/create', [PostController::class, 'create']);
+Route::post('/post', [PostController::class, 'store']);
+
+```
+
+### resources/views/Post/create.ctp
+
+今回は**説明時の可搬性を重視し、cssはインラインスタイル**としています。
+コードの保守性を考慮するとできれば外部呼び出しにしたいところです...。
+
+```
+<!-- css -->
+<style>
+  body {
+    background: #efefef;
+    margin: 0px !important;
+
+  }
+
+  .container {
+    background: #FFF;
+    width: 1024px;
+    min-height: 1000px;
+    margin: 0 auto;
+    padding: 25px 50px;
+  }
+
+  .container h1 {
+    border-left: 7px solid blueviolet;
+    padding-left: 15px;
+  }
+
+  .form-group {
+    margin: 30px 0 30px;
+  }
+
+  label {
+    font-weight: bold;
+  }
+
+  input[type=text],
+  input[type=password],
+  input[type=email],
+  input[type=date],
+  input[type=number],
+  input[type=decimal],
+  select {
+    padding: 10px 20px;
+    width: 100%;
+    border-radius: 5px;
+  }
+
+  input.password {
+    width: 48%;
+  }
+
+  button[type=submit] {
+    background: lightblue;
+    width: 200px;
+    height: 35px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .is-invalid {
+    border: 1px solid #F00;
+  }
+
+  .alert {
+    font-weight: bold;
+  }
+
+  .alert-danger {
+    color: #f00;
+  }
+</style>
+
+<!-- /resources/views/post/create.blade.php -->
+
+<div class="container">
+  <h1>バリデーションテスト</h1>
+
+  <form action="/post" method="POST" enctype="multipart/form-data">
+    @csrf
+
+    <div class="form-group">
+      <label for="hissu_text">入力必須の一般テキスト</label>
+      <p>
+        <input id="hissu_text" type="text" name="hissu_text" value="<?= old('hissu_text'); ?>"
+          class="@error('hissu_text') is-invalid @enderror">
+      </p>
+      @error('hissu_text')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+    <div class="form-group">
+      <label for="user_name">ユーザー名(アルファベット・数字限定）</label>
+      <p>
+        <input id="user_name" type="text" name="user_name" value="<?= old('user_name'); ?>"
+          class="@error('user_name') is-invalid @enderror">
+      </p>
+      @error('user_name')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+    <div class="form-group">
+      <label for="email">メール</label>
+      <p>
+        <input id="email" type="email" name="email" value="<?= old('email'); ?>"
+          class="@error('email') is-invalid @enderror">
+      </p>
+      @error('email')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+
+    <div class="form-group">
+      <label for="id8_20">8文字以上20文字以下のID</label>
+      <p>
+        <input id="id8_20" type="text" name="id8_20" value="<?= old('id8_20'); ?>"
+          class="@error('id8_20') is-invalid @enderror">
+      </p>
+      @error('id8_20')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+    <div class="form-group">
+      <label for="from_date">今日から半年後まで指定できる日付</label>
+      <p>
+        <input id="from_date" type="date" name="from_date" value="<?= old('from_date'); ?>"
+          class="@error('from_date') is-invalid @enderror">
+      </p>
+      @error('from_date')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+    <div class="form-group">
+      <label for="decimal">ドルなどの小数点を含む数字(セントなので小数点二位まで）</label>
+      <p>
+        <input id="decimal" type="decimal" name="decimal" value="<?= old('decimal'); ?>" placeholder="12.32"
+          class="@error('decimal') is-invalid @enderror">
+      </p>
+      @error('decimal')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+    <div class="form-group">
+      <label for="intValue">10円から100万円まで　などの整数値</label>
+      <p>
+        <input id="intValue" type="number" name="intValue" value="<?= old('intValue'); ?>" placeholder="500000"
+          class="@error('intValue') is-invalid @enderror">
+      </p>
+      @error('intValue')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+    <div class="form-group">
+      <label for="avatar">最大で縦1000px,横500pxの画像（jpg/gif/pngのみ。アバターなど）</label>
+      <p>
+        <input id="avatar" type="file" name="avatar" value="<?= old('avatar'); ?>"
+          class="@error('avatar') is-invalid @enderror">
+      </p>
+      @error('avatar')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+    <div class="form-group">
+      <label for="colorFavorite">限られた選択肢から選ぶ。どの色が好き？</label>
+      <p>
+        <select name="colorFavorite" id="colorFavorite" value="<?= old('colorFavorite'); ?>"
+          class="@error('colorFavorite') is-invalid @enderror">
+          <option value="">未選択</option>
+          <option value="red" <?php if(old('colorFavorite')=='red' ): ?>selected
+            <?php endif; ?>>
+            赤色
+          </option>
+          <option value="blue" <?php if(old('colorFavorite')=='blue' ): ?>selected
+            <?php endif; ?>>青色
+          </option>
+          <option value="black" <?php if(old('colorFavorite')=='black' ): ?>selected
+            <?php endif; ?>>黒色
+          </option>
+        </select>
+      </p>
+      @error('colorFavorite')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+
+    <div class="form-group">
+      <label for="user_password">パスワード・パスワード（再確認）</label>
+      <p>
+        <input id="user_password" type="password" name="user_password" value="<?= old('user_password'); ?>"
+          class="password @error('user_password') is-invalid @enderror">
+        <input id="retype_password" type="password" name="retype_password" value="<?= old('retype_password'); ?>"
+          class="password @error('retype_password') is-invalid @enderror">
+      </p>
+      @error('user_password')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+      @error('retype_password')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+    <div class="form-group">
+      <label for="term">利用規約などのチェックボックス</label>
+      <p>
+        <input id="term" type="checkbox" name="term" value="1" <?php if(old('term')): ?> checked
+        <?php endif; ?>
+        class="@error('term') is-invalid @enderror">
+      </p>
+      @error('term')
+      <p class="alert alert-danger">{{ $message }}</p>
+      @enderror
+    </div>
+
+
+    <div class="form-group">
+      <button type="submit">送信</button>
+    </div>
+
+  </form>
+</div>
+```
+
+## サンプルを使うにあたっての注意点
+
+サンプルの動作を確実なものとするため、特にLaravelプロジェクトを立ち上げたばかりの場合は以下の点を
+あらかじめご確認の上お試しください。
+
+#### 日本語化ファイルを使おう
+
+**バリデーションをユーザーに表示するにあたり、日本語での表示が必要な方は下記のURLの手順に従い、必要なファイルを設置しましょう。**
+    <span className="hoso">コマンドでも入れられる</span>のを今回初めて知りました。
+
+参考記事: [Laravel 8.x validation.php言語ファイル](https://readouble.com/laravel/8.x/ja/validation-php.html)
+
+（ReadDouble様、いつもお世話になっております...！）
+
+#### まだの人はプロジェクト全体を日本語化しておこう
+
+プロジェクト全体の日本語化がまだの方は、
+`config/app.php`の下記の箇所を変更すると日本語が出るようになります。
+
+```
+    'timezone' => 'Asia/Tokyo', // 日本標準時に
+    'locale' => 'ja',
+    'fallback_locale' => 'ja',
+    'faker_locale' => 'ja_JP',
+
+# 変更して保存が終わったら以下のコマンドをプロジェクトのルートディレクトリで実行
+php artisan config:cache
+```
+
+
+## バリデーションパターン
+
+今回サンプルの中でご紹介したバリデーションパターンは、後日一つずつ細かくご説明してまいります。
+
+## まとめ
+
+Laravelは**相当細かくバリデーションパターンが用意されています**ね。しかも、**フレームワークの標準でここまでの
+物が用意されているのは心強い**です。
+
+やはりCGMなどでユーザーが何を入力してくるかわからないコンテンツの場合は、<span className="hoso">言語処理には強いバックエンド側の
+      フレームワークはしっかり使ってバリデーションしたほうがいいなーとあらためて思った次第</span>でした。
+
+もちろんNext.jsなどの**フロントエンドフレームワークと二重でバリデーションをかけられたらさらに強固なものとはなる**でしょうね。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
