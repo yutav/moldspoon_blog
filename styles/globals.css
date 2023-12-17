@@ -178,7 +178,14 @@ img.overImage {
   animation: makerUp 3s ease-in-out infinite; /* アニメーション設定 */
 }
 
-
+@keyframes makerUp {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-size: 100% 100%;
+  }
+}
 .hoso-noanimation {
   font-weight: bold;
   background: linear-gradient(transparent 60%, #FBB92F 60%);
