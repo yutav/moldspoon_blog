@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: '【CSSハック】マーカーで引いた装飾をアニメーションで動くようにする',
   date: '2023-12-06T07:10:23.000Z',
+  updateDate: '2023-12-18T00:23:000Z',
   tags: [
     'Tips',
     '初級者向け',
@@ -98,8 +99,15 @@ export const meta = {
 }
 ```
 
-結果として、<span className="hoso-infinite">このようになります。</span>
-何度も繰り返す=無限ループにするのではなく、一方通行のアニメーションをご希望の場合は**infinite**のところを**forwards**に変更してください。
+試行錯誤した結果、<span className="hoso-infinite">このようになりました。</span>
+わかりやすく何度も繰り返すために、無限ループにしていますがもし初回描画時のみにしたいときは`infinite`を`forwards`とします。
+
+### CSSでは限界がある
+
+上記のような`@keyframes`を利用したCSSアニメーションは、<span className="hoso">時間の経過に合わせてCSSの状態を変化させる</span>、という発想で書いています。
+
+しかし、上記では**背景画像を元々下のほうの「60%」描画するとしていたものを、0%~100%に変化させる** という指定になり、
+左から右に色をつけるようなグラデーションが描けず中途半端になってしまいました。
 
 ## まとめ
 
