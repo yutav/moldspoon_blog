@@ -1,0 +1,230 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Laravel QueueをSyncモードで動かした時に動かなくなった時の対象方法',
+  date: '2023-12-18T00:19:12.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'バックエンド',
+    'Queue',
+    'キューワーカー'
+  ]
+}
+
+本日は小ネタです！
+
+Laravelで簡易的なキューシステムを利用してみたのですが、動かなくなることがあり
+その理由について簡単に解説してみたいと思います。最後までお付き合いをいただければ幸いです。
+
+## 本記事のゴール
+
+Laravel Queue（キューワーカー）でデフォルトの`sync`オプションを適用して
+Queueを発行した => 動かなくなった時の問題を特定し、解消します。
+
+以下に手順を書きますが、**結論をみたい！という方は[こちら](https://moldspoon.jp/blog/posts/laravel-queue-config-explain#%E7%B5%90%E8%AB%96)
+からどうぞ。**
+
+## 事象が起きた手順
+
+### バッチ処理を作成
+
+Laravelでは、以下のコマンドでバッチ処理を作成することができます。
+
+```
+php artisan make:command [CommandName]
+```
+
+私の方ではコマンド名は「TestBatchCommand」のように末尾を**Command**としますが、それに沿わなくても作れると思います。
+
+作ったコマンドは以下のように実行できます。
+
+```
+php artisan app:test-batch-command
+```
+
+「app:test-batch-command」とある部分については、作成したファイルの以下の部分に記載があり、`make:command`実行時に
+自動的に設定されます。また、作成済みのバッチ一覧については`php artisan list`から確認することも可能です。
+
+
+<CodeBlockTitle title="app/Console/Command/TestBatchCommand.php" />
+
+```php
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+
+class TestBatchCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:test-batch-command'; // <= ここに入る
+
+    // 省略
+
+    // ⇩ ここの説明を入れておくとphp artisan listを実行した時表示されて、どんなコメントかわかりやすい
+    protected $description = 'Command description';
+
+    // 省略
+}
+
+```
+
+#### バッチから、Jobを呼ぶようにする。
+
+このままでは、バッチの中身が重い処理だった場合。重複して呼ばれてしまいます。
+
+例えば、以下のように実際に実行を行う`handle()`の中で、100000行くらいMySQLのテーブルからレコードを取得してきた場合。
+
+```
+$manyRecords = User::where('from', date('2001-01-01'))
+ ->where('to',date('2030-12-31'))
+ ->get();
+
+foreach($manyRecords as $manyRecord) {
+  // 更新・登録など時間がかかり重い処理を1行ずつ行う。
+
+}
+
+```
+
+メモリに一時的に結果を載せるため、並行して同じ処理が何度も呼ばれると（例えば**システムの要件面での要求から、毎時実行で処理しなければいけないのに、1時間以内に処理が収まりきらない** など）最悪の場合PHPに割り当てられたメモリ上限をオーバーして、処理が失敗します。
+
+参考URL:[【PHP】Allowed memory size of *** bytes exhaustedエラーの対処法まとめ](https://qiita.com/P2eFR6RU/items/9370011fe6cdb884769f)
+
+対処としてはメモリの上限を上げることもできますが、<span className="hoso">無駄な重複処理は呼ばないようにする</span>とシンプルに対処しましょう。
+
+（そもそもの問題としては、**重い処理が設計上適切かはよく考えて実装を行う必要があります。**しかし、今回は設計面でも回避できないケースを前提として考えているので念の為お伝えします。）
+
+##### Jobを作成
+
+そこで、**ジョブを作成し、キューから呼び出す** という仕組みが必要になってきます。
+
+PHPの場合非同期で処理を行うケースが少ないのでイメージしにくいところではありますが、
+
+```
+常時起動するキューワーカーが => ジョブクラスを呼び出す
+```
+
+という形で処理されるようになります。
+
+```
+php artisan make:job TestCommandJob
+```
+
+こちらで、ジョブを作成し、作成したCommandの中で以下のように書いて呼び出しを行います。
+
+```
+TestCommandJob::dispatch();
+```
+
+##### Syncモードで動かす
+
+本来であれば、キューワーカーを別プロセスで常時立ち上げておかねば、**CommandからJobは呼ばれません。**
+ただ、Laravelには主に<span className="hoso">テスト用に、即時ジョブが呼び出されるSyncモード</span>
+というのがあり、今回はそれを使います。
+
+特に、.envの下記の箇所が変更されていなければ、SyncモードでTestCommandJobは呼び出されるはずです。
+
+```
+QUEUE_CONNECTION=sync
+
+# 以下のコマンドをプロジェクトルートで実行して反映
+php artisan config:cache
+```
+
+ここを、databaseにするとMySQLのテーブルでキューの実行状況は管理できます。ほかに**redis**や**memcached**,なんと**dynamodbも選べる**ようです。
+AWS使っている人は一度は試してみたいものですね...！
+
+さて、今日はSyncで動かした時に起きた問題についてです。
+
+### Jobが呼ばれなくなった。
+
+私の方で、Jobクラスでテストを行っていて、以下のように処理を入れたことがありました。
+
+```
+public function handle() {
+  // ...
+  Log::info("### show log message to laravel.log");
+  exit;
+}
+```
+
+```
+tail -f /path/to/app/storage/logs/laravel.log
+```
+でログ出力を待ち受けて確認できます。
+
+すると、初回はログにメッセージが出たのですが、
+
+```
+### show log message to laravel.log
+```
+
+その後何度`php artisan app:test-batch-command` で呼び出しを行っても、このメッセージは出ませんでした！
+
+<span className="hoso">なんだかJobが空振りしている気がします...。</span>
+
+## 結論
+
+### syncモードで再起動したい場合はキャッシュを手で消そう
+
+結論としては、**syncモードは状態をキャッシュファイルで管理している** ので、それを消すことで、再度実行できます。
+
+`exit`で Jobから出た場合は、**正常にジョブが完了せず、判定上実行され続けていることになります。**
+
+```
+/path/to/project/storage/framework/cache/data/[ascii2文字]/[ascii2文字]/[ascii40文字]
+```
+
+にファイルがあるので消しましょう。
+```
+cd /path/to/project/storage/framework/cache/data/[ascii2文字]/[ascii2文字]
+rm [ascii40文字]
+```
+
+他にも`sync`モードで動かしている場合、`data`以下に複数のディレクトリが存在する可能性もあります。
+<span className="hoso">どれが消したいファイルか、タイムスタンプから確認した上で消しましょう。</span>
+
+私はそこまでしていないのですが、開発用途であれば、`/path/to/project/storage/framework/cache/data/`を**丸ごと消す
+Command** を作ってもいいかもです。
+
+#### 補足: 以下は役に立たなかった
+
+syncモードでは、再起動やqueueのクリアは役に立たないようです。
+`database`モードであれば使えるでしょう。
+
+```
+php artisan queue:restart
+php artisan queue:clear
+```
+
+参考記事: [How to stop a laravel SyncQueue](https://stackoverflow.com/questions/75431441/how-to-stop-a-laravel-syncqueue)
+
+## まとめ
+
+ここで思ったよりハマってしまいました。**[公式ドキュメント](https://laravel.com/docs/10.x/queues#connections-vs-queues) にも特にこの点の記載がなかった**ので、
+開発用途でなければLaravelでのキューは知見が多い`database`モードを**素直に使うのが望ましい**かもしれませんね...。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
