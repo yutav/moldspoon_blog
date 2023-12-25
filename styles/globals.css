@@ -259,3 +259,8 @@ ul.MuiPagination-ul li button {
 .detail-body ol li {
   @apply m-0 leading-loose;
 }
+
+pre code {
+  @apply !text-white
+  
+}

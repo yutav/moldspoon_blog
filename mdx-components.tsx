@@ -1,4 +1,4 @@
-import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
+//import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
 import type { MDXComponents } from 'mdx/types';
 
 export function useMDXComponents(_: MDXComponents): MDXComponents {
@@ -22,7 +22,7 @@ export function useMDXComponents(_: MDXComponents): MDXComponents {
   );
 
   return {
-    code: ({ children }) => <SyntaxHighlight>{children}</SyntaxHighlight>,
+    //    code: ({ children }) => <SyntaxHighlight>{children}</SyntaxHighlight>,
     h1: CustomH1,
     h2: CustomH2,
     h3: CustomH3,
