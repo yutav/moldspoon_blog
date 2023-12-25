@@ -37,6 +37,7 @@ export type LayoutHeader = {
 
 const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }) => {
 
+  const { isMedium } = useIsMobile()
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
 
   return (
@@ -82,8 +83,10 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         name="viewport"
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
-        crossOrigin="anonymous"></script>
+      {(process.env.NODE_ENV == 'production' && isMedium == false) && (
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
+          crossOrigin="anonymous"></script>
+      )}
       <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
 
     </Head >
@@ -256,7 +259,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 style={{ minHeight: '400px', maxHeight: "550px" }}
               >
                 <p className='text-xs py-1 my-0'>Ads:</p>
-                {/* blog-top-square */}
+                {/* blog-top-square */}0
                 {(process.env.NODE_ENV == 'production' && isMedium == false) && (
                   <GoogleAdsense
                     client="ca-pub-1104475365452915" //
