@@ -257,7 +257,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               >
                 <p className='text-xs py-1 my-0'>Ads:</p>
                 {/* blog-top-square */}
-                {process.env.NODE_ENV == 'production' && isMedium == false && (
+                {(process.env.NODE_ENV == 'production' && isMedium == false) && (
                   <GoogleAdsense
                     client="ca-pub-1104475365452915" //
                     slot="1717621406"
