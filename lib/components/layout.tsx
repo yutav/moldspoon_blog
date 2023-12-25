@@ -16,6 +16,7 @@ import { usePageCounter } from 'hooks/usePageCounter'
 import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
+import GoogleAdsense from './original/parts/GoogleAdsense'
 import DetailLeftBox from './original/parts/DetailLeftBox'
 import "../../scripts/marker.js";
 export type PostMetadata = {
@@ -80,6 +81,8 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         name="viewport"
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
+        crossOrigin="anonymous"></script>
       <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
 
     </Head >
@@ -245,6 +248,20 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                   />
                 </div>
                 <p className="text-xs">※Google検索を使用しています。</p>
+              </div>
+
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2"
+                style={{ minHeight: '400px', maxHeight: "550px" }}
+              >
+                <p className='text-xs py-1 my-0'>Ads:</p>
+                {/* blog-top-square */}
+                {process.env.NODE_ENV == 'production' && (
+                  <GoogleAdsense
+                    client="ca-pub-1104475365452915" //
+                    slot="1717621406"
+                    style={{ display: 'block' }}
+                  />
+                )}
               </div>
 
             </div>
