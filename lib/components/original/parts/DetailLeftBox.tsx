@@ -1,16 +1,20 @@
+import { useIsMobile } from "hooks/useIsMobile";
 import DetailAds from "./DetailAds";
 type Prop = {
   detailContents: React.ReactNode
 }
 
 const DetailLeftBox: React.FC<Prop> = ({ detailContents }) => {
+  const { isMedium } = useIsMobile()
 
   return (
     <div
       className="detailLeftBox z-10"
     >
       {detailContents}
-      <DetailAds />
+      {(process.env.NODE_ENV == 'production' && isMedium == false) && (
+        <DetailAds />
+      )}
       <style jsx>{`
         .detailLeftBox {
           position: relative;
