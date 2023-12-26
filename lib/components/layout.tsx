@@ -84,8 +84,46 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
       {(process.env.NODE_ENV == 'production' && isMedium == false) && (
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915"
-          crossOrigin="anonymous"></script>
+        (function (window, document) {
+          function main() {
+            // GoogleAdSense読込み
+            var ad = document.createElement('script');
+            ad.type = 'text/javascript';
+            ad.async = true;
+            // 新コードの場合、サイト運営者IDを書き換えてコメントアウトを外す
+            ad.dataset.adClient = 'ca-pub-1104475365452915';
+            ad.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+            var sc = document.getElementsByTagName('script')[0];
+            sc?.parentNode?.insertBefore(ad, sc);
+          }
+
+          // 遅延読込み
+          var lazyLoad = false;
+          function onLazyLoad() {
+            if (lazyLoad === false) {
+              // 複数呼び出し回避 + イベント解除
+              lazyLoad = true;
+              window.removeEventListener('scroll', onLazyLoad);
+              window.removeEventListener('mousemove', onLazyLoad);
+              window.removeEventListener('mousedown', onLazyLoad);
+              window.removeEventListener('touchstart', onLazyLoad);
+              window.removeEventListener('keydown', onLazyLoad);
+
+              main();
+            }
+          }
+          window.addEventListener('scroll', onLazyLoad);
+          window.addEventListener('mousemove', onLazyLoad);
+          window.addEventListener('mousedown', onLazyLoad);
+          window.addEventListener('touchstart', onLazyLoad);
+          window.addEventListener('keydown', onLazyLoad);
+          window.addEventListener('load', function () {
+            // ドキュメント途中（更新時 or ページ内リンク）
+            if (window.pageYOffset) {
+              onLazyLoad();
+            }
+          });
+        })(window, document)
       )}
       <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
 
@@ -259,7 +297,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 style={{ minHeight: '400px', maxHeight: "550px" }}
               >
                 <p className='text-xs py-1 my-0'>Ads:</p>
-                {/* blog-top-square */}0
+                {/* blog-top-square */}
                 {(process.env.NODE_ENV == 'production' && isMedium == false) && (
                   <GoogleAdsense
                     client="ca-pub-1104475365452915" //
