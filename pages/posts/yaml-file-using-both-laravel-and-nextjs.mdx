@@ -1,0 +1,306 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'LaravelとNextjsの両方で設定ファイルを兼用する 第1回YAML化',
+  date: '2023-12-27T15:36:47.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    '設定ファイル',
+    'YAML',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'PHP',
+    'Laravel',
+    'バックエンド',
+    '連載記事'
+  ],
+  description: 'LaravelとNextjs、フロントエンドとバックエンドの両方で同じ設定ファイル(YAMLファイル)を参照できるようにする特集第1回です。'
+}
+
+**お風呂に入った後、ドアは閉めておいた方が湿気が居室に流れてこないので望ましい** と今日ネットで見たのですが、Hackerの皆様はどのようにお考えですか？
+
+...話がそれました。早速本題に入ってまいります。
+
+## 問題が生じた経緯
+
+現在、以下のような構成で構築を進めているWebサイトのプロジェクトがあります。
+
+- バックエンド: [Laravel](https://laravel.com/) @ CentOS オンプレミスサーバ
+- フロントエンド: [Nextjs](https://nextjs.org/) @ Vercel
+
+**ステータス変更を伴う管理画面** を開発していたのですが、
+頻繁に**データパターンの追加** が伴います。
+
+例えば注文データを例に取った場合。
+以下のように並列で多数のステータスデータができ、フォームのセレクトボックスとして表示する必要が生じます。
+
+```
+<select name="status">
+  <option value="1">新規</option>
+  <option value="2">梱包中</option>
+  <option value="3">梱包完了</option>
+  <option value="4">発送準備</option>
+  <option value="5">発送開始</option>
+  <option value="6">配送センターに向けて輸送中</option>
+  <option value="7">配送センター到着</option>
+  <option value="8">顧客に向けて輸送中</option>
+  <option value="9">到着</option>
+  <option value="10">返送中</option>
+  <option value="11">返送完了</option>
+</select>
+```
+
+### 改修前
+
+改修を行う前はフロントエンド・バックエンドでそれぞれ以下のように別々にデータを持っていました。
+
+#### フロントエンド(Next.js)の改修前
+
+`src/utils/common.ts`に`getOrderStatuses()`というメソッドを作り、
+配列を返すようにしていました。
+
+<CodeBlockTitle title="src/utils/common.ts" />
+
+```typescript
+export const getOrderStatuses = () => {
+  const orderStatuses = [
+    "新規",
+    "梱包中",
+    "梱包完了",
+    "発送準備",
+    "発送開始",
+    "配送センターに向けて輸送中",
+    "配送センター到着",
+    "顧客に向けて配達中",
+    "配達完了",
+    "返送中",
+    "返送完了",
+  ];
+
+  return orderStatuses
+}
+```
+
+Next.jsで開発段階においてこのような配列形式のデータを定義する場合
+
+- こちらのように共通tsファイルに書いてしまうか
+- そのまま配列をexportできるようにするか（よく考えたらこっちのほうが良かったですね...）
+- ページコンポーネント(Appレイアウトの場合`/src/app/path/to/page.tsx`)に直接書いてしまうか
+
+のいずれかになるでしょう。
+
+
+#### バックエンド(Laravel)の改修前
+
+`config/適当なファイル名.php`にコンフィグファイルとして配列を定義します。
+
+<CodeBlockTitle title="config/order_status.php" />
+
+```php
+<?php
+
+return [
+  'order_statuses' => [
+    '新規',
+    '梱包中',
+    '梱包完了',
+    '発送準備',
+    '発送開始',
+    '配送センターに向けて輸送中',
+    '配送センター到着',
+    '顧客に向けて配達中',
+    '配達完了',
+    '返送中',
+    '返送完了'
+  ]
+];
+```
+
+こちらを、ControllerやMiddlewareなど判定が必要な箇所で以下のように呼び出します。
+(configのキャッシュの再読み込みは[こちら](https://moldspoon.jp/blog/posts/laravel-validation-patterns#%E3%81%BE%E3%81%A0%E3%81%AE%E4%BA%BA%E3%81%AF%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E5%85%A8%E4%BD%93%E3%82%92%E6%97%A5%E6%9C%AC%E8%AA%9E%E5%8C%96%E3%81%97%E3%81%A6%E3%81%8A%E3%81%93%E3%81%86)の方法で行っておきましょう)
+
+```
+$order_statused = config('order_status.order_statuses');
+```
+
+### 突き当たった問題
+
+上記ご覧になっていただく通り、このままでは<span className="hoso">ファイルを定義する箇所が2箇所</span>になってしまいます。
+1つ2つの属性を追加するだけでは手作業で済みますが、頻度が増えた場合、以下の問題が起きてくると思われます。
+
+- 都度コピペ作業が生じて**保守性が低下**する。
+- **コピペ漏れ**により、片方の環境で必要なパラメータが存在せず、バグとなってしまう。
+
+**プロジェクトに関わる人が多いほど、呼び出す箇所が多いほど、飛躍的に効率は落ちます。**
+
+<span className="hoso">こうなる前に両者を定義する箇所を1つにまとめましょう</span>
+
+## 本記事のゴール
+
+LaravelとNextJsの両方で同じ設定ファイルを<span className="hoso">手間なしで</span>共有できるようにする。
+本記事では、YAML化までの解説を行い、**ソートできる設定ファイル化は別稿にてお伝えします。**
+
+## 作業
+
+### yamlファイルの採用
+
+古典的ではありますが、データ作成時の手間を考えて、**yamlファイル** を利用します。
+メンテしやすいように、バックエンドの**Laravelの格納用ディレクトリである`storage/app` **に`config.yaml`を作成し、
+両方のプロジェクトで利用が必要な定義をこちらにどんどん追加していきます。
+
+結果、以下のようになります。
+
+<CodeBlockTitle title="storage/app/config.yaml" />
+
+```yaml
+order:
+  statuses:
+    name:
+      - '新規',
+      - '梱包中'
+      - '梱包完了'
+      - '発送準備'
+      - '発送開始'
+      - '配送センターに向けて輸送中'
+      - '配送センター到着'
+      - '顧客に向けて配達中'
+      - '配達完了'
+      - '返送中'
+      - '返送完了'
+```
+
+### フロントエンド(Nextjs)の改修後
+
+
+以下のように、**yamlファイルを読み込む専用の関数** を用意します。
+Appレイアウトではこちらは、<span className="hoso">ファイルの入出力を伴うため、サーバサイドコンポーネントとなることを留意</span>してください。
+
+（フロントエンドではブラウザでの実行となるので、読み込む対象のファイルがないはず、ですよね）
+
+##### 事前に js-yaml のインストールが必要
+
+```
+yarn add js-yaml
+```
+
+##### コンフィグを読み込む
+
+<CodeBlockTitle title="src/utils/config.ts" />
+
+```typescript
+import fs from 'fs'; // fsを使うのでサーバサイドとなる
+import path from 'path';
+import yaml from 'js-yaml';
+
+export function getConfigData(configName = 'config.yaml') {
+
+  const configPath = path.join(process.cwd(), configName);
+  try {
+    const fileContents = fs.readFileSync(configPath, 'utf8');
+    const data = yaml.load(fileContents);
+    return data;
+  } catch (error) {
+    console.error('cant find yaml file', error);
+    return null;
+  }
+}
+```
+
+こちらを、ページコンポーネントなどから以下の形で読み込みます。
+
+```
+  const config = getConfigData('config.yaml')
+```
+
+読み込む対象の`config.yaml`はフロントエンドのプロジェクトのルート直下にあることを想定しています。
+
+### バックエンド(Laravel)の改修後
+
+Laravelでは、**config以下の呼び出し箇所でYAMLを呼ぶように変えてしまいます。**
+
+以下のような形になります。
+
+<CodeBlockTitle title="config/config.php" />
+
+```php
+<?php
+
+use Symfony\Component\Yaml\Yaml;
+
+$configPath = storage_path('app/config.yaml');
+$config = [];
+
+if (file_exists($configPath)) {
+  $config = Yaml::parseFile($configPath);
+}
+
+return $config;
+```
+
+**汎用的にYAMLの全データを取得できます** が、一部に絞りたいときは、`return $config["order"];` など適宜スコープのように
+絞っていきましょう。
+
+### バックエンド => フロントエンドに共有する処理
+
+これについてはいろいろ方法が考えられますが、一番シンプルに開発環境ということでコピーでやりましょう。
+
+コピーする方向は、
+
+- バックエンドからフロントエンドへ
+
+です！
+<br />
+
+本番環境では**CIを組んでいたり、VercelのようなPaaSを使用しているとデプロイ時にコピー後のものが反映されるはずなので、
+あまり難しく考える必要はない**はずです。それ以外の特殊な環境の場合は本記事の対象から漏れるものとします。<span className="text-gray-500 text-xs">どうしてもやりたいなら、自分だったらGCPのFirebase Realtime Databaseでも使うかな？</span>
+
+フロントエンド、Next.jsの`package.json`を開き
+
+**開発サーバ立ち上げの呼び出し部分** を以下のようにしました。
+
+```
+  "scripts": {
+    "dev": "cp -f ../backEndLaravelProject/storage/app/config.yaml ./ && next dev",
+  },
+```
+
+こうすることで<span className="hoso">リアルタイムではないですが、開発作業をしていれば両者の設定ファイルは基本的に同じものに保たれる</span>はずです。
+
+※パスは適宜自分の環境にものに変更してください。**私の開発環境は、フロントエンドとバックエンドが同じディレクトリ以下に並列で設置してあります** ので上記で対応しています。
+
+#### デプロイするアプリケーションのバージョン違いには今後注意
+
+フロントエンドとバックエンド、両者の整合性は、
+以前のバージョンにアプリケーションを切り戻すなどの場合は考える必要がありそうです。
+
+**バージョンが違うと結局設定ファイルが食い違いエラーが出る可能性があるため** です。
+<span className="hoso">予防のためGitにて、リリース時のタグを貼っておくとミスが避けられて良いかと思います。</span>
+
+
+## まとめ
+
+本日は、フロントエンド・バックエンドで共通のYAMLを参照できるようにするまでを解説しました。
+基本的には開発環境にて、開発効率を上げるためのTIPS的な記事です。
+
+余裕があれば、第2回記事として、**ソートできるYAML設定ファイルを考えてみたいと思います。** 
+（ソートするのであればデータベーステーブル化するのが一番早そうですが、本記事から具体的な方法は省略したいと思います。）
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

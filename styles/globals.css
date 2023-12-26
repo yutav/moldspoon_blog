@@ -100,7 +100,10 @@ pre.language-json,
 pre.language-typescript,
 pre.language-javascript,
 pre.language-php,
-pre.language-html {
+pre.language-html,
+pre.language-yaml,
+pre.language-shell
+{
   margin-top: 0px !important;
   margin-bottom: 30px !important;
   border: none !important;
