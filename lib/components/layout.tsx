@@ -19,7 +19,6 @@ import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import DetailLeftBox from './original/parts/DetailLeftBox'
 import "../../scripts/marker.js";
-import { useIsMobile } from 'hooks/useIsMobile'
 export type PostMetadata = {
   title: string
   date: string
