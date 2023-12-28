@@ -1,4 +1,3 @@
-import { useIsMobile } from "hooks/useIsMobile";
 import DetailAds from "./DetailAds";
 type Prop = {
   detailContents: React.ReactNode
