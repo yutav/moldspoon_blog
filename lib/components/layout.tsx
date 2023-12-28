@@ -19,6 +19,7 @@ import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import DetailLeftBox from './original/parts/DetailLeftBox'
 import "../../scripts/marker.js";
+import Script from 'next/script'
 export type PostMetadata = {
   title: string
   date: string
@@ -82,7 +83,8 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
       {(process.env.NODE_ENV == 'production') && (
-        <script async={true} src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous"></script>
+        <Script strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous" />
       )}
       <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
 

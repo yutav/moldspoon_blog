@@ -9,7 +9,6 @@ type Props = {
 
 const GoogleTagManager: React.FC<Props> = ({ googleTagManagerId }) => (
   <Script
-    async={true}
     id="gtm"
     strategy="afterInteractive"
     dangerouslySetInnerHTML={{
