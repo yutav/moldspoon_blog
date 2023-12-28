@@ -12,7 +12,7 @@ const DetailLeftBox: React.FC<Prop> = ({ detailContents }) => {
       className="detailLeftBox z-10"
     >
       {detailContents}
-      {(process.env.NODE_ENV == 'production' && isMedium == false) && (
+      {(process.env.NODE_ENV == 'production') && (
         <DetailAds />
       )}
       <style jsx>{`

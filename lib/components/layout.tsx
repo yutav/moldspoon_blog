@@ -83,7 +83,7 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         name="viewport"
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
-      {(process.env.NODE_ENV == 'production' && isMedium == false) && (
+      {(process.env.NODE_ENV == 'production') && (
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous"></script>
       )}
       <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
@@ -259,7 +259,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               >
                 <p className='text-xs py-1 my-0'>Ads:</p>
                 {/* blog-top-square */}
-                {(process.env.NODE_ENV == 'production' && isMedium == false) && (
+                {(process.env.NODE_ENV == 'production') && (
                   <GoogleAdsense
                     client="ca-pub-1104475365452915" //
                     slot="1717621406"
