@@ -5,7 +5,6 @@ type Prop = {
 }
 
 const DetailLeftBox: React.FC<Prop> = ({ detailContents }) => {
-  const { isMedium } = useIsMobile()
 
   return (
     <div

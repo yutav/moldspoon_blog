@@ -37,7 +37,6 @@ export type LayoutHeader = {
 
 const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }) => {
 
-  const { isMedium } = useIsMobile()
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
 
   return (
@@ -127,7 +126,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   const router = useRouter()
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const isDetailPage = router.pathname.startsWith('/posts') as boolean;
-  const { isMedium } = useIsMobile()
 
   const [{ pageView }] = usePageCounter({
     slug: router.asPath
