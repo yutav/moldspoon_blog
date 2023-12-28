@@ -16,7 +16,6 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@geist-ui/core": "^2.3.4",
-    "@geist-ui/icons": "^1.0.1",
     "@geist-ui/prism": "^1.1.1",
     "@mdx-js/react": "1.6.22",
     "@mui/material": "^5.14.11",
