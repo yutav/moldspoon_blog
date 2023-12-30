@@ -1,12 +1,12 @@
 import { NextPage } from 'next'
 import { AppProps } from 'next/app'
 import useDomClean from 'lib/use-dom-clean'
-import { PrismBaseline } from '@geist-ui/prism'
 import { GeistProvider, CssBaseline } from '@geist-ui/core'
 import { useCallback, useState, useEffect } from 'react'
 import { BlogConfigsProvider } from 'lib/components'
 import '../styles/globals.css'
 import 'tailwindcss/tailwind.css'
+import "../styles/prism-a11y-dark.css";
 
 const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
   const [themeType, setThemeType] = useState('light')
@@ -27,7 +27,6 @@ const Application: NextPage<AppProps<unknown>> = ({ Component, pageProps }) => {
 
       <GeistProvider themeType={themeType}>
         <CssBaseline />
-        <PrismBaseline />
         <BlogConfigsProvider onChange={changeHandle}>
           <Component {...pageProps} />
         </BlogConfigsProvider>

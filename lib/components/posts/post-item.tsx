@@ -34,13 +34,11 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             <Image src={process.env.baseUrl + "/api/og?v=4&title=" + encodeURI(post.name)} width="100" height="44" alt={post.name} style={{
               borderRadius: '5px'
             }} className='hover:opacity-80'
-              priority
             />
           ) : (
             <Image src={process.env.baseUrl + "/api/og?v=3&title=" + encodeURI(post.name)} width="320" height="140" alt={post.name} style={{
               borderRadius: '12.5px'
             }} className='hover:opacity-80'
-              priority
             />
           )}
         </Link>
