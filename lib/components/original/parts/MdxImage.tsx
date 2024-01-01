@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import styles from '../../../../styles/mdximage.module.css';
 import 'react-image-lightbox/style.css'; // Lightboxのスタイルをインポート
@@ -37,6 +37,18 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
     setLightboxOpen(false);
   };
 
+  const altEvaluated = useMemo(() => {
+    if (alt) {
+      return alt
+    }
+    else if (annotation) {
+      return annotation
+    }
+    return image
+  }, [alt, annotation, image])
+
+
+
   return (
     <div className={styles.imageContainer + ' ' + (addClass ? addClass : '')}>
       {month ? (
@@ -45,7 +57,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
             <Image
               className={`${isHalf ? styles.imageHalf : styles.image} border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
               src={imageUrl}
-              alt={alt}
+              alt={altEvaluated}
               layout="fill"
               objectFit="contain"
             />
@@ -65,7 +77,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
         <Image
           className={`${styles.image} ${classStr}`}
           src={imageUrl}
-          alt={alt}
+          alt={altEvaluated}
           width={width}
           height={height}
         />
