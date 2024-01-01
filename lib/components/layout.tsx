@@ -86,7 +86,7 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         <Script strategy="afterInteractive"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous" />
       )}
-      <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
+      <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} />
 
     </Head >
   )
