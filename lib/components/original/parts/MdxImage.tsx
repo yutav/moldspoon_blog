@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import styles from '../../../../styles/mdximage.module.css';
 import 'react-image-lightbox/style.css'; // Lightboxのスタイルをインポート
