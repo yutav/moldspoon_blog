@@ -86,7 +86,11 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         <Script strategy="afterInteractive"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous" />
       )}
-      <link rel="preload" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} as="style" />
+      <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} media="all"
+        // // Next.js doesn't like this but it allows us to load CSS asynchronously
+        // @ts-ignore
+        onload="this.media='all';this.onload=null;"
+      />
       <noscript>
         <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} />
       </noscript>
