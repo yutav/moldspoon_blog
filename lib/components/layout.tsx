@@ -8,7 +8,6 @@ import { Configs, changeTitle } from '../utils'
 import ShareButtons from './original/parts/ShareButtons'
 import TagLinks from './original/parts/TagLinks'
 import IntroduceMyself from './original/parts/IntroduceMyself'
-import "remixicon/fonts/remixicon.css"
 import BLOG from 'blog.config'
 import { getDNSPrefetchValue } from 'lib/data-transform'
 import { useRouter } from "next/router"
@@ -94,7 +93,14 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
       <noscript>
         <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} />
       </noscript>
-
+      <link rel="stylesheet" href={`https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css`} media="all"
+        // // Next.js doesn't like this but it allows us to load CSS asynchronously
+        // @ts-ignore
+        onload="this.media='all';this.onload=null;"
+      />
+      <noscript>
+        <link rel="stylesheet" href={`https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css`} />
+      </noscript>
     </Head >
   )
 }
