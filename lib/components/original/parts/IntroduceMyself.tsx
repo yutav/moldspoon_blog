@@ -7,7 +7,7 @@ const IntroduceMyself: React.FC<Prop> = () => {
     <>
       <div className="flex">
         <div className="w-20 flex-none">
-          <img src={process.env.baseUrl + "/posts/images/yuku_tas_clear.png?n=1"} className=" z-50  " alt="yuku_tasのアイコン" width={80} height={80} />
+          <img src={process.env.baseUrl + "/posts/images/yuku_tas_clear_lb.png?n=1"} className="z-50" alt="yuku_tasのアイコン" width={80} height={80} />
         </div>
         <div className="flex-auto p-3  mr-4 md:mr-0 rounded ">
           <div className="balloon2-left bg-white dark:bg-gray-900 text-black dark:text-white px-3 py-2 md:px-4 md:py-3 shadow rounded 
