@@ -59,7 +59,7 @@ const Toc: React.FC<Prop> = ({ body }) => {
 
           return (
             <li key={key} className="p-0 m-0 text-xs">
-              <Link href={`#${key.replace(/\s+/g, "-").toLowerCase()}`} className="text-black dark:text-white">
+              <Link href={`#${key.replace(/\s+/g, "-").toLowerCase()}`} className="text-black dark:text-white font-normal">
                 {showNumberString && numberString + ". "}{key}
               </Link>
               {renderToc(data[key], currentNumbers)}

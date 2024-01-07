@@ -1,0 +1,288 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Next.js製ブログで、Lighthouseで生じたLCP/FCPに関する問題を解決する',
+  date: '2024-01-07T15:11:58.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    'Next.js',
+    'Google Search Console',
+    'GA4',
+    'Analytics',
+    'Lighthouse',
+    'React',
+    'フロントエンド',
+  ]
+}
+
+こんばんは、年が明けてから大変な事件続きで心が休まらないですね...。
+私としては**どれだけ社会に貢献できているかはわかりませんが、できる仕事を着実に前に進めていきたい。** と思っています。
+
+本日のネタは小ネタとなります。
+
+## 本記事のゴール
+
+本ブログはNext.js製となりまして
+[Google Search Console](https://search.google.com/search-console/about?hl=ja)で検索レポートを
+日々確認しているのですが、FCP・LCPの問題が生じてしまったので解決したいと思います。
+
+<MdxImage month="202401" image="lcp1.png?n=1" annotation="ある日、LCPについて警告が表示された" />
+
+「ウェブに関する指標」から確認できる問題は、問題となっているURLがグループで表示されますが、
+具体的なURLをクリックしていくと、「デベロッパー向けリソース」から、Googleの[Lighthouse](https://chromewebstore.google.com/detail/lighthouse/blipmdconlkpinefehnmjammfjpmpbjk?hl=ja&pli=1)の結果(スコア含む)
+が即時確認できますので使っていきます。
+
+<MdxImage month="202401" image="lcp5.png?n=2"  />
+
+結果、以下のように**FCP・LCPの双方で改善が必要である旨が表示**されました。
+
+<MdxImage month="202401" image="lcp3.png?n=1" annotation="LCPだけでなくFCPもパフォーマンスがよくなさそう" />
+
+特に**Next.js製のプロジェクトに関して対処したポストが比較的少なかった**ため、是非記事を書いてみたいと思いました。
+
+#### いきなり結論
+
+私の場合は、**CDNから外部読み出ししているCSSをサイト内に設置したCSS呼び出しに変更すると劇的に改善**しました！
+
+結論から読みたい方は[こちら](https://moldspoon.jp/blog/posts/blog-fcp-problem-fix#cdnで呼び出していたspeed-highlightを内部呼び出しに変更する。)へどうぞ！
+
+## 具体的な作業内容
+
+確実にこれを修正すればLCPの問題は解決するというのを**Google側では教えてくれませんので、できることをこなしていきます。**
+
+一番パフォーマンスにマイナスの影響を与えているのは
+
+- Javascript
+- CSS
+
+の**いずれか、または両方が同期的に読み込まれていること** と仮定して、それらへの対処を最優先に。
+
+Next.jsの場合、**SSG(静的サイト生成)** により**遷移先のページコンポーネントをコンパイルしてあらかじめ持っているため、それらの容量を減らす。** というのを**次善の策** として考えて
+進めていきます。
+
+### Google系のタグを後から呼び出しに
+
+Google Tag Manager と Google Analytics のタグ呼び出しが「使用していないJavascriptの削除」に列挙されていました。
+
+<MdxImage month="202401" image="lcp2.png?n=1" annotation="" />
+
+
+対処方法として
+
+>使用していない JavaScript を削除して、必要になるまでスクリプトの読み込みを遅らせると、ネットワークの通信量を減らすことができます。
+
+とあります。
+
+そのため、
+
+```
+import Script from 'next/script'
+```
+を定義し、
+
+Next.jsの`<Script>`タグで呼び出しを行うようにしました。
+
+以下のようにstrategyは"afterInteractive" を指定し、
+ページ表示後、呼び出すように。
+
+```
+        <Script strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-123456789012345" crossOrigin="anonymous" />
+```
+
+`async={true}`　などの併用は、strategyとかち合うのでおそらく意味はないと思いました。
+
+**結論からするとこれは私のケースには無関係でした。** が、役立つ場面があるかもと思い列挙します。
+
+### webpack-bundler-analyzerで分析
+
+下記参考記事様の手順に従い、`webpack-bundle-analyzer`をNext.jsに入れて、パフォーマンスの確認をします。
+
+参考記事: [Next.jsアプリのパフォーマンスを上げる(lighthouseの利用)](https://qiita.com/AkiUnleash/items/d8255e91bf67ebbb069f)
+
+```
+yarn add -D webpack-bundle-analyzer
+```
+
+下記コマンドで立ち上げて、確認します。
+
+私の環境では、[highlight.js](https://highlightjs.org/)がとても重かったです。
+このhighlight.jsはそもそも以前に導入していてゴミとして残っていた格好で、ずっと前により軽量な[speed-highlight](https://github.com/speed-highlight/core)に利用を差し替えていたので、削除できると判断しました。
+
+PageSpeed Insights(Lighthouse)の結果スコアが改善したわけではないですが、**FCP/LCPが気持ち改善した** 気がするので
+**これは、多少プラスの影響があった気がします...。** 
+
+なお、highlight.jsをそのまま使う方法として以下のGithub Issueがあり、参考になりました。
+私の方では、そのまま使い続ける理由は特になかったためライブラリ削除で対処してしまいました。
+
+参考記事: [バンドルサイズの調査](https://github.com/kenji7157/kk-blog/issues/20)
+
+以下のサイト様でも、  highlight.jsを削る方向で対処されており参考にさせていただきました。
+
+参考記事: [バンドルサイズを減らしてみた](https://note.com/katohnoriyasu/n/n367fe938392e)
+
+#### 分析結果に従い、不要なパッケージを削除
+
+その他、package.jsonから明らかに使っていないと思われるパッケージを念の為削除しておきます。
+私の環境では以下あたりでした。（特に、highlight.jsについては上記でご説明をしたとおりです）
+
+```
+-    "@geist-ui/icons": "^1.0.1",
+-    "highlight.js": "^11.8.0",
+```
+
+削れるライブラリが少なくて、私にはおそらくほとんど意味なかったかも...？
+人によっては**ここが大きいというポストもあった** ので、<span className="hoso">特に運用が長くなり過去の遺物となっているライブラリが多そうなサイトでは見直す価値が大きそうだ</span>と思いました。
+
+### PC/モバイル用の表示画像切り替えをtailwind.cssでやっていたところを、JSで行うように（関連性不明）
+
+下記のように、**tailwindcss**の`block`および`hidden`で表示のON/OFFをやっていたところは、
+**Javascriptで切り替えを実行するように**しました。
+
+<CodeBlockTitle title="before" />
+
+```typescript
+import React from 'react'
+import Link from 'next/link'
+import Image from "next/image"
+
+const PostItem: React.FC<PostItemProps> = ({ post }) => {
+  return (
+    <Link href={post.url} passHref className="flex-none">
+      <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="100" height="44" alt={post.name} style={{
+        borderRadius: '5px'
+      }} className='hidden sm:block md:hidden hover:opacity-80'
+        priority
+      />
+      <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="320" height="140" alt={post.name} style={{
+        borderRadius: '12.5px'
+      }} className='hidden md:block hover:opacity-80'
+        priority
+      />
+    </Link>
+  )
+}
+```
+
+<CodeBlockTitle title="after" />
+
+```typescript
+import React from 'react'
+import Link from 'next/link'
+import Image from "next/image"
+import { useIsMobile } from 'hooks/useIsMobile'
+
+const PostItem: React.FC<PostItemProps> = ({ post }) => {
+
+  const { isMedium } = useIsMobile()
+
+  return (
+    <Link href={post.url} passHref className="flex-none">
+      {isMedium ? (
+        <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="100" height="44" alt={post.name} style={{
+          borderRadius: '5px'
+        }} className='hover:opacity-80'
+        />
+      ) : (
+        <Image src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)} width="320" height="140" alt={post.name} style={{
+          borderRadius: '12.5px'
+        }} className='hover:opacity-80'
+        />
+      )}
+    </Link>
+  )
+}
+```
+
+なお、変更後のJSによる判定を行なっている、`useIsMobile()`は以下のような内容となっています。
+
+<CodeBlockTitle title="src/utils/useIsMobile.tsx" />
+
+```typescript
+import { useEffect, useState } from "react"
+
+export const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false); // 768px以下をモバイルとして扱う
+  const [isMedium, setIsMedium] = useState(false); // こっちはタブレット以下などの判定で使う
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const mediumBreakpoint = window.matchMedia("(max-width: 1024px)").matches;
+      const smallBreakpoint = window.matchMedia("(max-width: 768px)").matches;
+
+      setIsMobile(smallBreakpoint);
+      setIsMedium(mediumBreakpoint);
+    };
+
+    checkIsMobile();
+
+    window.addEventListener("resize", checkIsMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkIsMobile);
+    };
+  }, []);
+
+  return { isMobile, isMedium };
+}
+```
+
+Javascript側で行うことで、html上は(CSSで隠しているとはいえ)両方の画像が読み込まれなくなるので、
+多少はパフォーマンスにプラスの影響はあったかも、、？
+
+### CDNで呼び出していたspeed-highlightを内部呼び出しに変更する。
+
+前述したシンタックスハイライトライブラリの**speed-highlight** ですが、[README.mdにあるように](https://github.com/speed-highlight/core)CDN経由での呼び出しを行なっていました。
+
+ただ、<span className="hoso">Lighthouseの結果からはどうもこちらがメインスレッドをブロックしているよう</span>なので、
+以下のように書き換えました。
+
+```
+# before
+-      <link rel="stylesheet" href="https://unpkg.com/@speed-highlight/core/dist/themes/default.css" />
+
+# after
++      <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} />
+```
+
+speed-hightlightの内容はダウンロードしてきて、`public/css`以下に設置しています。
+
+これを実行しデプロイした結果、再度lighthouseにかけると、**80点前後だった「パフォーマンス」欄が97点とまで改善しました。**
+
+<MdxImage month="202401" image="lcp4.png?n=1" annotation="ユーザー補助は、全く別の内容のため後ほど改善する。" />
+
+ひとまずこちらで、Search Consoleの判定の改善を待ってみたいと思います。
+
+### 記事に列挙した以外で参考にさせていただいたサイト
+
+[Next.jsを使ったサイトの表示速度改善](https://engineering.nifty.co.jp/blog/13820) 
+
+[Google タグマネージャー で Google アナリティクスの設定を確認](https://www.rectus.co.jp/archives/757#toc2)
+
+[highlight.jsを軽くする](https://scrapbox.io/shokai/highlight.js%E3%82%92%E8%BB%BD%E3%81%8F%E3%81%99%E3%82%8B)
+
+## まとめ
+
+私の場合は、まだ運用の歴史が浅いサイトなので単一の問題への対処で済んだわけですが、今後同じような問題が起きた場合に備え今回挙げた別のアプローチ、特に`webpack-bundle-analyzer`による**パフォーマンス分析も継続的に行うべきである**、と感じました。
+
+また、他に後ほど気づいた対処があれば追加していきたいと思います。
+
+それにしても。この問題への対処一つとってみても、<span className="hoso">内容だけでなくエンジンにも人にも評価され続けるコンテンツを持続して作っていくことの難しさを、改めて思い知らされた次第</span>でした。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
