@@ -12,7 +12,7 @@ p {
 }
 
 body div a {
-  @apply text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
+  @apply font-bold text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
 }
 
 .profile .user h1 {
@@ -24,7 +24,7 @@ body div a {
 }
 
 .container h2 {
-  @apply text-lg bg-orange-400 dark:bg-orange-700 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
+  @apply text-lg bg-orange-400 dark:bg-orange-500 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
 }
 
 .container h2:before {
