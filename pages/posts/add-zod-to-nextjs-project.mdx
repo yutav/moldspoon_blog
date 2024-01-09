@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使ってらくらくバリデーション',
   date: '2023-08-21T08:30:00.000Z',
-  updateDate: '2023-12-13T07:29:00.000Z',
+  updateDate: '2024-01-09T00:21:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -329,6 +329,31 @@ export default Page
 ```
  pref: z.number().min(1, { message: '都道府県を選択してください' }),
 ```
+
+#### 日本のハイフン付き電話番号のバリデーションをするには？
+
+**日本のハイフン付きの電話番号** の場合ですと、
+
+- 03-1234-5678
+- 050 or 070 or 080 or 090-1234-5678
+
+といった電話番号以外にも複雑なパターンがありそうですが、問い合わせなどのケースを考えて、一般的な電話番号を対象に緩めにバリデーションしておきます。
+
+```
+contact_tel: z.string().nullable()
+    .refine((value) => {
+      const phoneNumberPattern = /^0\d{2,3}-\d{3,4}-\d{3,4}$/; //
+
+// nullまたは空文字列の場合は検証をスキップ
+      if (value === null || value === '') {
+        return true;
+      }
+
+      return phoneNumberPattern.test(value);
+    }, { message: '正しい電話番号を入力してください' }),
+```
+
+（もう少し厳しいバリデーションルールにニーズがありそうならば、記事化します）
 
 #### 利用規約などチェックボックスのバリデーションをするには？
 
