@@ -15,7 +15,7 @@ const RichLink: React.FC<Prop> = ({ url, icon, moldspoonIcon, title, subtitle, t
       <Link href={url} className="dark:text-white text-black hover:text-gray-500" target={targetBlank ? "_blank" : ""}>
         {moldspoonIcon ? (
           <>
-            <p className="mr-2 text-sm">参考記事:</p>
+            <p className="m-0 text-sm text-gray-700 dark:text-gray-300">参考記事:</p>
             <div className="border rounded-lg p-5">
               <Image src={process.env.baseUrl + "/assets/moldspoonblog_short.png"} width="160" height="40" alt="モルドスプーンアイコン" className="mr-2 mb-2 dark:hidden block" />
               <Image src={process.env.baseUrl + "/assets/moldspoonblog_short_white.png"} width="160" height="40" alt="モルドスプーンアイコン" className="mr-2 mb-2 dark:block hidden" />

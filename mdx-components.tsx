@@ -2,6 +2,7 @@
 import type { MDXComponents } from 'mdx/types';
 
 export function useMDXComponents(_: MDXComponents): MDXComponents {
+
   const CustomH1: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h1 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h1>
   );
