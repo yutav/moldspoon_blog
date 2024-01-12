@@ -1,0 +1,408 @@
+
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'PageSpeed APIを使用して、複数ページの結果をCSV出力する処理をLaravelで作る',
+  date: '2024-01-12T01:58:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'PHP',
+    'Laravel',
+    'GCP',
+    'PageSpeed API',
+    'バックエンド',
+  ],
+  description: 'PageSpeedの結果をまとめて確認したい時に、APIが用意されています。それをPHP(Laravel)から呼び結果をCSVで出す方法を丁寧に解説します。'
+}
+
+眼精疲労がひどくなってめまいになってしまい、なんとか改善できる方法をないか探しています。
+
+Hackerの皆様はお元気でお過ごしでしょうか...
+
+## 本記事のゴール
+
+前回の記事で、**FCP/LCPの問題**に対処し、少しずつ状況が改善しているようではありますが、サイト内の各ページの状況を網羅的に確認したいと思いました。
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/blog-fcp-problem-fix"
+                moldspoonIcon={true}
+                title="Next.js製ブログで、Lighthouseで生じたLCP/FCPに関する問題を解決する"
+                targetBlank={true}
+            />
+
+１つ１つ、<OL href="https://pagespeed.web.dev/">ここから</OL>テストにかけるのはどう見ても面倒臭すぎます...。
+
+そこで、<span className="hoso">PageSpeed API を使用して、一気に複数ページの分析結果をCSV形式で出力できるシステム</span>を作ります。
+
+## 技術調査
+
+### 公式ドキュメントを読む
+
+<OL href="https://developers.google.com/speed/docs/insights/v5/get-started?hl=ja">こちらの公式ドキュメント</OL>にPageSpeed APIの使い方が
+まとまっています。
+
+> PageSpeed Insights API を試すだけであれば、API キーは不要です。
+
+とあるように、APIキーなしでも、curlコマンドから結果を試しに確認することができるようです。
+
+まずこちらで試します。
+
+
+#### curlでテスト実行してみる
+
+以下のコマンドを実行し、本ブログのトップのスコアを確認して見ます。
+
+**結果がとても長いので、出力が消化されないよう、テキストファイルに出力**します。
+
+```
+# 末尾の-oオプションが出力。上書きでなく「追加」なので注意
+curl 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://moldspoon.jp/blog' -o output.txt
+```
+
+以下のように出力されます。
+
+```
+{
+  "captchaResult": "CAPTCHA_NOT_NEEDED",
+  "kind": "pagespeedonline#result",
+  "id": "https://moldspoon.jp/blog",
+  "loadingExperience": {
+    "id": "https://moldspoon.jp",
+    "metrics": {
+      "CUMULATIVE_LAYOUT_SHIFT_SCORE": {
+        "percentile": 0,
+        "distributions": [
+          {
+            "min": 0,
+            "max": 10,
+            "proportion": 0.95499999999999952
+          },
+          {
+            "min": 10,
+            "max": 25,
+            "proportion": 0.029999999999999988
+          },
+          {
+            "min": 25,
+            "proportion": 0.014999999999999998
+          }
+        ],
+        "category": "FAST"
+      },
+      // 以下省略
+```
+
+とても長くてわかりにくいです...
+
+#### ブラウザに投げ込むとJSON構造が細かく見れる
+
+ドキュメントを掘り進めてパラメーターの詳細を...と思いましたが、**ブラウザのアドレスバーにURLを入れるだけで、構造が見れる**ことに気づきました。
+
+```
+https://www.googleapis.com/pagespeedonline/v5/runPagespeed?locale=ja&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO&url=https://moldspoon.jp/blog
+```
+
+をブラウザに入れると見事に表示されます。
+
+<MdxImage month="202401" image="pagespeed3.png" annotation="▶️を押すと、そのグループを省略できたりするので意外と見やすい" />
+
+##### 取得するAPIのオプションの紹介
+
+ここで、オプションを超簡単に紹介しておきます。詳しくは[こちら](https://developers.google.com/speed/docs/insights/v5/reference/pagespeedapi/runpagespeed?hl=ja#response)をご覧ください
+
+- locale ... 言語・地域を定義　ここでは日本語の ja
+- strategy ... desktop or mobile なしだとデスクトップ
+- category ... 取得するカテゴリ。&category=PERFORMANCE&category=BEST_PRACTICE...　と繋げることで複数に対応可能。今回はパフォーマンス、アクセシビリティ、ベストプラクティス、SEOの4カテゴリを指定。
+
+### 大まかに「どのページが悪いか」が、わかる項目だけ取る
+
+かなり細かく項目が存在するので、**CSVに書き出すにあたってキリ** がなくなりそうです。
+
+設計方針としては。「どのページが悪いか」を<span className="hoso">目視でざっくりと確認できる</span>ようにし、
+<span className="hoso">スコアが悪いページから、優先的に個別に掘り下げて改善していく</span>という対応が取れるような思想で実装を進めたいと思います。
+
+以下のスクリーンショットに写っているスコア・指標が取れれば最低限は充足すると私は感じたのでそのようにします。
+
+<MdxImage month="202401" image="pagespeed4.png" annotation="" />
+
+## 実装
+
+Laravelプロジェクトの初期設定については割愛します。
+
+- Laravel Sail環境が手元にあり
+- ブラウザからControllerが着地疎通する
+
+ことを前提として進めていきます。
+
+よろしければ、Mac+Docker(仮想開発環境)で管理画面を開発できるLaravel Sail + Filamentの記事も書いているのでご覧ください。
+
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
+        moldspoonIcon={true}
+        title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
+        subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
+        targetBlank={true}
+      />
+
+
+### APIキーの取得
+
+まず、さきほどの[PageSpeed APIの公式ドキュメント](https://developers.google.com/speed/docs/insights/v5/get-started?hl=ja)からAPIキーを取得します
+
+<MdxImage month="202401" image="pagespeed1.png" annotation="赤いところをクリック" />
+
+**分析したいプロジェクトを選択**し、しばらく待つとキーが表示されるのでコピーしておきます。
+
+<MdxImage month="202401" image="pagespeed2.png" annotation="キーをコピーしておく" />
+
+Laravelの`.env`に以下のように書いておきます。
+
+```
+PAGESPEED_API_KEY='ここに書く'
+```
+
+つづいて、`config/gcp.php`を新たに作り（ある人は適宜合流してください）
+下記のように書きます。
+
+```
+<?php
+return [
+  'pagespeed' => [
+    'key' => env('PAGESPEED_API_KEY')
+  ]
+];
+```
+
+以下のコマンドを忘れず実行しておきます。`.env`を読み込みし直しています。
+```
+sail artisan config:cache
+```
+
+### 前提となる、URLリストの設置
+
+**Google Console上の警告リストから、そのままサクッとコピペで貼り付けられる**ように、
+以下のようなテキストファイルをLaravelの`storage/app/speedtest-urls.txt`として用意することにしました。
+
+```
+https://moldspoon.jp/blog/posts/how-to-start-laravel-filament
+https://moldspoon.jp/blog/posts/authjs-with-prisma
+https://moldspoon.jp/blog/before_posts/add-zod-to-myblog
+https://moldspoon.jp/blog/posts/add-supabase-access-counter-to-blog
+https://moldspoon.jp/blog/posts/add-php-batch-with-mysql-in-shortest-time
+https://moldspoon.jp/blog/posts/laravel-filament-csv-download
+https://moldspoon.jp/blog/posts/react-hook-form-and-zod
+https://moldspoon.jp/blog/posts/route53-add-txt-record
+https://moldspoon.jp/blog/posts/stream-download-from-s3-by-laravel
+https://moldspoon.jp/blog/posts/add-toc-to-blog
+...
+```
+
+### Commandの実装
+
+**Laravel Sail環境の場合** ですが、ローカルから下記をプロジェクトのルートで実行します。
+
+```
+sail artisan make:command EvaluteConsoleUrlAndSaveData
+```
+
+`app/Console/Commands`以下にファイルを生成した後、以下のように実装します
+
+<CodeBlockTitle title="app/Console/Commands/EvaluteConsoleUrlAndSaveData.php" />
+
+```php
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Storage;
+
+class EvaluteConsoleUrlAndSaveData extends Command
+{
+
+    protected $baseUrl = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?locale=ja&category=PERFORMANCE&category=ACCESSIBILITY&category=BEST_PRACTICES&category=SEO&url=";
+
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'evaluate-console-url-and-save-data';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'speedtest-urls.txtに従って画像を一斉ダウンロード';
+
+    /**
+     * Execute the console command.
+     *
+     * @return int
+     */
+    public function handle()
+    {
+
+        echo "実行開始 ...";
+
+        // ストレージから読み込み
+        $consoleUrlStr = Storage::disk('local')->get('speedtest-urls.txt');
+
+        // 配列に分割
+        $consoleUrls = explode("\n", $consoleUrlStr);
+
+        $resultLists = [];
+        foreach ($consoleUrls as $consoleUrl) {
+            // 空白はスキップ
+            if (!$consoleUrl) {
+                continue;
+            }
+
+            $analyzeUrl = $this->baseUrl . $consoleUrl;
+            $resultJson = file_get_contents($analyzeUrl);
+            $obj = json_decode($resultJson);
+
+            // スコアを出力
+            $performanceScore = $obj->lighthouseResult->categories->performance->score;
+            $accessibilityScore = $obj->lighthouseResult->categories->accessibility->score;
+            $bestPracticesScore = $obj->lighthouseResult->categories->{'best-practices'}->score; // キーにハイフンが含まれるので一部違う
+            $seoScore = $obj->lighthouseResult->categories->seo->score;
+
+            // 指標の目印となるスコアを出力
+            $firstContentfulPaintScore = $obj->lighthouseResult->audits->{'first-contentful-paint'}->score;
+            $largestContentfulPaintScore = $obj->lighthouseResult->audits->{'largest-contentful-paint'}->score;
+            $totalBlockingTimeScore = $obj->lighthouseResult->audits->{'total-blocking-time'}->score;
+            $cumulativeLayoutShiftScore = $obj->lighthouseResult->audits->{'cumulative-layout-shift'}->score;
+            $speedIndexScore = $obj->lighthouseResult->audits->{'speed-index'}->score;
+
+            // 指標を出力
+            $firstContentfulPaint = $obj->lighthouseResult->audits->{'first-contentful-paint'}->displayValue;
+            $largestContentfulPaint = $obj->lighthouseResult->audits->{'largest-contentful-paint'}->displayValue;
+            $totalBlockingTime = $obj->lighthouseResult->audits->{'total-blocking-time'}->displayValue;
+            $cumulativeLayoutShift = $obj->lighthouseResult->audits->{'cumulative-layout-shift'}->displayValue;
+            $speedIndex = $obj->lighthouseResult->audits->{'speed-index'}->displayValue;
+
+            $list = [
+                $consoleUrl, // URLを冒頭に入れる
+                $performanceScore,
+                $accessibilityScore,
+                $bestPracticesScore,
+                $seoScore,
+                $firstContentfulPaintScore,
+                $largestContentfulPaintScore,
+                $totalBlockingTimeScore,
+                $cumulativeLayoutShiftScore,
+                $speedIndexScore,
+                $firstContentfulPaint,
+                $largestContentfulPaint,
+                $totalBlockingTime,
+                $cumulativeLayoutShift,
+                $speedIndex
+            ];
+
+            $resultLists[] = $list;
+
+            // 2秒ほどwait
+            sleep(2);
+        }
+
+        // CSV出力処理
+
+        $header = [
+            'URL',
+            'パフォーマンス',
+            'アクセシビリティ',
+            'ベストパフォーマンス',
+            'SEO',
+            'FCPスコア',
+            'LCPスコア',
+            'TBTスコア',
+            'CLSスコア',
+            'SIスコア',
+            'FCP',
+            'LCP',
+            'TBT',
+            'CLS',
+            'SI',
+        ];
+
+        $csvFile = fopen('speedtest-results.csv', 'w');
+
+        fputcsv($csvFile, $header);
+
+        foreach ($resultLists as $row) {
+            fputcsv($csvFile, $row);
+        }
+
+        fclose($csvFile);
+
+        // 最終的にcsvとして、元のフォルダに出力
+        Storage::disk('local')->put('speedtest-results.csv', file_get_contents('speedtest-results.csv'));
+
+        echo "実行完了 ... csvファイルを出力しました。";
+
+        return Command::SUCCESS;
+    }
+}
+
+
+```
+
+#### Commandを実行
+
+下記で処理を実行します。
+
+```
+sail artisan evaluate-console-url-and-save-data
+```
+
+ファイルは、テキストファイルと同じ`storage/app/`以下に出力されます。
+
+##### 実行時の注意事項
+URLの数によっては当然時間がかかります。気長に待ちましょう。
+また、数百行を超えるサイズの検証は当方では行っていないので、実行時の責任は負いかねますためあらかじめご了承ください。
+
+**大量に検証を行いたい場合はGoogle側に負荷をかけないかなど、適切かつ慎重にご利用いただくのが望ましい姿** と考えております。
+
+### 結果の確認
+
+`storage/app/speedtest-result.csv`に出力されたcsvを開いて確認します。
+
+<MdxImage month="202401" image="pagespeed5.png" annotation="想定通り出力" />
+
+いい感じですね。
+
+##### 補足
+
+私はLibreOfficeで開きましたが、エクセルで開くと文字化けしそう。UTF-8で出力しているためです。
+メモ帳などで開くとひとまず結果はみれると思いますので念のためお伝えいたします。
+
+## まとめ
+
+**結構構造体のキーの捜索に時間がかかってしまって大変でした。**
+auditsの下に164個程度キーがぶら下がっていましたしね。
+
+ 意外に面倒な作業となったわけでその辺りが、この件に関するエントリーがググっても少なかった理由かも...
+ただ、<span className="hoso">こういう誰もやりたがらないようなスクリプトを作ることにこそ、仕事の本質があるはず</span>なので、引き続き地道にエントリー書いていけたらなと思っています。
+
+よければシェアお願いいたします！
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
