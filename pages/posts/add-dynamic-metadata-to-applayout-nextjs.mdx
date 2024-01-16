@@ -1,0 +1,258 @@
+
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Next13のApp Routerレイアウトで動的にメタデータを出力するにはどうすればいいのか',
+  date: '2024-01-12T01:58:00.000Z',
+//  updateDate: '2024-01-13T08:05:00.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'App Router',
+    'メタデータ'
+  ],
+  description: 'Next13のApp Routerでのtitle/descriptionの出力方法がほとんど記事として見つからないため、具体的事例とともにご紹介します。'
+}
+
+今日初めて訪問した徒歩5分くらいのところのラーメン屋さんが、自分的には「普通に美味しい」くらいでした。
+でも**めちゃめちゃ美味しくなくても、近所にラーメン屋さんあるってそれだけで、なんか嬉しい。** リピします。
+
+Hackerの皆様はいかがお過ごしでしょうか。
+
+## 本記事のゴール
+
+App Routerレイアウトで、メタデータを出力する情報は下記ページにまとまっています。
+
+参考リンク: [Optimizing: Metadata | Next.js](https://nextjs.org/docs/app/building-your-application/optimizing/metadata)
+
+ただ、英語のエントリーということでちょっとわかりにくいです。
+
+<br />
+かつ自分の事例では、
+
+`/order/edit/1001`
+
+といった形式で、**IDと対応するコンテンツを表示するいわゆる「詳細ページ」でメタデータを出力したかった**です。
+
+下記の実装方法では、**ページコンポーネントの中で動的にパラメータを変更できない** ですよね。
+
+```
+import type { Metadata } from 'next'
+ 
+export const metadata: Metadata = {
+  title: '...',
+  description: '...',
+}
+ 
+export default function Page() {
+  // この中でAPIに取得処理をしにいかざるを得ず、外にいるMetadataの中身は改変できない。そもそも定数なので。
+
+}
+```
+
+
+## 要件定義
+
+ということで要件をまとめると
+
+- 動的にメタデータを設定したい
+- できるだけシンプルな方法でまとめたい
+
+となります。
+
+## 実装
+
+早速実装に入ります。
+[先ほどの参考リンク](https://nextjs.org/docs/app/building-your-application/optimizing/metadata) にも
+例が書かれておりまして、これに沿って実装しますが、**読み解きを行うのとカスタマイズを合わせて行います。**
+
+<CodeBlockTitle title="src/app/order/[code]/page.tsx" />
+
+```typescript
+import { getServerSession } from 'next-auth';
+import { options } from '@/app/options';
+import type { Metadata, ResolvingMetadata } from 'next'
+
+// 引数の型定義
+type Props = {
+  params: { code: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export async function generateMetadata(
+  { params, searchParams }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+
+  const session = await getServerSession(options)
+
+  const code = params.code
+
+  let orderTitle: string | undefined = undefined
+
+  try {
+    // const order = await fetch("http://domain.com/path/to/order/api",{
+    //   method: "POST,"
+    //   body: {
+    //     code: code
+    //   }
+    // })
+    
+    // NOTE: モックに変えています
+    const order = {
+      title: "動的タイトル"
+    }
+    orderTitle = order.title // コメントアウトするとエラーパターンも確認できます。
+  } catch (e: any) {
+    //console.log(e)
+  }
+
+  const outputOrderTitle = (orderTitle ? orderTitle : "詳細ページ")
+
+  return {
+    title: outputOrderTitle + " | サイトタイトル",
+    description: outputOrderTitle + "について詳しく解説します",
+    openGraph: {
+      title: outputOrderTitle + " | サイトタイトル",
+      description: outputOrderTitle + "について詳しく解説します"
+    },
+  }
+}
+
+// こっちがサーバサイドコンポーネント
+export default function Page({ params }: {
+  params: {
+    random_code: string
+  }
+}) {
+
+  return (
+    <div>
+      <p>{random_code}</p>
+
+      {/* 下記のフロントエンドコンポーネントの中で、codeを使ってもう一度サーバから取得 */}
+      <OrderDetailView code={code} />
+    </div>
+    <DashboardContainer>
+
+      <SiteEditForm
+        config={config}
+        random_code={params.random_code}
+      />
+
+    </DashboardContainer >
+  )
+}
+
+```
+
+以下、ポイントとなるところを紹介します。
+
+#### 引数の型定義
+
+params ... codeなどページを構成する上で必ず入ってくるパラメータ（ないとエラーになります)
+searchParams ... クエリストリング。`?query=1` のようなやつですね。なくても動きます。
+
+```
+type Props = {
+  params: { code: string }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+```
+
+こちらはどの動的出力の場合でも`params`の中身は、ページごとに定義しなきゃいけません。
+
+例えば、`/page/utf8`のように、引数を「文字コード」として渡したい場合は、下記のようになるかと思います。
+
+```
+params: { characterType: string }
+```
+
+#### 対向処理は一時的にモックにしている
+
+```
+  try {
+    // const order = await fetch("http://domain.com/path/to/order/api",{
+    //   method: "POST,"
+    //   body: {
+    //     code: code
+    //   }
+    // })
+    
+    // NOTE: モックに変えています
+    const order = {
+      title: "動的タイトル"
+    }
+    orderTitle = order.title
+  } catch (e: any) {
+    //console.log(e)
+  }
+```
+
+**APIへデータをリクエストする処理は今回の試みとは別内容となるので**、省略する意味でモックとしました。
+**適宜、fetch/axiosなどご利用されるHTTPライブラリに置き換えてください** ませ。
+
+#### リクエストが失敗した場合でもエラーハンドリングする
+
+下記の部分で、<span className="hoso">APIへのリクエストが失敗した時でも「詳細ページ」というタイトルでメタデータが出来上がる</span>ように組んでみました。
+
+```
+  const outputOrderTitle = (orderTitle ? orderTitle : "詳細ページ")
+
+  return {
+    title: outputOrderTitle + " | サイトタイトル",
+    description: outputOrderTitle + "について詳しく解説します",
+    openGraph: {
+      title: outputOrderTitle + " | サイトタイトル",
+      description: outputOrderTitle + "について詳しく解説します"
+    },
+  }
+```
+
+ただ、この加工方法だと文章によっては文節がおかしくなるので、そこは適宜ご調整ください。
+
+ちなみに、リクエストに失敗した時のケースは、
+
+```
+    orderTitle = order.title // コメントアウトするとエラーパターンも確認できます。
+```
+
+この行をコメントアウトすると確認できます。
+
+## 動作確認
+
+今回の事例の`order/edit/1001`にアクセスしたところ無事想定通りの動きになりました。
+
+<MdxImage month="202401" image="metadata1.png" annotation="タイトル・デスクリプションは問題なし" />
+
+
+## まとめ
+
+Next.js (Next13)の<span className="hoso">App Routerレイアウトではメタデータがどのように実用的に運用されているかの事例があまりにも少なすぎる</span>と正直感じました。
+
+SEO対策では必要なところなので、Webサービスがユースケースとして多いNext.js(App Layout)とはいえ、もうちょいノウハウが得られるといいなと。LaravelやRailsのように、とはいかなくてもそれに近いくらいだと人に勧めやすいフレームワークになりますね。
+
+<br />
+今回はNext.jsを使って開発するのが決定しているので、<span className="hoso">自分自身でもっと深掘りすることでよい情報発信できたらいいな</span>、とは思っています！
+
+<br />
+また、動的メタデータの情報が他にもあれば、順次本記事に追加していきたいと考えておりますので[SNSのフォロー](https://twitter.com/yuku_tas)いただけるとありがたいです！
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
