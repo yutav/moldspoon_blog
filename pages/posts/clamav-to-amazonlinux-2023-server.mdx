@@ -1,0 +1,263 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'ClamAVをAmazon Linux2023サーバに組み込んでウィルスチェックする',
+  date: '2024-01-22T15:15:46.000Z',
+//  updateDate: '2024-01-13T08:05:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Amazon Linux 2023',
+    'バックエンド',
+    'ウィルスチェック',
+    'ClamAV'
+  ],
+  description: 'ClamAVをLarvelに組み込む手順を丁寧に解説してまいります。'
+}
+
+図書館で本を予約したら、タイミングが被ってしまい一気に５冊も届いてしまいました...。
+
+全部読み切れるかな... そんな[yuku_tas](https://twitter.com/yuku_tas)です。
+
+Hackerの皆様はいかがお過ごしでしょうか。
+
+## 経緯
+
+Linux用のアンチウィルスソフト
+[ClamAV](https://www.clamav.net/)を**PHPプロジェクトに組み込みたくなりました。**
+
+Laravelをよく使うので、Validationでついでにウィルスチェックできる
+[clamav-validator](https://github.com/sunspikes/clamav-validator)を見つけて、試行錯誤してみたのですが
+動く感じがせず。
+
+Github Issueでは **「これは打ち捨てられてるレポジトリじゃないか？」** と言われてしまっていました...。
+
+<br />
+ないものは仕方ありません。<span className="hoso">ClamAVをライブラリを経由せず直接利用し、アップロードされたファイルをその場でスキャンして、不備がある場合は削除する。
+という設計思想で運用しよう</span>と思います。
+
+### 実装
+
+#### clamav本体をインストール
+
+私のLinuxサーバのカーネルは
+
+- Amazon Lightsail
+- Amazon linux 2023
+- vCPU 2コア
+- メモリ 2GB
+
+ですが、以下のコマンドで入りました。Amazon Linux2やCentOSならば`yum`
+でインストールしましょう。
+
+```
+sudo dnf update
+sudo dnf install -y clamav clamav-update clamd
+```
+
+##### clamdが今回の方法のポイント
+
+本体はあくまで`clamav`ですが、`clamd`を**デーモンとして常時待機** させ、
+`clamscan [file or dir]`で、`clamd`経由でファイルスキャンを行う。という形で運用したいと思います。
+
+#### 定義ファイルを最新に
+
+ウィルスをブロックするための定義ファイルを以下のコマンドで
+最新のものに更新しておきます。
+
+```
+sudo freshclam
+```
+#### 定義ファイルを自動更新にしておく
+
+cronで以下を設定します。わたしは、ログイン中のsshユーザから`crontab -e`で入れました。
+
+```
+N * * * *   /usr/bin/freshclam --quiet
+```
+
+Nのところは、3~57の間にして欲しいと。
+10の倍数は選択しないで欲しいと[公式ドキュメントにも書いてあります](https://docs.clamav.net/manual/Usage/Configuration.html)
+理由は、00分に実行されるスクリプトが多いので、とのことでした。そちらに従って、適当（ちゃんとした意味で）な数字を設定します。
+
+>to check for a new database every hour. N should be a number between 3 and 57 of your choice. Please don’t choose any multiple of 10, because there are already too many clients using those time slots.
+>
+>1時間ごとに新しいデータベースをチェックすることになります。Nは、3から57の間で好きな数字を選んでください。10 の倍数は選択しないでください。これらのタイムスロットを使用するクライアントがすでに多すぎるからです。
+
+#### freshclam.confを修正
+
+`/etc/freshclam.conf`を変更します。
+
+下記の部分を探し、
+
+```
+# Send the RELOAD command to clamd.
+# Default: no
+#NotifyClamd /path/to/clamd.conf
+NotifyClamd /etc/clamd.d/scan.conf
+```
+
+こちらのように修正して、定義ファイルの更新後に、clamd（デーモンスクリプト）に**設定がすぐに伝わるように** します。
+
+
+#### /etc/clamd.d/scan.confを修正
+
+```
+# ログ出力設定
+LogFile /var/log/clamd.scan
+LogFileMaxSize 2M
+LogSyslog yes
+LogRotate yes
+
+# TCPのソケットを使う
+#LocalSocket /run/clamd.scan/clamd.sock
+
+TCPSocket 3310
+TCPAddr 127.0.0.1
+```
+
+このように設定してログを出したり、clamdが待ち受けるポートやIPなどを定義しておきます。
+
+他、コメントアウトしてある箇所はそのまま変更なしでセーブします。
+
+#### clamdの設定をしておく
+下記が<span className="hoso">systemdで管理されているclamdのユニット設定ファイル</span>です。
+**起動後、こう動きなさいというレシピみたいなもの** ですね。
+
+```
+/usr/lib/systemd/system/clamd@.service
+```
+
+これをviで開いて、以下のように変更しておきます。（変更点のみ書きます）
+
+```
+sudo vi /usr/lib/systemd/system/clamd@.service
+
+[Unit]
+...
+
+[Service]
+...
+TimeoutStartSec=600
+MemoryLimit=512M
+CPUQuota=30%
+
+[Install]
+...
+```
+
+後述しますが **`clamscan`の処理が重いので、clamdは軽く動くようにメモリの上限値・CPUの上限値を指定して起動する** ことにします。
+
+#### clamdを立ち上げる
+
+ここまで設定を行ってきた`clamd`を`systemctl`で起動時に立ち上がるプログラムとして登録し、
+実際にここで開始しておきます。
+
+```
+sudo systemctl enable clamd@scan
+sudo systemctl start clamd@scan
+```
+
+これで、**ファイルスキャンが実行できる準備が整いました。**
+
+#### 実行してみたが、メモリを使いすぎる
+
+[こちら](https://www.eicar.org/download-anti-malware-testfile/)からテスト用のウィルス定義ファイルeicar.comをダウンロードしてFTPを経由して設置します。
+
+もしくは、下記の`curl`コマンドを実行して、Linuxサーバに直接落としてくることも可能です。
+
+```
+ curl -O https://secure.eicar.org/eicar.com
+```
+
+定義ファイルを入れたディレクトリに移動し、**clamscanコマンドを実行したところマシンが固まってしまいました。** 
+
+```
+cd /path/to/eicar.com/exist
+clamscan eicar.com
+```
+
+どうも、このインスタンスの**2GB** ではメモリが足りないようです。
+
+#### スケールアップして、メモリ4GBのマシンで再度試す
+
+そのままでは何もできないので、**実験用にマシンをスケールアップしました。** 
+
+その結果、**実行中に3GBくらいは`clamscan`の実行にメモリを使ってしまう感じ**ですが、30秒くらいで結果が出ました。
+
+```
+$ clamscan eicar.com
+/home/ec2-user/work/eicar.com: Win.Test.EICAR_HDB-1 FOUND
+
+----------- SCAN SUMMARY -----------
+Known viruses: 8683058
+Engine version: 0.103.9
+Scanned directories: 0
+Scanned files: 1
+Infected files: 1
+Data scanned: 0.00 MB
+Data read: 0.00 MB (ratio 0.00:1)
+Time: 27.969 sec (0 m 27 s)
+Start Date: 2024:01:23 02:32:20
+End Date:   2024:01:23 02:32:48
+```
+
+<span className="hoso">成功？してウィルスとして判定された</span>ようです。
+
+#### PHPからウィルススキャンソフトとして使う時のユースケースは？
+
+**clamscanコマンドをシェルなどを経由して叩き**、標準出力に出た結果を受け取って、
+preg_matchなどの正規表現で判定する形になるかな、と思っています。
+
+例えば、Laravelのファイル置き場は`storage/app/data`以下などになりますので、
+
+```
+clamscan /storage/app/data/upload/xxxx.zip
+```
+
+と**呼び出すシェルスクリプトをLaravelのバッチから呼ぶ**といったイメージでしょうか。
+<span className="hoso">「Infected files」が1以上ならウィルスとして削除する、という判定はできるでしょう。</span>
+
+本当は[kissit/php-clamav-scan](https://github.com/kissit/php-clamav-scan)のようなライブラリがあるといいのですが
+残念ながらメンテされていないようですので、直接呼ぶ方向になりそうです。
+
+#### 今回は実験まで
+
+ここまでの経緯でご説明した通り、2GBのマシンで動かないのはキツく、気軽に導入するわけには行かなそうでした。
+よって、別の方法でウィルススキャンする方法を考えるようにしました。
+
+### 参考URL
+
+以下のサイト様を参考にさせていただきました。（他にもあるかもです、気づき次第追加させていただきます。）
+
+```
+https://www.fumibu.com/use_clam-anti-virus_debian-package/#toc4
+https://souiunogaii.hatenablog.com/entry/clamd-memory-limit
+http://safe-linux.homeip.net/mail/clamav/clamd.html
+https://blog.kamata-net.com/archives/12891.html
+```
+
+## まとめ
+
+実行ユーザーは今回は実用しないということで`root`でやってしまいましたが、**商用利用する場合は
+`clamav`ユーザーなどを作り、rootで実行させないようにした方が安全だと公式ドキュメントに書いてありました。**
+実際に使う機会があればその方向でユーザーを作る形で考えたいと思います。
+
+その場合、パーミッションの設定は残念ながらちょっと面倒そうでしたね。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
