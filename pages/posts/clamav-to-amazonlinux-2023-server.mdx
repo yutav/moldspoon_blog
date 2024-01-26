@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from 
 export const meta = {
   title: 'ClamAVをAmazon Linux2023サーバに組み込んでウィルスチェックする',
   date: '2024-01-22T15:15:46.000Z',
-//  updateDate: '2024-01-13T08:05:00.000Z',
+  updateDate: '2024-01-26T16:46:49.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -32,7 +32,7 @@ Laravelをよく使うので、Validationでついでにウィルスチェック
 [clamav-validator](https://github.com/sunspikes/clamav-validator)を見つけて、試行錯誤してみたのですが
 動く感じがせず。
 
-Github Issueでは **「これは打ち捨てられてるレポジトリじゃないか？」** と言われてしまっていました...。
+Github Issueでは **「これは打ち捨てられてるレポジトリじゃないか？」** と[言われてしまって](https://github.com/sunspikes/clamav-validator/issues/66#issuecomment-1744124400)いました...。
 
 <br />
 ないものは仕方ありません。<span className="hoso">ClamAVをライブラリを経由せず直接利用し、アップロードされたファイルをその場でスキャンして、不備がある場合は削除する。
