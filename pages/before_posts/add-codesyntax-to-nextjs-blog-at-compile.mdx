@@ -1,1 +1,13 @@
 https://www.yuta-extend.com/posts/20221208-code-block
+
+
+#### 実行ユーザーを追加する
+
+Googleで調べたところrootで実行するやり方も載っていましたが、[公式ドキュメント](https://docs.clamav.net/manual/Installing/Add-clamav-user.html)では、「rootはセキュリティ上まずいので使わないで」
+という一文が載っていました。
+
+>Caution: We do not recommend running clamd as root for safety reasons because ClamAV scans untrusted files that may be malware. Always configure the "User" setting in clamd.conf if you plan to run clamd as a service.
+>
+>注意: ClamAVはマルウェアかもしれない信頼されていないファイルをスキャンするので、安全上の理由からrootとしてclamdを実行することはお勧めしません。clamdをサービスとして実行する場合は、必ずclamd.confの "User "を設定してください。
+
+よって、`clamav`ユーザーを作成し、スキャンを実行させるようにします。
