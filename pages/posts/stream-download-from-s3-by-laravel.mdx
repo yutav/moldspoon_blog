@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: '大容量ファイルをAmazon S3+Laravelでサーバに落とす方法を詳細解説',
   date: '2023-12-03T16:43:59.000Z',
+  updateDate: '2024-02-02T15:14:50.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -106,18 +107,16 @@ DB_PASSWORD=password
 
 #### FlySystemライブラリをインストール
 
-AWS S3との送受信のために下記のライブラリを入れておきましょう。
+<span className="hoso">AWS S3との送受信のために下記のライブラリを入れておきましょう。</span>
 
 ```
 sail composer require league/flysystem-aws-s3-v3 "^3.0"
 ```
 
-インストールしていない場合は、**コマンドの実行時に以下のエラーが出て行き詰まります。**
+インストールしていない場合は、**下記のコマンドの実行時にこのようなエラーが出て行き詰まります。**
 
 ```
-   Error
-
-  Class "League\Flysystem\AwsS3V3\PortableVisibilityConverter" not found
+Class "League\Flysystem\AwsS3V3\PortableVisibilityConverter" not found
 ```
 
 #### コマンドの作成
