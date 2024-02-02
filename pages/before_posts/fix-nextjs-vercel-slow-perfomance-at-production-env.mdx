@@ -7,6 +7,7 @@ chatGPTにも質問しましたが、
 以下のような
 
 
+```
   useEffect(() => {
     let isFirstRender = false
     async function readFirst() {
@@ -24,11 +25,12 @@ chatGPTにも質問しましたが、
       isFirstRender = true;
     };
   }, [])
+```
 
 `next.config.js`の
 useStrictModeをoffに
 
-## 
+## test
 
 `node_modules/next-auth/src/core/types.ts/CallbacksOptions/session`
 の中の以下の箇所

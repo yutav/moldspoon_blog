@@ -30,7 +30,7 @@ export const meta = {
 どうぞ最後までお付き合いくださいませ。
 
 <RichLink
-url="https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor" 
+url="https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor"
 moldspoonIcon={true}
 title="VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第1回 アカウント作成からIAMユーザー作成まで" 
 subtitle="本連載は、かなり丁寧に手順を書いていきますので、環境構築に慣れておられる方にとってはちょっと冗長かもしれません..."
@@ -135,8 +135,7 @@ LightsailとしてAWSが買収した[bitnamiのLaravelイメージ](https://bitn
 ただbitnamiについては、開発者が主体的にミドルウェアをupdateする処理を組まない限り、
 立ち上げた時点のままのミドルウェアとなります。
 
-反面、**Vaporなどのマネージドサービス**では「PHP8.2」などの明示的にユーザーが選択したソフト以外の<span className="hoso">ミドルウェアのアップデート作業はVapor側で自動的にやってくれるので
-Webエンジニアとしての業務により注力できるようになる。</span>今風な仕組みになっているな、と感じました。
+反面、**Vaporなどのマネージドサービス**では「PHP8.2」などの明示的にユーザーが選択したソフト以外の<span className="hoso">ミドルウェアのアップデート作業はVapor側で自動的にやってくれるのでWebエンジニアとしての業務により注力できるようになる。</span>今風な仕組みになっているな、と感じました。
 
 もちろん、**インフラ・サーバ管理に精通している人にとってはLinuxサーバを丸ごと扱えるLightsail等のクラウドインスタンスの方が便利に感じるかもしれない**のでそこは人それぞれ、というところだと思いました。
 
@@ -156,5 +155,3 @@ export default function Page({ children }) {
     </Layout>
   )
 }
-
-
