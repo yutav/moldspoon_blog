@@ -1,0 +1,291 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第3回 Wordpress導入編。',
+  date: '2023-11-12T02:50:39.000Z',
+  updateDate: '2023-12-27T17:02:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'LAMP',
+    '連載記事',
+    'AmazonLinux2023',
+    'Amazon Lightsail',
+    'Lightsail',
+    'PHP',
+    'バックエンド'
+  ],
+  description: '新しくAWSに登場したOS、Amazon Linux2023のサーバに、Wordpressを入れて運用開始できるまでを丁寧に解説する連載の第３弾。実際にWordpress本体を入れて運用開始できるまでを解説します。'
+}
+
+## 概要
+
+個人的に大好きなインフラが[AWS Lightsail](https://aws.amazon.com/jp/lightsail/)。とてもコストパフォーマンスに優れ、
+かつ**いわゆるVPSではある** ものの、**専用インスタンスである[Amazon EC2](https://aws.amazon.com/jp/ec2/)と変わらない使用感**で、小規模なプロジェクトでは頻繁に使っています。
+
+この連載では、Lightsailの2023年度版イメージである**Amazon Linux2023** をLAMP構成で運用開始できるまでを、画像付きで丁寧に解説していきます。
+最終回となる今回は、WordpressをsshログインできるようになったLightsailサーバに導入し、疎通確認できるところまでを書いていきます。
+
+現在は以下のようになっています。もし不明点があれば以下をお読みください。
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-how-to-start"
+          icon='ri-list-check'
+          title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第1回 サーバ立ち上げ編。"
+          subtitle="第1回はこちらからご覧いただけます。"
+          targetBlank={true}
+        />
+        <br />
+ 
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-middleware-install"
+          icon='ri-list-check'
+          title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。"
+          subtitle="第2回はこちらからご覧いただけます。"
+          targetBlank={true}
+        />
+
+
+
+### 本連載のゴール
+
+Amazon Linux2023カーネルのLightsailインスタンス・サーバで、インストール済みのWordpressにアクセスできるようにする。
+
+### 対象読者
+
+- AWSのアカウントを持っている方(まだの方は[こちら](https://aws.amazon.com/jp/free/)より開設をお願い致します。)
+- Amazon Linux2023でWorpdressを含むLAMP構成の開発を始めてみたいエンジニア・プログラマーの方。
+- 開発環境(ローカルPC)がMacの方。Windowsの方は適宜読み替えてみてください。
+
+## 1. 第2回のおさらい
+
+第2回では、SSHで入ったサーバにミドルウェアを導入し、
+
+- WebサーバApacheの疎通確認
+- DBサーバMariaDBの疎通確認
+
+を行えるところまでを開設しました。
+
+    <MdxImage month="202311" image="aws200.png" annotation="Apache&MariaDBの疎通確認ができているのを前提とします。" />
+
+ここから、コンテンツ管理システムWordpressを導入し、簡単にブログ運営を始められるまでをこれから
+説明して参ります。（すでにWordpressに慣れていらっしゃる方は、この段階で **SFTP** + 秘密鍵認証での
+ファイルアップロードが可能になっておりますので、あまり難しくないかも。
+
+当記事では、スピードを考慮し、<span className="hoso">コマンドラインからのWordpress導入</span>の方法で
+解説していきます。
+
+## 2. Wordpress導入編。
+
+インスタンスに下記のコマンドで**sshログイン** します。
+
+```
+ssh ec2-user@[インスタンスの固定IP] -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+```
+
+### 2-1. Wordpressをインストールするディレクトリを用意。
+
+次に、**Wordpressをインストールしたいディレクトリを作成＆以下のコマンドで移動** します。
+
+```
+# projectsディレクトリを作成
+sudo mkdir /var/www/projects
+sudo chown ec2-user.ec2-user -R /var/www/projects
+cd /var/www/projects
+
+# wordpressをインストールするディレクトリを作成
+mkdir wordpress && cd wordpress
+pwd ## ここで/var/www/projects/wordpressとでたら成功
+```
+
+### 2-2. Wordpress管理ライブラリのWP-CLIをインストール。
+
+コマンドからWordpressを管理できる、便利なライブラリツールである[WP-CLI](https://wp-cli.org/#installing)を導入します。
+
+```
+# ツールをダウンロード
+curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+
+# ツールの正当性チェック（ダウンロードが成功しているかをチェック）
+
+php wp-cli.phar --info
+
+# 実行権限を与えて、wp-cli.pharが実行できるようにします。
+
+chmod +x wp-cli.phar
+
+# 実行できるようにしたら、パスのショートカットが通じるところに、「wp」とリネームしたうえで移動します。
+
+sudo mv wp-cli.phar /usr/local/bin/wp
+```
+
+Wordpressを<span className="hoso">ダウンロード経由でインストール</span>します。
+
+```
+# 今いるはずですが、念のため再度移動
+cd /var/www/projects/wordpress
+
+# 本体をダウンロード
+wp core download
+
+# パーミッションを変更し、apacheユーザーから変更が可能なようにしておく。
+sudo chown -R apache:ec2-user /var/www/projects/wordpress
+
+```
+
+これでインストールが完了したため、Apacheの設定を変更して、`/var/www/projects/wordpress/`にIPから参照できるようにします。
+
+### 2-3. Apacheのバーチャルホスト設定を行い、疎通まで。
+
+```
+# Apacheのバーチャルホスト設定を置くディレクトリに移動
+cd /etc/httpd/conf.d
+
+# エディターツールviで開きます。この時点では中身は空
+sudo vi virtualhost.conf
+
+# 以下の内容をコピー
+<VirtualHost *:80>
+  # ServerName hogehoge.com <= ドメインを設定する時はここの#をとってApacheを再起動してください。
+	DirectoryIndex index.php index.html
+  DocumentRoot /var/www/projects/wordpress
+
+  <Directory "/var/www/projects/wordpress">
+    Require all granted
+  </Directory>
+</VirtualHost>
+
+```
+
+viにはいったあとは
+`a` を押すと、INSERTモードになります。
+そこで、メモ帳のように内容を`Ctrl+V`でペーストすると書き込むことができます。
+
+`Esc`を押し、INSERTモードから抜けて、`:wq`と入力して、`Enter`を押すと保存します。
+
+もしviの操作を失敗した時は
+`sudo rm virtualhost.conf`
+と実行して、バーチャルホスト設定ファイルを消してやり直してください。
+
+以下のコマンドでApacheを再起動します。
+
+```
+sudo service httpd graceful
+```
+
+この画面が見えていたら疎通成功です！
+    <MdxImage month="202311" image="aws201.png" annotation="" />
+
+AWSのIPは不正なアタックも多く、この状態のままでは危険なので、放置せず本記事の完了まで設定を行っていただくか、
+
+```
+sudo service httpd stop
+```
+
+でApacheを停止しておいてください。
+
+### 2-4. Wordpressのデータベースを作っておく。
+
+[第2回](https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-middleware-install)で作成したMariaDBに再び入り、
+**Wordpress用のデータベース** を作っておきます。
+
+```
+# どこからでもいいので以下のコマンドでMariaDBに入る。パスワードは第2回で作成したものを入力。
+
+mysql -uroot -p
+
+# 以下のコマンドを入力して、データベースを作成（末尾の;を忘れないように。）
+
+MariaDB [(none)]> create database wordpress;
+
+# MariaDBから出る
+exit
+
+# ※もしMariaDBからどうしても出たい時は、Ctrl + x + c で強制終了ができる
+```
+
+### 2-5. 画面から接続設定を行う。
+
+先程のWordpressの画面に戻ります。
+2-2 の最後で実行した、以下ができているかを確認してください。
+
+```
+# こちらができていないと、Wordpressによるインストールが完了しない。
+
+sudo chown -R apache:ec2-user /var/www/projects/wordpress
+```
+
+下記の画面が次に表示されると思うので、
+
+    <MdxImage month="202311" image="aws202.png" annotation="" />
+
+- databaseは**wordpress** に
+- usernameは**root** に
+- Passwordは**第2回で作成したもの** を
+- DatabaseHostは**localhost** を
+- TablePrefixはデフォルトの**wp_** を
+
+それぞれ入力してください。
+
+    <MdxImage month="202311" image="aws203.png" annotation="" />
+
+入力が成功しこの画面が出ると技術的なことはほぼ終わりです！
+
+### 2-6. Wordpressの初期設定を行う。
+
+あとはWordpressの初期設定を行います。
+
+    <MdxImage month="202311" image="aws204.png" annotation="" />
+
+この画面では、ブログのログインを行う管理ユーザーのユーザー名/パスワードを設定します。
+この辺りは普通のWebサービスを行うのと同じです。
+
+    <span className="hoso">Wordpressはアタックされやすいので、できれば複雑なユーザー名・パスワードに変更しておきましょう。
+          推測しやすいユーザー名・パスワードは危険です。</span>
+
+あとは**Log in** からログインして利用を始めるだけですね！
+
+    <MdxImage month="202311" image="aws205.png" annotation="WordpressのUIも日々進化していますね。標準でもかっこいい...！" />
+
+## まとめ
+
+作業お疲れ様でした。現時点ではまだ、ブログとして運用するためには課題として
+以下のようなものがあります。
+
+- IPに**ドメイン** を当てる。(hogehoge.comでアクセスしたい。)
+- ドメインをhttpsで疎通できるようにする(https://hogehoge.comでアクセスしたい。Let's Encryptをつかう)
+- utf8ではなく**utf8_mb4** を文字セットにし、絵文字でも入力できるようにする。
+- Wordpressを**日本語化** する
+- **Amazon Linux2** にはインストールされていたが、Amazon Linux 2023にはデフォルトで入っていないミドルウェアを必要に応じて入れる。
+
+とはいえ、**最低限ブログが始められるようにできました。** 
+
+続きは以下の第４回の記事でご説明しています。
+ぜひご覧くださいませ。
+
+↓第４回はこちら
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-domain-setting"
+          icon='ri-links-line'
+          title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第4回（最終回）ドメイン編。"
+          subtitle="第4回はこちらからご覧いただけます。"
+          targetBlank={true}
+        />
+    <br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

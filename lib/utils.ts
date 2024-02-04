@@ -56,7 +56,7 @@ export const getRandomString = (length = 40) => {
 
 export const getTagColor = (tag: string) => {
 
-  let bgText = "text-white bg-orange-400 hover:text-orange-100 dark:bg-orange-700"
+  let bgText = "text-white bg-orange-400 hover:text-orange-100 dark:bg-orange-500"
 
   if (tag == 'Tips') {
     bgText = "text-black hover:text-gray-900 bg-cyan-100 "

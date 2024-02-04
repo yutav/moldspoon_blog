@@ -1,0 +1,251 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '大容量ZipファイルをAmazon S3からLaravel経由でユーザーにダウンロードさせる方法を解説',
+  date: '2023-12-22T14:23:28.000Z',
+  updateDate: "2024-01-12T11:18:00.000Z",
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    'PHP',
+    'Laravel',
+    'バックエンド',
+    'S3',
+    'ダウンロード'
+  ]
+}
+
+アニメ映画の巨匠のドキュメンタリーを繰り返し閲覧してしまい、メンタルだけでもクリエイターとして
+同じ心構えを持ちたいと思う今日この頃...
+
+Hackerの皆様いかがお過ごしでしょうか？
+
+## 本記事執筆の経緯
+
+現在私が関わっている**Laravelプロジェクト** で、<span className="hoso">ユーザーがWebサイトから投稿したZIPなどの大容量ファイルを大量保存させたいというニーズ</span>が生じました。
+
+#### Webサーバのディスク利用料はとても高い=低価格クラウドストレージにおきたい
+
+**ファイル容量がとても重いファイルをそのまま大量にサーバにおいてしまっては、AWSやGCPなどのクラウドサービスのディスク容量がとても嵩んでしまいます。** 
+
+例えばAWS EC2で使用するEBS(ディスクストレージ)の汎用　SSDの使用量は1GBあたり 0.096ドル(2023/12現在)。 1ドル140円と仮定すると
+**13.44円。100GB使用した場合<span className="text-red-500">1344円/月</span>** もかかってしまいます。
+
+ましてや、CGM(ユーザーが作成したコンテンツ)でユーザーが自由に100MB以上のファイルをあげられる。という案件においては、これがいかに直接設計要件に関わってくることは理解できるでしょう。
+
+そこで、**AWS S3のような低価格、かつ容量上限を気にせず保存できるストレージの必要性が増します。** 
+
+<MdxImage month="202312" image="lfsd1.png" annotation="EBSはかなり高額。一時ストレージとして使うのが望ましい" />
+
+S3にアップロードするシステムは本記事では割愛し、<span className="hoso">S3にファイルが設置してある状況から、いかにサーバに一時的にファイルを保存せず
+直接ユーザーのブラウザ経由でダウンロードさせるか</span>というのを本記事では考えてみます。
+
+<br />
+また、こうすることで貴重なサーバリソースであるメモリを大量に消費することを避けられ、安定稼働につながると考えました。
+
+## 本記事のゴール
+
+Amazon S3から、巨大なファイル(100MB~)をユーザーに直接ダウンロードさせたい。
+
+## 作業
+
+早速作業を始めていきます。
+
+### 前提
+
+今回は
+
+- 既存のS3バケットがあり、`data`というフォルダにテストファイルを入れておきます。
+- 既存のLaravel10プロジェクトがある
+- 実行するLinuxサーバあるいはローカルで作成したLaravel Sail環境がある
+
+を前提に作業を進めてまいりますので、まだの方は私が以前に書いた類似する作業の
+ポストをよろしければご覧ください。
+
+また、サンプルとして、`test.zip`という100MB以上のファイルを、作成したs3バケットの`/data/test.zip`に入れておきます。
+
+※特に、<span className="hoso">下記の記事にLaravel + S3の初期設定については書きました</span>ので、本記事では詳しい説明は省略させていただきます。
+
+##### S3からサーバにDLさせる方法はこちら
+
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/stream-download-from-s3-by-laravel"
+        moldspoonIcon={true}
+        title="大容量ファイルをAmazon S3+Laravelでサーバに落とす方法を詳細解説"
+        subtitle="Laravelを使って、Amazon S3に設置したとても大きな容量（1GB〜）をダウンロードしようとしましたが..."
+        targetBlank={true}
+      />
+
+こちらのポストは内容が似通ってはいますが、**ユーザーのブラウザを経由して、ユーザーのPCにダウンロードさせる、という点で異なります。**
+
+##### Laravel Sailの初期設定についてはこちら
+
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/how-to-start-laravel-filament"
+        moldspoonIcon={true}
+        title="【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編"
+        subtitle="管理画面を楽に作れるツールは続々と登場しますね。当ブログでは、以前にNext.js製のCMSツール Strapiの導入手順についてもご紹介しました..."
+        targetBlank={true}
+      />
+
+
+### 必要なライブラリのインストール
+
+以下のコマンドで必要なライブラリ[thephpleague/flysystem-aws-s3-v3](https://github.com/thephpleague/flysystem-aws-s3-v3)を予め`composer`を経由して入れておきます。
+
+```
+composer league/flysystem-aws-s3-v3
+```
+
+### envファイルにAWSのキーを書いておく
+
+`.env`の以下の箇所を実際のものに差し替えておきます。
+
+```
+AWS_ACCESS_KEY_ID=XXXXXXX
+AWS_SECRET_ACCESS_KEY=XXXXX
+AWS_DEFAULT_REGION=ap-northeast-1
+AWS_BUCKET=BucketName
+AWS_USE_PATH_STYLE_ENDPOINT=false
+```
+
+### configファイルを用意
+
+`config/aws.php`を作っておき、
+
+```
+<?php
+
+return [
+  'bucket' => env('AWS_BUCKET', ''),
+  'credentials' => [
+    'key'    => env('AWS_ACCESS_KEY_ID', ''),
+    'secret' => env('AWS_SECRET_ACCESS_KEY', ''),
+  ],
+  'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+  'version' => 'latest',
+  // You can override settings for specific services
+  'Ses' => [
+    'region' => 'us-east-1',
+  ],
+];
+
+```
+
+このように書いて保存します。
+
+```
+php artisan config:cache
+```
+
+でキャッシュするのを忘れず。
+
+### Controllerの作成
+
+今回の実装にあたり、`FileDownloadController.php`を作成しました。
+
+<CodeBlockTitle title="app/Http/Controllers/FileDownloadController.php" />
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller as Controller;
+use Illuminate\Http\Request;
+use AWS;
+use App\Models\TmpDownload;
+
+class FileDownloadController extends Controller
+{
+  public function index(Request $request)
+  {
+
+    // Validation
+    $request->validate([
+      'backup_name' => 'required|string'
+    ]);
+
+    $s3 = AWS::createClient('s3');
+
+    $s3->registerStreamWrapper();
+    $zipName = "test.zip"; // 前述通り、100MB以上のテスト用zipファイル
+
+    $key = "s3://" . config('aws.bucket') . "/data/" . $zipName; // 上記で設定したバケット名が使えるはず
+
+    $size = filesize($key);
+    header('Content-Type: application/octet-json');
+    header('Content-Length: ' . $size);
+    header('Content-Disposition: attachment; filename="' . rawurlencode($zipName) . '"');
+    readfile($key);
+    exit;
+  }
+}
+```
+
+ポイントとしては
+
+- ファイルを一度にダウンロードして、サーバ上のメモリに保存する方法ではなく、少しずつ読み取りを行う
+`registerStreamWrapper()`を使っている
+- **独自にレスポンスヘッダー**を組み立てている
+
+ことです。
+
+この方法であれば、**Laravelに限らず他のPHPプロジェクトでもダウンロードさせることは可能** です。
+
+反面`afterFilter`などの**フレームワークの事後処理を通らないので、この方法が本当に良いかは疑問** ではあります。
+とはいえ、今回はファイルを実際にダウンロードさせさえすればよいことから、妥協したいと思います...。
+
+#### FileStreamを使う方法はうまくいかなかった
+
+[FileStreamを使う方法](https://readouble.com/laravel/5.7/ja/releases.html)を実行している例もGoogle検索するといくつかありましたが、
+Laravel10の公式ドキュメントでは記述を見つけられず。また**結果として私の環境ではうまくいきませんでした。**
+
+もしうまくいかれた方おられましたらご教示ください...mm
+
+なお、LaravelのFileStreamは、中身は`\Symfony\Component\HttpFoundation\StreamedResponse`で元々**Symfonyで開発されたライブラリ**のようですね。
+先人の開発遺産に感謝です🥲
+
+### ルートを設定しておく
+
+ダウンロードの用のルートを予め設定しておきます。
+
+```
+use App\Http\Controllers\FileDownloadController;
+
+// 省略 ...
+
+Route::get('/file/download', [FileDownloadController::class, 'index']);
+```
+
+### 実際にリクエストしてみる
+
+今回の例では<span className="hoso">ブラウザから直接エンドポイントを叩いてみます。</span>
+
+```
+https://domainToProject.com/file/download
+```
+
+を叩くと、ダウンロードが始まり実際にファイルがダウンロードできるはずです。
+お疲れ様でした。
+
+## まとめ
+
+`afterFilter`を使えないことで後にどういうマイナス面が出てくるのかちょっと理解できていないことも
+ありますが<span className="hoso">実現できることがまず大事..と思い、ご紹介したいと思いました。</span>
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

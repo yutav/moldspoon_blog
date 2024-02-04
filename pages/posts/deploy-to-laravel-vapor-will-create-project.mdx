@@ -1,0 +1,157 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第2回 アカウント作成からIAMユーザー作成まで',
+  date: '2024-02-02T13:08:55.000Z',
+//  updateDate: '2024-01-13T08:05:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'Vapor',
+    'バックエンド',
+    'フレームワーク'
+  ],
+  description: '人気のPHPフレームワークLaravelをAWSが提供するサーバレス環境にデプロイする方法を丁寧に解説します。第2回の今回は実際にプロジェクトを立ち上げ、画面でアクセスできるまでを解説します。'
+}
+
+倍率が低めの読者投稿に当選しました。アイスクリームの商品券が郵送でやってきて家族大喜び。
+**仕事もプライベートもコツコツタイプの私です。**
+
+そんな今日この頃ですが、Hackerの皆様はいかがお過ごしでございましょうか。
+
+#### 第1回は以下からお読みください
+
+今回は、**Laravel Vapor環境を立ち上げてみる連載の続き**となります。
+連載第2回の今回は実際にプロジェクトを立ち上げ、画面でアクセスできるまでを解説します。
+どうぞ最後までお付き合いくださいませ。
+
+<RichLink
+url="https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor"
+moldspoonIcon={true}
+title="VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第1回 アカウント作成からIAMユーザー作成まで" 
+subtitle="本連載は、かなり丁寧に手順を書いていきますので、環境構築に慣れておられる方にとってはちょっと冗長かもしれません..."
+targetBlank={true}
+/>
+
+## 本記事のゴール
+
+[Vapor](https://vapor.laravel.com/)をつかってLaravelをサーバレス環境にデプロイし、**インフラの運用コストの低減を試みる** 
+
+## 環境の作成
+
+### Githubレポジトリを作成→プロジェクトをデプロイ
+
+早速、[前回](https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor)の続き、Vaporにログイン済みの状態から
+環境を新たに作っていきます。
+
+<MdxImage month="202401" image="vp201.png" annotation="" />
+
+**「Create Project」** を押します
+<MdxImage month="202401" image="vp202.png" annotation="" />
+
+今回は新たに環境を作るため **「Fresh Laravel Project」** を選択。
+<MdxImage month="202401" image="vp203.png" annotation="" />
+
+Regionは、デフォルトのN.Virginia以外に変更するとリージョンに制限があり...
+ということでエラーが出てしまいました。よって、デフォルトのまま行きます。
+
+#### Githubとの連携設定を行う
+
+** + Connect to GitHub ** の部分を押してGithub レポジトリを作ります。
+（アカウントがまだの方は[作成をお願いいたします](https://docs.github.com/ja/repositories/creating-and-managing-repositories/quickstart-for-repositories)。）
+<MdxImage month="202401" image="vp205.png" annotation="" />
+
+なお、[gitlab](https://gitlab.com/)や[bitbucket](https://bitbucket.org/)にはまだ対応していないみたいですね...
+その点は残念ですが特に困ることはないでしょう
+
+<MdxImage month="202401" image="vp206.png" annotation="" />
+
+ポップアップダイアログが出るので、アカウントを選択しましょう
+
+<MdxImage month="202401" image="vp207.png" annotation="" />
+
+下にスクロールして「Install」を押します。
+2段階認証が挟まると思うので、Google Authenticatorなど認証用アプリを経由して
+パスワードを入れます。
+
+<MdxImage month="202401" image="vp208.png" annotation="" />
+
+許可します。
+
+#### 許可が終わり、実際のデプロイを行う
+
+
+PHPバージョンを選択して、**DEPLOY** を押します。
+特に理由がなければ最新のものでいいでしょう（2024/02現在の最新はPHP8.2系)
+
+<MdxImage month="202401" image="vp209.png" annotation="" />
+
+<span className="hoso">CREATE を押して実際にデプロイ</span>します。
+
+<MdxImage month="202401" image="vp210.png" annotation="" />
+
+しばらく待つことになります。
+
+**レポジトリの作成（Laravelプロジェクトのコピー）からプロジェクトのアップロード（デプロイ）
+まで全部自動的に行われます！** これは便利❤️
+
+<MdxImage month="202401" image="vp211.png" annotation="" />
+
+無事立ち上がりました。**開発を始めるにあたってのリファレンス情報も色々と書いてくれています**ね。
+
+GO TO DASHBOARD を押すと下記画面になります。
+
+- データベース
+- ストレージ
+
+も追加できるようなので、連載の次回は実例を踏まえて追加作業を行ってみたいと思います。
+Laravelでは一般的なMySQLサーバを使ってサンプル処理を作ってみるとしましょう。
+
+<MdxImage month="202401" image="vp211.png" annotation="" />
+
+
+## まとめ
+
+Githubとの繋ぎ込み手順はよくある感じでしたが、
+そこからLaravelをデプロイするまではあったという間で素晴らしいと思いました。
+
+#### bitnamiと似ている
+
+LightsailとしてAWSが買収した[bitnamiのLaravelイメージ](https://bitnami.com/stack/laravel)とここまでのスピーディさでは
+似ているなと思いました。
+
+- GUIから環境構築が完結する
+- 初歩者でも、あまり難しく悩まず環境が立ち上がるまで作業が完結する
+
+ところが共通です。
+<br />
+
+#### 個人的にはVaporの方が進化系に感じる
+
+ただbitnamiについては、開発者が主体的にミドルウェアをupdateする処理を組まない限り、
+立ち上げた時点のままのミドルウェアとなります。
+
+反面、**Vaporなどのマネージドサービス**では「PHP8.2」などの明示的にユーザーが選択したソフト以外の<span className="hoso">ミドルウェアのアップデート作業はVapor側で自動的にやってくれるのでWebエンジニアとしての業務により注力できるようになる。</span>今風な仕組みになっているな、と感じました。
+
+もちろん、**インフラ・サーバ管理に精通している人にとってはLinuxサーバを丸ごと扱えるLightsail等のクラウドインスタンスの方が便利に感じるかもしれない**のでそこは人それぞれ、というところだと思いました。
+
+<span className="hoso">今時点ではVaporについてデメリットを感じていません</span>が、このままステップバイステップで評価を行えればと思っています。
+引き続きお付き合いくださると嬉しいです！
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}

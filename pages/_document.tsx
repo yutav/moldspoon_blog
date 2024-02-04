@@ -29,6 +29,7 @@ class BlogDocument extends Document {
           <Main />
           <NextScript />
           <Script
+            async={true}
             id="gtm"
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import styles from '../../../../styles/mdximage.module.css';
 import 'react-image-lightbox/style.css'; // Lightboxのスタイルをインポート
@@ -13,9 +13,11 @@ interface Prop {
   width?: number;
   height?: number;
   classStr?: string;
+  annotation?: string
+  isHalf?: boolean
 }
 
-const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr }) => {
+const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr, annotation, isHalf }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { isMedium } = useIsMobile()
   const baseUrl = process.env.baseUrl || ''; // ベースURLを適切に設定する必要があります
@@ -35,18 +37,31 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
     setLightboxOpen(false);
   };
 
+  const altEvaluated = useMemo(() => {
+    if (alt) {
+      return alt
+    }
+    else if (annotation) {
+      return annotation
+    }
+    return image
+  }, [alt, annotation, image])
+
+
+
   return (
     <div className={styles.imageContainer + ' ' + (addClass ? addClass : '')}>
       {month ? (
         <>
-          <div onClick={openLightbox}>
+          <div onClick={openLightbox} className='my-10'>
             <Image
-              className={`${styles.image} my-10 border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
+              className={`${isHalf ? styles.imageHalf : styles.image} border border-gray-300 shadow-lg cursor-pointer hover:opacity-50 ${classStr}`}
               src={imageUrl}
-              alt={alt}
+              alt={altEvaluated}
               layout="fill"
               objectFit="contain"
             />
+            {annotation && <p className={(isHalf && "w-1/2") + " text-xs text-center italic"}>{annotation}</p>}
           </div>
           {lightboxOpen && (
             <Lightbox
@@ -62,7 +77,7 @@ const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, 
         <Image
           className={`${styles.image} ${classStr}`}
           src={imageUrl}
-          alt={alt}
+          alt={altEvaluated}
           width={width}
           height={height}
         />

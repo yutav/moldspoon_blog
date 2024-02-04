@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'サーバがなくてもMySQLが使える！PlanetScaleとNext.jsを組み合わせ速攻でDBに接続する方法。',
   date: '2023-10-04T09:00:00.000Z',
-  updateDate: '2023-10-05T12:22:53.000Z',
+  updateDate: '2023-11-06T8:04:55.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -30,6 +30,18 @@ Next.jsで利用する具体例を交えながら、利用準備が整うまで�
 コンセプトは似ています。よろしければこちらもご覧ください。
 
 参考記事: [Next.js製ブログにアクセスカウンターを追加する作業でSupabase使ってみた。](https://moldspoon.jp/blog/posts/add-supabase-access-counter-to-blog)
+
+#### 注意点
+
+PlanetScaleは**foreign key制約(外部キー制約)をサポートしていない** ので、既存DBからの移行ができない可能性がありますので
+検討にあたりこの点を確認されることをお勧めします。
+
+また、多額の資金調達をしているものの、未だ正式リリース版となっていないことにも商用利用にあたり、注意が必要かと思われます。
+
+参考記事:[PlanetScaleとは何か、なぜ外部キー制約をサポートしていないのか](https://zenn.dev/tak_iwamoto/articles/b27151d22d9e6a)
+参考記事:[PlanetScale is now generally available](https://planetscale.com/blog/ga)
+
+※ 2023/10/21追記
 
 ### 作業
 

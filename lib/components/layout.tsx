@@ -8,7 +8,6 @@ import { Configs, changeTitle } from '../utils'
 import ShareButtons from './original/parts/ShareButtons'
 import TagLinks from './original/parts/TagLinks'
 import IntroduceMyself from './original/parts/IntroduceMyself'
-import "remixicon/fonts/remixicon.css"
 import BLOG from 'blog.config'
 import { getDNSPrefetchValue } from 'lib/data-transform'
 import { useRouter } from "next/router"
@@ -16,7 +15,10 @@ import { usePageCounter } from 'hooks/usePageCounter'
 import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
-
+import GoogleAdsense from './original/parts/GoogleAdsense'
+import DetailLeftBox from './original/parts/DetailLeftBox'
+import "../../scripts/marker.js";
+import Script from 'next/script'
 export type PostMetadata = {
   title: string
   date: string
@@ -79,6 +81,26 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         name="viewport"
         content="initial-scale=1, maximum-scale=5, minimum-scale=1, viewport-fit=cover"
       />
+      {(process.env.NODE_ENV == 'production') && (
+        <Script strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1104475365452915" crossOrigin="anonymous" />
+      )}
+      <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} media="all"
+        // // Next.js doesn't like this but it allows us to load CSS asynchronously
+        // @ts-ignore
+        onload="this.media='all';this.onload=null;"
+      />
+      <noscript>
+        <link rel="stylesheet" href={`${process.env.baseUrl}/css/speed-highlight-1.2.4/default.css`} />
+      </noscript>
+      <link rel="stylesheet" href={`https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css`} media="all"
+        // // Next.js doesn't like this but it allows us to load CSS asynchronously
+        // @ts-ignore
+        onload="this.media='all';this.onload=null;"
+      />
+      <noscript>
+        <link rel="stylesheet" href={`https://cdn.jsdelivr.net/npm/remixicon@4.0.0/fonts/remixicon.css`} />
+      </noscript>
     </Head >
   )
 }
@@ -151,7 +173,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   }
 
   return (
-    <section className="animate-fadeIn">
+    <section>
       <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
       <div className="flex">
         <div className="container p-0 lg:px-12 bg-white dark:bg-black lg:shadow">
@@ -162,11 +184,43 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
             <>
               <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
               <TagLinks tags={meta.tags} />
-              <div className="dynamic-content">
+              <div className="dynamic-content detail-body">
                 <IntroduceMyself />
                 {children}
               </div>
               <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+
+              <DetailLeftBox detailContents={
+                <div>
+
+                  <div className="bg-white dark:bg-black xl:shadow rounded-lg p-0 xl:p-6 mb-2">
+                    <h3 className="!mt-0 mb-6">検索</h3>
+                    <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
+                      <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
+                      <input
+                        type="text"
+                        name="search"
+                        className={"w-full text-xl bg-transparent "}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          console.log(e.key)
+                          console.log(composing)
+                          switch (e.key) {
+                            case "Enter":
+                              if (composing) break;
+                              handleSearch();
+                              break;
+                          }
+                        }}
+                        onCompositionStart={startComposition}
+                        onCompositionEnd={endComposition}
+                      />
+                    </div>
+                    <p className="text-xs">※Google検索を使用しています。</p>
+                  </div>
+                </div>
+              } />
               <Toc body={childrenHtml} />
 
             </>
@@ -182,11 +236,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         </div>
 
         {inDetailPage ? (<></>) : (
-          <div className="mt-6 ml-6 right-container hidden xl:block h-screen">
+          <div className="mt-2 ml-6 right-container hidden xl:block h-screen">
 
-
-            <div className="right-container bg-white dark:bg-black lg:shadow rounded-lg fixed z-2">
-              <div className="m-6">
+            <div className="right-container fixed z-2">
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-2">
                 <h3 className="mb-6">検索</h3>
                 <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
                   <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
@@ -211,8 +264,22 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                   />
                 </div>
                 <p className="text-xs">※Google検索を使用しています。</p>
-
               </div>
+
+              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2"
+                style={{ minHeight: '400px', maxHeight: "550px" }}
+              >
+                <p className='text-xs py-1 my-0'>Ads:</p>
+                {/* blog-top-square */}
+                {(process.env.NODE_ENV == 'production') && (
+                  <GoogleAdsense
+                    client="ca-pub-1104475365452915" //
+                    slot="1717621406"
+                    style={{ display: 'block' }}
+                  />
+                )}
+              </div>
+
             </div>
           </div>
         )}
@@ -283,7 +350,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         }
 
         .right-container {
-          width: 300px;
+          width: 348px;
         }
 
         .right-container :global(h3) {

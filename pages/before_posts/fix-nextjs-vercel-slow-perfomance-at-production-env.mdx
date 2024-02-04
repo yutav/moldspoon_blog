@@ -1,0 +1,88 @@
+Next.jsサイトが重い理由を解決
+
+## useEffectが2回呼ばれてしまう
+
+なぜか、useEffectが2回呼ばれてしまっていました。
+chatGPTにも質問しましたが、
+以下のような
+
+
+```
+  useEffect(() => {
+    let isFirstRender = false
+    async function readFirst() {
+	if(isFirstRender == true) {
+		return
+		}
+      try {
+        const response = await request({ token: session?.user?.accessToken || "" });
+		setResponse(response)
+      } catch (e: any) {
+      }
+    }
+    readFirst()
+    return () => {
+      isFirstRender = true;
+    };
+  }, [])
+```
+
+`next.config.js`の
+useStrictModeをoffに
+
+## test
+
+`node_modules/next-auth/src/core/types.ts/CallbacksOptions/session`
+の中の以下の箇所
+
+```
+   * This callback is called whenever a session is checked.
+   * (Eg.: invoking the `/api/session` endpoint, using `useSession` or `getSession`)
+   *
+   * ⚠ By default, only a subset (email, name, image)
+   * of the token is returned for increased security.
+   *
+   * If you want to make something available you added to the token through the `jwt` callback,
+   * you have to explicitly forward it here to make it available to the client.
+   *
+   * [Documentation](https://next-auth.js.org/configuration/callbacks#session-callback) |
+   * [`jwt` callback](https://next-auth.js.org/configuration/callbacks#jwt-callback) |
+   * [`useSession`](https://next-auth.js.org/getting-started/client#usesession) |
+   * [`getSession`](https://next-auth.js.org/getting-started/client#getsession) |
+   *
+   */
+  session: (
+    params:
+      | {
+          session: Session
+          /** Available when {@link SessionOptions.strategy} is set to `"jwt"` */
+          token: JWT
+          /** Available when {@link SessionOptions.strategy} is set to `"database"`. */
+          user: AdapterUser
+        } & {
+          /**
+           * Available when using {@link SessionOptions.strategy} `"database"`, this is the data
+           * sent from the client via the [`useSession().update`](https://next-auth.js.org/getting-started/client#update-session) method.
+           *
+           * ⚠ Note, you should validate this data before using it.
+           */
+          newSession: any
+          trigger: "update"
+        }
+  ) => Awaitable<Session | DefaultSession>
+```
+
+## vercelのリージョンを変更する
+
+下記の記事と同様に、
+Project Settings -> Functions
+から下記画像の場所を「Tokyo, Japan (Northeast) - hnd1」に変更した。
+
+参考記事: [Next.js × Supabase × Vercelで表示速度が激遅だったので調査した結果](https://zenn.dev/ksk2/articles/ddca8bf5a4ddd1)
+
+vercelのデフォルトのリージョンってワシントンなんすね、、
+ここの解決に1日かかったわ。マジで勘弁してほしい。。
+
+バックエンドが東京 => フロントエンドがワシントンということで、そりゃ開発環境よりレイテンシかかるよなという。。
+
+しかも、Edge CDNみたいなやつで、最寄りのCDNに接続してくれるから、セレクトボックスを変更した瞬間

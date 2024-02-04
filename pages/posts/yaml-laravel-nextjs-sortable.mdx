@@ -1,0 +1,310 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'LaravelとNextjsの両方で設定ファイルを兼用する 第2回 YAMLに後からパラメータ追加・ソートできるように',
+  date: '2024-01-01T18:07:47.000Z',
+  updateDate: "2024-01-12T11:18:00.000Z",
+  tags: [
+    'Tips',
+    '経験者向け',
+    'プログラミング',
+    '設定ファイル',
+    'YAML',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'PHP',
+    'Laravel',
+    'バックエンド',
+    '連載記事',
+    'ソート'
+  ],
+  description: 'LaravelとNextjs、フロントエンドとバックエンドの両方で同じ設定ファイル(YAMLファイル)を参照できるようにする特集 第2回、前回設定したYAMLをソート可能なように構成を変更します。'
+}
+
+<div className="bg-yellow-100 my-6 px-6 py-2 border-l-4 border-yellow-700">
+**🐉&nbsp;2024年、初めの記事となります。本年もよろしくお願いいたします！**
+</div>
+
+私ごとなのですが...
+
+気分転換に散歩していて、**不思議な建築を見つけるとすぐググってしまう習慣を持っている** のですが、Hackerの皆様はいかがお過ごしでしょうか..。
+
+さて、今回は前回YAML化した設定ファイルを、並び替えできるように実装を変えていこうと思います。
+
+#### 前回記事はこちらから😀
+
+よろしければ第1回の記事もご参照くださいませ。
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/yaml-file-using-both-laravel-and-nextjs"
+                moldspoonIcon={true}
+                title="LaravelとNextjsの両方で設定ファイルを兼用する 第1回YAML化"
+                targetBlank={true}
+            />
+
+## おさらいと改修方針
+
+前回のYAMLを振り返るとこのように書いていました。
+
+<CodeBlockTitle title="storage/app/config.yaml" />
+
+```yaml
+order:
+  statuses:
+    name:
+      - '新規',
+      - '梱包中'
+      - '梱包完了'
+      - '発送準備'
+      - '発送開始'
+      - '配送センターに向けて輸送中'
+      - '配送センター到着'
+      - '顧客に向けて配達中'
+      - '配達完了'
+      - '返送中'
+      - '返送完了'
+```
+
+こちらを、前回ご説明したように`js-yaml`でパースし、**配列としてhtmlに書き出せるようにした** かと思います。
+
+ただこのままでは、<span className="hoso">途中に新しい項目を追加した場合、配列のindexがずれてしまい、
+キー・IDとしては使えないという問題</span>に当たることになります。
+
+固定的なステータスで使うケースでなければ実用性がないのです。
+
+具体的には以下のような感じです。
+
+### 後から項目追加するケースに対応できない
+
+
+第1回の[こちら](https://moldspoon.jp/blog/posts/yaml-file-using-both-laravel-and-nextjs#%E5%95%8F%E9%A1%8C%E3%81%8C%E7%94%9F%E3%81%98%E3%81%9F%E7%B5%8C%E7%B7%AF)のselect boxに書き出していたものに、「返送前」というステータスを追加したとします。
+Next.jsのコンポーネントで書き出すと以下のようになります。
+
+```
+<select name="status">
+{statuses.map((status, index) => {
+  return (
+    <option key={index} value={index}>{status}</option>
+  )
+})}
+```
+
+その結果、ステータス追加後に出力されるhtmlは以下のようになります。
+
+```
+<select name="status">
+  <option value="1">新規</option>
+  <option value="2">梱包中</option>
+  <option value="3">梱包完了</option>
+  <option value="4">発送準備</option>
+  <option value="5">発送開始</option>
+  <option value="6">配送センターに向けて輸送中</option>
+  <option value="7">配送センター到着</option>
+  <option value="8">顧客に向けて輸送中</option>
+  <option value="9">到着</option>
+  <option value="10">返送前</option>
+  <option value="11">返送中</option> <!-- valueがずれちゃってる！ -->
+  <option value="12">返送完了</option> <!-- valueがずれちゃってる！ -->
+</select>
+```
+
+追加した「返送前」より後の項目に不都合がありそうです。
+
+これではデータベースなどにこの`status`の登録処理を行った場合、<span className="hoso">登録後の
+後続のステータスのID値が必ずずれてしまい、データ管理上とても支障をきたす</span>ことになります。
+
+### DBテーブル化すれば解決することもあるが、今回はしない
+
+**ぶっちゃけデータベースのテーブルに置き換えてしまえば解決できるかもしれません。** Next.jsで対応するのであれば、[prisma](https://www.prisma.io/)から呼ぶなり、
+APIを呼び出すなりして参照できます。
+
+ただ、**データベースを使えないケースや、開発効率を考えるとわざわざテーブル化までしなくてもいいというケースもありうる**ので、それを想定して
+今回はソートできるYAMLを考えてみたいと思います。
+
+<br />
+（なお、本筋から話がずれますがprismaについては以下で解説している記事が当ブログにございます🙇）
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/authjs-with-prisma"
+                moldspoonIcon={true}
+                title="NextAuth+Prisma+Next.jsによるDB認証が実用的でないのでなんとかした件"
+                subtitle="既存のNext.jsプロジェクトに、人気の認証ライブラリ「Auth.js」とDBアダプター「Prisma」を利用して認証機構を導入したいところ..."
+                targetBlank={true}
+            />
+
+## 実装
+
+ということで、早速始めていきます。
+
+### subtitleもキー追加しちゃおう
+
+とその前に...
+
+
+`name`という構造だけでは要件上済まないことも多いですよね。
+例えば、「梱包中」というステータスはどんな状態か、解説する`subtitle`という項目が必要になるケースってよくあると思います。
+
+よって、今回のサンプルでも`subtitle`というキーを追加し、丸ごとソートできるようにしちゃいましょう。
+
+### YAML構造の見直し
+
+結果、YAML構造は以下のように変えます。
+
+<CodeBlockTitle title="new.yaml" />
+
+```yaml
+order:
+  statuses:
+    rank:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 101
+      - 200
+      - 100
+    statusObjects:
+      name:
+        - '新規'
+        - '梱包中'
+        - '梱包完了'
+        - '発送準備'
+        - '発送開始'
+        - '配送センターに向けて輸送中'
+        - '配送センター到着'
+        - '顧客に向けて配達中'
+        - '配達完了'
+        - '返送中'
+        - '返送完了'
+        - '返送前'
+      subtitle:
+        - '新規の解説'
+        - '梱包中の解説'
+        - '梱包完了の解説'
+        - '発送準備の解説'
+        - '発送開始の解説'
+        - '配送センターに向けて輸送中の解説'
+        - '配送センター到着の解説'
+        - '顧客に向けて配達中の解説'
+        - '配達完了の解説'
+        - '返送中の解説'
+        - '返送完了の解説'
+        - '返送前の解説'
+```
+
+ポイントは以下の3点です
+
+- ソートのためにつかう**rank** というキーを新たに用意した。
+- **name,subtitle**は**statusObjects**というキーの下にぶら下げることで、<span className="hoso">あとで出力時にループの形で使いやすくした。</span>
+- テストのために、rankは単純な連番にしない（飛び飛びの番号を指定してソートしたい時もあるだろうから）
+
+### 完成したソースコード
+
+思ったより長くなってしまいました。
+一旦こちらで公開としますが、**関数化をすればもう少しシンプルな処理にできると思いました。**
+
+今回は、サンプルであるということもありファイルが複数に分散するのもちょっと見にくいのでこのまま載せてしまいます。何卒ご了承ください。
+
+<CodeBlockTitle title="src/app/test/page.tsx" />
+
+
+```typescript
+import { getConfigData } from "@/utils/config"
+
+const Page = () => {
+  // configファイルを読み込み
+  const config = getConfigData('config.yaml')
+
+
+  const orderStatuses = config.order.statuses
+
+  const ranks = orderStatuses.rank
+  const sortedRanks = [...orderStatuses.rank].sort((a, b) => a - b)
+  const sortedIndexArray = Array.from({ length: ranks.length }, (_, index) => index + 1)
+  let rankHash: { [index: number]: number } = {}
+  let sortedRankToIndexHash: { [index: number]: number } = {}
+  let newIndexToOldIndexHash: { [index: number]: number } = {}
+
+  // indexをキーに、rankを値にしたハッシュを作る
+  ranks.forEach((rank: number, index: number) => {
+    rankHash[rank] = index;
+  });
+
+  // ソート済みrank配列を使って、ソート済みrankから新indexを取れるハッシュを作る
+  sortedRanks.forEach((sortedRank: number, index: number) => {
+    sortedRankToIndexHash[sortedRank] = index
+  })
+
+  // 新 => 旧indexを確認できるハッシュを作る
+  Object.entries(sortedRankToIndexHash).forEach(([sortedRank, newIndex]) => {
+    const oldIndex = rankHash[Number(sortedRank)]
+    newIndexToOldIndexHash[Number(newIndex)] = oldIndex
+  });
+
+  // ソートした状態で、元の「orderStatuses」と同じ構造で詰め直す
+  let sortedNames: string[] = []
+  let sortedSubtitles: string[] = []
+
+  sortedRanks.forEach((sortedRank: number, index: number) => {
+    const newIndex = sortedRankToIndexHash[sortedRank]
+    const oldIndex = newIndexToOldIndexHash[newIndex]
+    const name = orderStatuses.statusObjects.name[oldIndex]
+    const subtitle = orderStatuses.statusObjects.subtitle[oldIndex]
+    sortedNames.push(name)
+    sortedSubtitles.push(subtitle)
+  })
+
+  // TODO:毎回手作業でキーパターンを追加しなければいけなくなりそうなので、抽象化するメソッドにしたい。
+  const sortedData = {
+    rank: sortedRanks,
+    statusObjects: {
+      name: sortedNames,
+      subtitle: sortedSubtitles
+    }
+  }
+
+  return (
+    <div>
+      {sortedData.statusObjects.name.map((name, index) => (
+        <div key={index} className="m-2 px-4 py-2 shadow ">
+          <h2>{name}</h2>
+          <p className="text-xs text-gray-400">{sortedData.statusObjects.subtitle[index]}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default Page
+```
+
+##### 補足: getConfigData()の実装
+
+なお、yamlを取得する`getConfigData()`は[前回](https://moldspoon.jp/blog/posts/yaml-file-using-both-laravel-and-nextjs#%E3%82%B3%E3%83%B3%E3%83%95%E3%82%A3%E3%82%B0%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%82%80)
+の記事でご確認をいただけますのでそちらをご利用くだされば幸いです。
+
+## まとめ
+
+今回は**DBなしでもソートできるYAML**ということで<span className="hoso">ちょっと無理した感じが強かった</span>です...。
+すでに書かせていただきましたが、**単純なデータの羅列からやることが抜け出した場合は、素直にデータベースを使うべきだと改めて感じた次第でした。**
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

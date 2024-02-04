@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Next.jsプロジェクトで、Zodを使ってらくらくバリデーション',
   date: '2023-08-21T08:30:00.000Z',
+  updateDate: '2024-01-09T00:21:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -22,13 +23,13 @@ export const meta = {
 Next.jsプロジェクトに、サクッとバリデーション処理を追加したい。
 でき上がりのサンプルプロジェクトは下記にあります。
 
-<RichLink 
-url="https://github.com/moldspoon/demo-nextjs-zod-sample" 
-icon='ri-github-fill'
-title="demo-nextjs-zod-sample" 
-subtitle="githubのサンプルプロジェクト"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/moldspoon/demo-nextjs-zod-sample"
+          icon='ri-github-fill'
+          title="demo-nextjs-zod-sample"
+          subtitle="githubのサンプルプロジェクト"
+          targetBlank={true}
+        />
 
 ### 作業
 
@@ -57,13 +58,13 @@ yarn add zod react-hook-form @hookform/resolvers
 ```
 最後の`@hookform/resolvers`は、react-hook-formでzodを利用するために必ず必要なのでもれなくインストールしてください。
 
-<RichLink 
-url="https://github.com/react-hook-form/resolvers#zod" 
-icon='ri-github-fill'
-title="react-hook-form/resolvers#zod" 
-subtitle="ここでzodでの用法を確認できます。"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/react-hook-form/resolvers#zod"
+          icon='ri-github-fill'
+          title="react-hook-form/resolvers#zod"
+          subtitle="ここでzodでの用法を確認できます。"
+          targetBlank={true}
+        />
 
 インストールが完了したら、ルートで
 ```
@@ -84,7 +85,7 @@ yarn run dev
 
 ##### 1.対象のComponentでライブラリをインポート。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 "use client";
@@ -106,7 +107,7 @@ import { useState } from 'react';
 PHP系フレームワーク（バックエンドで私がよく使う）のこういうバリデーション処理って、`retype_password`のバリデーション定義で一致もそのまま書けるイメージがありますが、Zodでは
 `refine()`というメソッドを後付けで追加してバリデーションします。少し癖があるので要注意です。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 const schema = z.object({
@@ -127,17 +128,17 @@ react-hook-formは通常のhtmlに、バリデーション処理を簡便に注�
 もし興味があれば、以下のリンクを参照してみてください。
 
 
-<RichLink 
-url="https://github.com/react-hook-form/resolvers#quickstart" 
-icon='ri-github-fill'
-title="react-hook-form/resolvers#quickstart" 
-subtitle="それぞれのリソルバの書き味を比較できます。ただこれだけだと比較上物足りない面も。本来的に比較するには、モック的に実装してみるしかないかも...？"
-targetBlank={true}
- />
+    <RichLink
+          url="https://github.com/react-hook-form/resolvers#quickstart"
+          icon='ri-github-fill'
+          title="react-hook-form/resolvers#quickstart"
+          subtitle="それぞれのリソルバの書き味を比較できます。ただこれだけだと比較上物足りない面も。本来的に比較するには、モック的に実装してみるしかないかも...？"
+          targetBlank={true}
+        />
 
 私の方では、公式ドキュメントに載っている一般的なやり方で実装していきます。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 const Page = () => {
@@ -179,7 +180,7 @@ const Page = () => {
 最終的に、Next.jsプロジェクトのエントリーポイントとなる`src/app/page.tsx`のソースコードは以下となります。
 先述の通りNext 13プリインの**tailwindcss**をそのまま使っているので、1ファイルでほぼ処理が完結しています。
 
-<CodeBlockTitle title="src/apps/page.tsx" />
+    <CodeBlockTitle title="src/apps/page.tsx" />
 
 ```typescript
 "use client";
@@ -277,10 +278,142 @@ const Page = () => {
 export default Page
 ```
 
+### バリデーションの逆引き一覧
+
+以下に、私のほうで実際に使ったさまざまなバリデーションパターンを逆引き形式で、気づき次第追記していきます。
+
+#### URLのバリデーションをするには？
+
+```
+  url: z.string().url({ message: 'URLを入力してください' }),
+```
+
+実際に試したところ、`http://`または`https://`が入力されているかどうかが条件で、`.com`などのドメイン形式となっているかどうかは
+判定条件ではないようです。よって、**ドメインのバリデーションが必要な場合** は以下のように正規表現を使います。
+
+```
+    .regex(/^https?:\/\/(.+?)\.(.+?)/, { message: 'URLを入力してください' }),
+```
+
+#### 相対パスのバリデーションをするには？
+
+`./`で始まるURLのバリデーションをするには以下のように正規表現を使います。
+`./hogehoge`や`./hogehoge/fugafuga`といった多階層の相対パスも一致します。
+
+```
+  path: z.string().regex(/^\.\/(.*)/, { message: 'パスを相対パスの形式で入力してください。' }),
+```
+
+ちなみに絶対パスのバリデーションをしたい時も大きな変更はないです。`\.`を取るだけです。
+
+```
+  path: z.string().regex(/^\/(.*)/, { message: 'パスを絶対パスの形式で入力してください。' }),
+```
+
+#### 値が数値のセレクトボックスのバリデーションをするには？
+
+以下のようにします。ポイントは、`valueAsNumber`をオプションで指定し、<span className="hoso">数字としてzodで判定するようにする</span>こと。
+
+```
+<select name="pref" {...register('pref',{ valueAsNumber: true })}>
+  <option value={0}>未選択</option>
+  <option value={1}>北海道</option>
+  <option value={2}>青森県</option>
+  // 中略
+  </option value={47}>沖縄県</option>
+</select>
+```
+
+こうすることで、未選択を0として扱い、**1以上をバリデーション通過**というシンプルな形で判定が可能です。
+
+```
+ pref: z.number().min(1, { message: '都道府県を選択してください' }),
+```
+
+#### 日本のハイフン付き電話番号のバリデーションをするには？
+
+**日本のハイフン付きの電話番号** の場合ですと、
+
+- 03-1234-5678
+- 050 or 070 or 080 or 090-1234-5678
+
+といった電話番号以外にも複雑なパターンがありそうですが、問い合わせなどのケースを考えて、一般的な電話番号を対象に緩めにバリデーションしておきます。
+
+```
+contact_tel: z.string().nullable()
+    .refine((value) => {
+      const phoneNumberPattern = /^0\d{2,3}-\d{3,4}-\d{3,4}$/; //
+
+// nullまたは空文字列の場合は検証をスキップ
+      if (value === null || value === '') {
+        return true;
+      }
+
+      return phoneNumberPattern.test(value);
+    }, { message: '正しい電話番号を入力してください' }),
+```
+
+（もう少し厳しいバリデーションルールにニーズがありそうならば、記事化します）
+
+#### 利用規約などチェックボックスのバリデーションをするには？
+
+下記のようなチェックボックスタイプのパーツは、
+
+```
+<div className="flex items-start mb-1">
+  <div className="flex items-center h-5">
+    <input id="term" type="checkbox" {...register('term', { required: true })} value="" className={border border-gray-300 w-4 h-4 rounded bg-gray-50"} />
+  </div>
+  <label htmlFor="term" className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"><Link href="/term" className="text-blue-600 hover:underline dark:text-blue-500">ご利用規約</Link>に同意する</label>
+</div>
+```
+
+このように、`refine()`を使って判定を行います。
+
+```
+  term: z.boolean().refine((value) => value === true, { message: '注意事項・利用規約をお読みいただき同意してください。' }),
+```
+
 ### まとめ
 
-Next.js + react-hook-form + zodの組み合わせで、一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。
+Next.js + react-hook-form + zodの組み合わせで、<span classNme="hoso">一度雛形を作ってしまえばform処理をすごいスピード（Ruby on RailsやLaravelなどの古典的なバック・フロント同梱のフレームワークと比べ）で量産できます。</span>
 ただ、DBと連関する処理や認証処理などは別途用意せねばなりませんので、用途によってはという注意書きはつきますが、少なくとも初学者などには非常に向いているソリューションだと思いました。
+
+##### 補足: 本ブログのNext.js関連記事
+
+※ 2023.11.19 追記
+
+ブログを色々書き進めて、React/Next.js関連の記事がちょっと増えてきたので、
+こちらに併記させていただきます。もしよろしければお読みくださいませ。
+
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/react-hook-form-and-zod"
+        icon='ri-link'
+        title="react-hook-formと組み合わせるバリデーションライブラリ５選"
+        subtitle="ここでzodでの用法を確認できます。ReactやNext.jsでフォームのバリデーションを行いたいけれど..."
+        targetBlank={true}
+      />
+  <br />
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/add-planetscale-to-nextjs-project"
+        icon='ri-link'
+        title="サーバがなくてもMySQLが使える！PlanetScaleとNext.jsを組み合わせ速攻でDBに接続する方法。"
+        subtitle="この記事では、MySQLをクラウドで立ち上げ、速攻で利用を開始できるIPaaSサービス、PlanetScaleについて..."
+        targetBlank={true}
+      />
+      <br />
+  <RichLink
+        url="https://moldspoon.jp/blog/posts/add-toc-to-blog"
+        icon='ri-link'
+        title="Next.js製ブログにオリジナルの目次を追加する。"
+        subtitle="今回は、Next.jsで作られているこのブログにオリジナルの目次を追加しようと思いました。..."
+        targetBlank={true}
+      />
+
+
+以上でございます。
+    <br />
+
 
 この記事が何かのお役に立てれば幸いです。
 最後までお読みいただきありがとうございました！

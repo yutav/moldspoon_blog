@@ -42,6 +42,9 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
             <Link aria-label="about" href={process.env.baseUrl + "/about"} {...linkProps}>
               このブログについて
             </Link>
+            <Link aria-label="about" href={process.env.baseUrl + "/privacy"} {...linkProps}>
+              プライバシーポリシー
+            </Link>
           </div>
         </div>
 
@@ -52,8 +55,6 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
             position: absolute;
             z-index: 1;
             bottom: 3.5rem;
-            left: 785px;
-            transform: translateX(-50%);
             color: ${theme.palette.accents_6};
           }
 

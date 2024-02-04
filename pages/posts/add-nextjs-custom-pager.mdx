@@ -1,0 +1,300 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Markdownで執筆するNext.js製のブログに、ページ送り処理を追加する。',
+  date: '2023-11-20T11:39:37.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'Pager',
+    'Paging',
+    'Markdown',
+    'マークダウン',
+    'フロントマター'
+  ],
+  description: 'Markdownで記事を作っていくタイプのNext.jsベースのブログに、ページ送り処理がなかったので、独自に追加作業を行いました。詳しい作業について解説していきます。'
+}
+
+## 本記事のゴール
+
+Next.js製プロジェクトである、このブログにページ送り処理を追加し、ユーザーが古い記事を見るためにページ送りができるようにする。
+
+## 作業
+
+このブログは、[unix.bio](https://github.com/unix/unix.bio)をもとに色々と改造を施しているのですが、
+ブログに絶対必要な**ページ送り** が元のライブラリの状態ではありませんでした。
+
+それでは物足りないので、ページ送りの追加をしてみます。
+**unix.bio**だけでなく、Markdown記事をmetadataとして生成する他のフレームワーク、例えば[Tailwind Nextjs Starter Blog](https://github.com/timlrx/tailwind-nextjs-starter-blog)などでも
+参考になれば幸いです。
+
+### 要件定義
+
+マークダウンファイルである、`.mdx`形式でブログ記事が書かれているため、
+ページを送るたびにajaxで都度、サーバサイドに結果を取得しにいくような実装ではなく、<span className="hoso">json形式のmetadataファイルから内容を一気に読み込み、ページごとに分割</span>するようにします。
+
+この読み方ですと、コンテンツ数・ページ数がめちゃくちゃ増えるとパフォーマンスの面で破綻する気がしますが一旦気にしないことにしましょう...。
+
+- ページ送りのURL形式は、`/blog/posts/page/[ページ番号]`とする。
+- 各ページは、SEO対策も考慮し、SPAで動くのではなく、各URLでアクセスされたときもそのページのコンテンツから表示できるようにする
+- このテンプレート（に限らず大抵のMarkdown執筆のテンプレート）はjson形式のファイルからデータを起こすようになっているので、それを前提としたデータ取得方法にする。
+
+### 設計
+
+具体的に設計を進めます。
+unix.bioでは、Next13を採用しているものの、**現在推奨されているAppレイアウトではなく、Pageレイアウトなので
+その点はご了承ください。**(本記事も参考になるとは思います...)
+
+なお、Pageレイアウトについては以下の公式ドキュメントのページで解説されています。
+
+[Pages and Layouts](https://nextjs.org/docs/pages/building-your-application/routing/pages-and-layouts)
+
+    <br />
+設計を検討した結果、以下のように進めます。
+
+- unix.bioはブログ記事のコンポーネントは`lib/posts/posts.mdx`というファイルとなっており、これに、ページ番号`page`を引数として渡すように改造する。
+- 1ページ目を受け取るのは従来通りブログのトップである`[baseUrl]` ファイルで言うと`/pages/index.mdx`
+- 2ページ目以降は`[baseUrl]/page/2`というURLになる。ファイルで言うと、`/page/[pageNum].mdx`となり、[pageNum]のところでページ番号を引数として受け取る。
+
+### 実装を進める
+
+結論から言うと、実際にページ送りを行う処理は、**Reactで動くフロントエンドフレームワークライブラリ** の[MaterialUI](https://mui.com/material-ui/)の**Pagination** というライブラリに**お願いしちゃおう** と判断しました。ページャーを自前で作ると、
+
+- 選択時に該当ページ番号に色がつく
+- マウスオーバー時に色を変える
+
+といった処理を<span className="hoso">全て自前でCSS実装しなければいけないので大変</span>だと思いました...。
+
+下記の参考記事等を見て、外部ライブラリに頼ってしまうのが結果早いと判断した次第でした。
+参考にさせていただきありがとうございました。
+
+[Next.js+Material-UIのPaginationでリストを作る](https://qiita.com/yurik/items/67c72cbd430c0fabca9b)<br />
+[Next.js / MUI (Material UI) でページネーション作成](https://zenn.dev/k16tkhs/articles/2436db229e74e7)
+
+#### 着地点のページファイル [pageNum].tsx
+
+**ページ送り毎の処理をブラウザから最初に受け取る**ページファイルは以下のようになります。
+先述の設計方針に沿って、`[pageNum].tsx`という名称で作りました。
+
+    <CodeBlockTitle title="/pages/page/[pageNum].tsx" />
+
+```typescript
+import React from 'react'
+import { Layout, Posts } from 'lib/components'
+import { useRouter } from "next/router"
+import { Loading } from '@geist-ui/core'
+const Page: React.FC<unknown> = () => {
+  const router = useRouter()
+
+  const page = Array.isArray(router.query.pageNum) ? router.query.pageNum[0] : router.query.pageNum;
+
+  if (page == undefined) {
+    return <Layout>
+      <Loading />
+    </Layout>
+  }
+
+  return (
+    <Layout>
+      <Posts page={Number(page)} router={router} />
+    </Layout>
+  )
+}
+
+export default Page
+```
+
+#### 一覧画面の各行（記事へのリンク）を出力する実態 posts.tsx
+
+`<Posts>`は、ページ送りの1ページ目の`index.tsx`とこちらの**双方から呼ばれているコンポーネント** です。このPostsコンポーネントでは、pageが引数として**nullable** になっており、<span className="hoso">指定しなくてもTypeScriptのエラーが出ないようになっています。</span>
+
+実際に改修した後の`posts.tsx`は以下になります。
+
+    <CodeBlockTitle title="/lib/posts/posts.tsx" />
+
+```typescript
+import Head from 'next/head'
+import React, { useMemo } from 'react'
+import PostItem from './post-item'
+import { Configs } from 'lib/utils'
+import metadata from 'lib/data/metadata.json'
+import { useTheme } from '@geist-ui/core'
+import Pager from './pager'
+import { NextRouter } from 'next/router'
+
+
+const getPosts = (data: typeof metadata, page?: number) => {
+  const postNode = data.find(item => item.name === 'posts');
+  const posts = (postNode || {}).children || [];
+
+  let filteredPosts = posts;
+
+  // タグなどで更なる表示コンテンツの絞り込みをしたい場合は、
+  // ここでfilteredPostsを改変してください。
+
+  let nowPage = page ? page : 1;
+
+  const start = (nowPage - 1) * Configs.latestLimit;
+  const end = nowPage * Configs.latestLimit;
+
+  const postCount = filteredPosts.length; // ポストの総数を計算
+
+  const paginatedPosts = filteredPosts.slice(start, end); // 開始位置・終了位置を指定して、配列を切り取る。
+
+  return { postCount, posts: paginatedPosts };
+};
+
+export interface PostsProps {
+  page?: number
+  router: NextRouter
+}
+
+const Posts: React.FC<PostsProps> = ({ page,  router }) => {
+
+  const theme = useTheme()
+  let title = ""
+  let { postCount, posts } = useMemo(() => getPosts(metadata, page), [page]);
+
+  return (
+    <section>
+      <Head>
+        <title>
+          {title}
+        </title>
+      </Head>
+      {title !== "" && <h2 className="mb-8">{title}</h2>}
+      <div className="content">
+        {
+          // PostItemを呼び出すところは、unix.bioのまま、変更なし。
+          posts.map((post, index) => (
+          <PostItem post={post} key={`${post.url}-${index}`} />
+        ))}
+        {/* 下記Pagerコンポーネントへの呼び出し処理を新規に追加しています。 */}
+        <Pager postCount={postCount} page={page} router={router} />
+        {/*
+        // unix.bioでは下記の「もっと読む」形式のリンクが備わっていましたが、SEO的に弱いため廃止。
+
+        isLatest && <span className="more">{getMoreLink(posts.length)}</span>*/}
+      </div>
+      <style jsx>{`
+        section {
+          margin-top: calc(${theme.layout.gap} * 2);
+        }
+
+        .content {
+          margin: ${theme.layout.gap} 0;
+        }
+
+        @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
+          section {
+            margin-top: ${theme.layout.gapQuarter};
+          }
+
+          section h2 {
+            margin-top: calc(1.5 * ${theme.layout.gap});
+          }
+        }
+      `}</style>
+    </section>
+  )
+}
+
+export default Posts
+
+```
+
+ソースコード内にあります通り、ページングに必要な材料を組み立てて、さらに`<Pager>`コンポーネントに処理を渡しています。
+
+#### リクエストを処理する、表層的なページング層 pager.tsx
+
+`<Pager>`の中身では、Material UIのPaginationライブラリから受け取ったコールバックをもとに、実際のNext.jsレベルでの
+遷移を実現しています。したがって、ページング処理の中でもあくまで表層的なことをしているコンポーネントとなりますが、
+処理には欠かせないものとなります。
+
+では`pager.tsx`を見てみます。
+
+    <CodeBlockTitle title="/lib/posts/posts.tsx" />
+
+```typescript
+import * as React from 'react';
+import Pagination from '@mui/material/Pagination';
+import { NextRouter } from 'next/router';
+import { Configs } from 'lib/utils';
+
+type Prop = {
+  router: NextRouter
+  postCount: number
+  page?: number
+}
+
+const Pager: React.FC<Prop> = ({ router, postCount,  page }) => {
+
+  // 全記事数を1ページあたりの記事数で割って、ページの総数を生成して、MaterialUIのコンポーネントに渡している。
+  const pageCount = Math.ceil(postCount / Configs.latestLimit)
+
+  const handleChange = (_: React.ChangeEvent<unknown>, value: number) => {
+    router.push(process.env.baseUrl + "/page/" + value)
+  };
+
+  if (page == undefined) {
+    // ここ、routerからpage番号が取れていない時を考慮してreturnを実装しているが、
+    // Loading表示を出すなど改修がもう少しできるかも？
+    return <></> 
+  }
+
+  return (
+    <div className="mt-12">
+      <Pagination defaultPage={page} count={pageCount} variant="outlined" shape="rounded" color="primary" onChange={handleChange}
+      />
+    </div>
+  );
+}
+
+export default Pager
+```
+
+Material Paginationについては、[こちら](https://mui.com/material-ui/react-pagination/)をご覧ください。
+今回私は`Rounded pagination`を少々cssカスタマイズする形で使用しています。
+`global.css`にページング周りのCSSを追加しています。この辺りはお好みに合わせてどうぞ。
+
+    <MdxImage month="202311" image="paging.gif" isHalf={true} />
+
+    <span className="hoso">出来上がりとしてはこちらです。</span>
+    <br />
+    <br />
+ソースコード中にあった`Configs`について一応解説しておきます。
+
+#### 1ページあたりの件数など指定。utils.ts & blog.config
+
+`<Pager>`および`<Posts>`で`Configs`という定数クラスを呼んでいましたが、これは`utils.ts`=>`blog.config`という2ファイルに遡って定義されています。
+(unix.bioのデフォルトでそうなっています)
+
+こちらは実際にソースコードを見ていただくと分かるかと思いますので省略します。（究極、ソースコード内にハードコーディングでも個人レベルのブログという用途を考えると
+大きな問題はないはずです）
+
+## まとめ
+
+**改めて自前でPagingを作るのって大変だな** と思いました...。<br />
+でもみんなこの道を通ってきているんですよね。<br />
+    <br />
+    一方でサイトの利用者である<span className="hoso">エンドユーザーは何で作られているかはあまり気にならない方が多いと思うので、外部のライブラリに頼れるところはどんどん頼って、いいコンテンツを作るところに集中できればなあ</span>といったように改めて思いました！
+
+    <br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

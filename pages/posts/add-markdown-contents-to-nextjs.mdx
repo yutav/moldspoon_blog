@@ -1,0 +1,257 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+import { MarkdownView } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Markdownのコンテンツをカンタンにhtmlに変換できるコンポーネントを作る。',
+  date: '2023-10-27T10:56:00.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'マークダウン'
+  ]
+}
+
+## 本記事のゴール
+
+Markdownで書いた項目を、Next.jsプロジェクト内でカンタンに呼び出せるようにしたい。
+
+## 作業
+
+### 要件定義
+
+以下のようなMarkdown形式の項目があり、こちらをNext.jsのページでコンテンツとして表示したいです。
+
+```
+# タイトル
+
+内容がここに入ります。
+
+## 見出しレベル2
+
+[リンク](https://moldspoon.jp/blog)は当ブログのトップページに貼ってあります。
+
+```
+
+**.mdxファイル形式を使い、並列でファイルを作っていくことでページを作っていくアプリ構成も取れる** のですが、
+今回はもうちょっと複雑なWebサービスを開発しており、<span className="hoso">ページの一部分だけマークダウン形式</span>としたいので
+ちょっと要件がずれてきます。
+
+そのような時のために今回のコンポーネントを作成しました。
+
+### markedを使って実装
+
+今回は下記の**marked** というmarkdown => html置換ライブラリを使用します。
+
+<RichLink 
+url="https://github.com/markedjs/marked" 
+icon='ri-github-fill'
+title="markedjs/marked" 
+subtitle="A markdown parser and compiler. Built for speed."
+targetBlank={true}
+ />
+
+#### markedのデモページが結構すごい
+
+markedのデモページは[こちら](https://marked.js.org/demo/?text=Marked%20-%20Markdown%20Parser%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0A%0A%5BMarked%5D%20lets%20you%20convert%20%5BMarkdown%5D%20into%20HTML.%20%20Markdown%20is%20a%20simple%20text%20format%20whose%20goal%20is%20to%20be%20very%20easy%20to%20read%20and%20write%2C%20even%20when%20not%20converted%20to%20HTML.%20%20This%20demo%20page%20will%20let%20you%20type%20anything%20you%20like%20and%20see%20how%20it%20gets%20converted.%20%20Live.%20%20No%20more%20waiting%20around.%0A%0AHow%20To%20Use%20The%20Demo%0A-------------------%0A%0A1.%20Type%20in%20stuff%20on%20the%20left.%0A2.%20See%20the%20live%20updates%20on%20the%20right.%0A%0AThat%27s%20it.%20%20Pretty%20simple.%20%20There%27s%20also%20a%20drop-down%20option%20above%20to%20switch%20between%20various%20views%3A%0A%0A-%20**Preview%3A**%20%20A%20live%20display%20of%20the%20generated%20HTML%20as%20it%20would%20render%20in%20a%20browser.%0A-%20**HTML%20Source%3A**%20%20The%20generated%20HTML%20before%20your%20browser%20makes%20it%20pretty.%0A-%20**Lexer%20Data%3A**%20%20What%20%5Bmarked%5D%20uses%20internally%2C%20in%20case%20you%20like%20gory%20stuff%20like%20this.%0A-%20**Quick%20Reference%3A**%20%20A%20brief%20run-down%20of%20how%20to%20format%20things%20using%20markdown.%0A%0AWhy%20Markdown%3F%0A-------------%0A%0AIt%27s%20easy.%20%20It%27s%20not%20overly%20bloated%2C%20unlike%20HTML.%20%20Also%2C%20as%20the%20creator%20of%20%5Bmarkdown%5D%20says%2C%0A%0A%3E%20The%20overriding%20design%20goal%20for%20Markdown%27s%0A%3E%20formatting%20syntax%20is%20to%20make%20it%20as%20readable%0A%3E%20as%20possible.%20The%20idea%20is%20that%20a%0A%3E%20Markdown-formatted%20document%20should%20be%0A%3E%20publishable%20as-is%2C%20as%20plain%20text%2C%20without%0A%3E%20looking%20like%20it%27s%20been%20marked%20up%20with%20tags%0A%3E%20or%20formatting%20instructions.%0A%0AReady%20to%20start%20writing%3F%20%20Either%20start%20changing%20stuff%20on%20the%20left%20or%0A%5Bclear%20everything%5D(%2Fdemo%2F%3Ftext%3D)%20with%20a%20simple%20click.%0A%0A%5BMarked%5D%3A%20https%3A%2F%2Fgithub.com%2Fmarkedjs%2Fmarked%2F%0A%5BMarkdown%5D%3A%20http%3A%2F%2Fdaringfireball.net%2Fprojects%2Fmarkdown%2F%0A&options=%7B%0A%20%22async%22%3A%20false%2C%0A%20%22breaks%22%3A%20false%2C%0A%20%22extensions%22%3A%20null%2C%0A%20%22gfm%22%3A%20true%2C%0A%20%22hooks%22%3A%20null%2C%0A%20%22pedantic%22%3A%20false%2C%0A%20%22silent%22%3A%20false%2C%0A%20%22tokenizer%22%3A%20null%2C%0A%20%22walkTokens%22%3A%20null%0A%7D&version=9.1.2)
+
+**どのように置換するのかを、リアルタイムでプレビューして見せてくれます。**
+
+<MdxImage month="202310" image="markdown1.png" />
+
+個人的に便利だなと思うのうは、Optionsを変更するとそれに合わせて出力内容を変えてくれたり
+
+<MdxImage month="202310" image="markdown2.png" annotation="微妙に出力方式を変えたい時に事前に確認できる。" />
+
+出力後のhtmlソースコードが見れるところですかね。
+
+<MdxImage month="202310" image="markdown3.png" annotation="あとで、カスタマイズをする時に役に立ちます。" />
+
+詳しいドキュメントは[こちら](https://marked.js.org/)のようです。
+
+#### 下準備〜ライブラリインストール
+
+Next.jsプロジェクトのルートディレクトリで以下のコマンドを実行
+
+```
+yarn add marked
+```
+
+これだけです。2011年からある古いライブラリのようなのですが、typescriptにもしっかり対応しているようです。
+（自分のユースケースでは特にtypescriptは使いませんでした。）
+
+#### コンポーネントを作成
+
+下記のように実際のコンポーネントを組んでいきます。
+
+<CodeBlockTitle title="components/Markdownview.tsx" />
+
+```typescript
+import { marked } from 'marked';
+import React from 'react';
+
+var renderer = new marked.Renderer();
+renderer.link = function (href, title, text) {
+  var link = marked.Renderer.prototype.link.call(this, href, title, text);
+  return link.replace("<a", "<a target='_blank' ");
+};
+
+const MarkdownView = ({
+  markdownStringBody,
+}: {
+  markdownStringBody: string
+}) => {
+
+
+  const options = {
+    gfm: true,
+    breaks: true,
+    pedantic: true,
+    smartLists: true,
+    smartypants: true,
+    renderer: renderer
+  };
+
+  const renderMarkdown = (text: string) => {
+    return marked(text, options);
+  };
+
+  return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(markdownStringBody) }} />
+
+}
+
+export default MarkdownView
+```
+
+呼び出し方は、
+```
+<MarkdownView markdownStringBody={markdownStringBody} />
+```
+のようにして、**マークダウンで入力されたコンテンツをそのままMarkdownViewに引数として渡します。**
+
+以下で詳しく解説します。
+
+##### markedに渡して、単純に出力する部分
+
+クラスの先頭で下記のようにシンプルに`string`形式で受け取り、
+```
+const MarkdownView = ({
+  markdownStringBody,
+}: {
+  markdownStringBody: string
+}) => {
+//...
+}
+```
+
+optionsを定義。`marked()`メソッドに**内容とオプションを渡してmarkdownをhtmlに変換するように** します。
+```
+  const options = {
+    gfm: true,
+    breaks: true,
+    pedantic: true,
+    smartLists: true,
+    smartypants: true,
+    // renderer: renderer <= あとで解説します。
+
+  };
+
+  const renderMarkdown = (text: string) => {
+    return marked(text, options);
+  };
+```
+
+```
+const MarkdownView = ({
+  markdownStringBody,
+}: {
+  markdownStringBody: string
+}) => {
+  // ...
+
+  return <div dangerouslySetInnerHTML={{ __html: renderMarkdown(markdownStringBody) }} />
+
+}
+
+export default MarkdownView
+```
+最後にhtmlとしてそのまま変換後のコンテンツを出力します。
+`dangerouslySetInnerHTML`はCGM(ユーザー投稿があるコンテンツ)ではインジェクションの被害を受ける可能性があるので、この方法は
+使えないですが、マークダウン形式でユーザーが入稿することは多分ほとんどないので大きな問題はないかなと思っています。
+
+##### 出力後に、htmlを置換する部分
+
+<span className="hoso">私のケースでは、aリンクを必ず外部リンクにしたかった</span>
+ので、全てのマークダウンコンテンツで変換するようにします。
+
+それを行なっているのが以下の箇所です。
+
+```
+import { marked } from 'marked';
+// ...
+
+var renderer = new marked.Renderer(); // markedをimportするだけで使えます
+renderer.link = function (href, title, text) {
+  var link = marked.Renderer.prototype.link.call(this, href, title, text); // aリンクを全て取得
+  return link.replace("<a", "<a target='_blank' "); // aリンクを単純に外部呼び出しするように変換
+};
+
+const MarkdownView = ({
+  markdownStringBody,
+}: {
+  markdownStringBody: string
+}) => {
+
+
+  const options = {
+    gfm: true,
+    breaks: true,
+    pedantic: true,
+    smartLists: true,
+    smartypants: true,
+    renderer: renderer // ここでオプションに必ず指定
+  };
+  ...
+}
+
+export default MarkdownView
+```
+
+全ての箇所で置換を行ってくれるのがポイントで、一種のパーサーになると思います。
+<br />
+最終的には、冒頭で挙げたマークダウン形式のファイルが無事表示できました。
+
+<MdxImage month="202310" image="markdown4.png" annotation="" />
+
+
+##### 補足: mdxファイル形式なら、mdx-components.tsxで一斉置換できる。
+
+なおファイル形式が`.mdx`形式に限り、htmlを置換する処理については、Next.jsの`mdx-components.tsx`をプロジェクトルートに置く形でも対応が可能です。
+下記の弊ブログエントリーの中で触れておりますのでよろしければご覧ください。
+
+参考記事: [Next.js製ブログにオリジナルの目次を追加する。](https://moldspoon.jp/blog/posts/add-toc-to-blog)
+
+## まとめ
+今回のエントリーを書いていて<span className="hoso">あらためて、markdownっていいよね、と思いました。</span>
+htmlをコーディングするよりずっと早くコンテンツ作れますしね。
+
+それに、太字、色付け...といった感じで」ボタンを押していくCMSよりも、キーボードから手を外さずに素早く装飾できますし、
+**エンジニアならコンテンツ作る時にマークダウンは外せませんね！**
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

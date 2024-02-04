@@ -3,7 +3,7 @@
 @import "tailwindcss/utilities";
 
 * {
-  @apply text-black dark:text-white;
+  @apply text-black dark:text-white text-sm leading-relaxed md:text-base md:leading-normal;
   font-family: var(--stk-base-font-family, "游ゴシック", "Yu Gothic", "游ゴシック体", "YuGothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif);
 }
 
@@ -12,7 +12,7 @@ p {
 }
 
 body div a {
-  @apply text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
+  @apply font-bold text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
 }
 
 .profile .user h1 {
@@ -24,7 +24,7 @@ body div a {
 }
 
 .container h2 {
-  @apply text-lg bg-orange-400 dark:bg-orange-700 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
+  @apply text-lg bg-orange-400 dark:bg-orange-500 text-white px-4 py-3 rounded relative block w-auto mt-16 mb-8
 }
 
 .container h2:before {
@@ -92,14 +92,18 @@ blockquote cite {
 }
 
 pre {
-  background: #303030;
+  background: #1c1b1b;
 }
 
 pre.language-text,
 pre.language-json,
 pre.language-typescript,
 pre.language-javascript,
-pre.language-html {
+pre.language-php,
+pre.language-html,
+pre.language-yaml,
+pre.language-shell
+{
   margin-top: 0px !important;
   margin-bottom: 30px !important;
   border: none !important;
@@ -158,18 +162,58 @@ img.overImage {
 }
 
 .hoso {
+  background:linear-gradient(transparent 50%, #FBB92F 50%);
+  display: inline;
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  font-weight: bold;
+  transition:background-size 1.5s;
+}
+
+.hoso.on {
+  background-size: 100% 100%;
+}
+
+.hoso-infinite {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #FBB92F 60%);
+  background-size: 200% 200%;
+  animation: makerUp 3s ease-in-out infinite; /* アニメーション設定 */
+}
+
+@keyframes makerUp {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-size: 100% 100%;
+  }
+}
+.hoso-noanimation {
   font-weight: bold;
   background: linear-gradient(transparent 60%, #FBB92F 60%);
 }
 
-.futo {
-  background-color: #FBB92F;
+.hoso2 {
+  font-weight: bold;
+  background: linear-gradient(#ff0 50%, #00f 50%);
 }
 
+.futo {
+  font-weight: bold;
+  background:linear-gradient(transparent 20%, #FBB92F 20%);
+}
 @media (prefers-color-scheme: dark) {
   .hoso {
     font-weight: bold;
     background: linear-gradient(transparent 60%, #BD23A7 60%);
+    display: inline;
+    background-repeat: no-repeat;
+    background-size: 0% 100%;
+    transition:background-size 1.5s;
+  }
+  .hoso.on {
+    background-size: 100% 100%;
   }
   .futo {
     background-color: #BD23A7;
@@ -182,4 +226,43 @@ ul.MuiPagination-ul li:before {
 
 ul.MuiPagination-ul li button {
   cursor: pointer;
+}
+@media (prefers-color-scheme: dark) {
+  ul.MuiPagination-ul li button {
+    background: #333;
+  }
+}
+
+/* only in detail page */
+.detail-body ul {
+  @apply !my-12 p-6 pb-4 rounded border-2 border-black dark:border-white;
+  margin: 0px;
+}
+
+.detail-body ul li {
+  padding-left: 20px;
+}
+
+.detail-body ul li:before {
+  @apply text-black dark:text-white inline-block;
+  content: '⚫︎';
+  margin-left: -20px;
+}
+
+.detail-body ul li ul {
+  @apply !m-3 p-0 !border-none;
+}
+
+/* only in detail page */
+.detail-body ol {
+  @apply !my-12 p-6 pl-12 rounded border-2 border-black dark:border-white;
+  margin: 0px;
+}
+
+.detail-body ol li {
+  @apply m-0 leading-loose;
+}
+
+pre code {
+  @apply !text-white
 }

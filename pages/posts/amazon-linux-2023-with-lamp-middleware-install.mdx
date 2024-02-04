@@ -1,0 +1,371 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。',
+  date: '2023-11-08T12:00:00.000Z',
+  updateDate: '2023-12-27T17:02:13.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    '連載記事',
+    'LAMP',
+    'AmazonLinux2023',
+    'Amazon Lightsail',
+    'Lightsail',
+    'PHP',
+    'バックエンド'
+  ]
+}
+
+## 概要
+
+個人的に大好きなインフラが[AWS Lightsail](https://aws.amazon.com/jp/lightsail/)。とてもコストパフォーマンスに優れ、
+かつ**いわゆるVPSではある** ものの、**専用インスタンスである[Amazon EC2](https://aws.amazon.com/jp/ec2/)と変わらない使用感**で、小規模なプロジェクトでは頻繁に使っています。
+
+前回の[Amazon Linux 2023 in LightsailをLAMPで運用開始できるまでを丁寧に解説。第1回 サーバ起動編。]()では、AWSのコンソール画面から
+サーバを立ち上げ、SSHでサーバに入るところまでを解説しました。
+
+第2回の今回は、SSHで入ったサーバで、ミドルウェア(Apache/PHP/MariaDB等)をインストールし、Apacheに疎通確認が
+でき、MariaDBにログインできるところまでを解説します。
+
+どうぞ最後までお付き合いくださいませ。
+
+### 本連載のゴール
+
+Amazon Linux2023カーネルのLightsailインスタンス・サーバで、インストール済みのWordpressにアクセスできるようにする。
+
+### 対象読者
+
+- AWSのアカウントを持っている方(まだの方は[こちら](https://aws.amazon.com/jp/free/)より開設をお願い致します。)
+- Amazon Linux2023でWorpdressを含むLAMP構成の開発を始めてみたいエンジニア・プログラマーの方。
+- 開発環境(ローカルPC)がMacの方。Windowsの方は適宜読み替えてみてください。
+
+## 1. 第1回のおさらい
+
+第1回では、SSHでサーバにログインするところまで進めました。
+
+```
+ssh ec2-user@[インスタンスの固定IP] -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+```
+
+    <MdxImage month="202311" image="aws100.png" annotation="" />
+
+現時点ではAmazon Linux2023のまっさらの状態で入ったことになるので、必要なミドルウェアを順次インストールし、
+PHP製の最も代表的なアプリケーションであるWordpressの動作確認ができるまでを辿っていきます。
+
+以下のAWS公式記事を特に参考記事として扱います。
+
+参考記事: [Amazon Linux 2023 での LAMP のインストール](https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/ec2-lamp-amazon-linux-2023.html)
+
+## 2. ミドルウェアインストール
+
+ReadHat系のOSであるAmazon Linux および Amazon Linux 2 ではコマンドラインパッケージ管理ツールの｀yum`をそのまま使ってミドルウェアのインストールを行なっていましたが、
+2023では`dnf`を使います。
+
+#### 2-1.セキュリティアップデートを適用し最新にしておく
+
+AWS Lightsailでは、** 重大なセキュリティホールに随時対応する更新を簡単に入れられる仕組み** を提供しています。以下のコマンドを実行するだけです。
+
+```
+sudo dnf update -y
+```
+
+#### 2-2.PHP8/MySQL8/Apache2を入れる
+
+公式のドキュメント通り下記を実行します。
+
+```
+sudo dnf install -y httpd wget php-fpm php-mysqli php-json php php-devel php-mysqlnd
+```
+
+    <MdxImage month="202311" image="aws101.png" annotation="" />
+インストールが始まります。`-y`オプションをつけたことで、自動的にインストール完了までいきます。
+
+    <MdxImage month="202311" image="aws102.png" annotation="" />
+
+無事完了しました。
+
+#### 2-3.MariaDBを入れる
+
+MySQLから派生した、ほぼMySQLの*MariaDB*を入れます。
+
+```
+sudo dnf install -y mariadb105-server
+```
+
+
+#### 2-4.Apacheを起動し、再起動時の自動立ち上げをONに
+
+Webサーバ(IPからリクエストを受け止めるソフトウェア)である *Apache* を起動しますが、その際に、再起動がかかっても自動的に
+Apacheが立ち上がるように、設定を行っておきます。
+
+```
+# 起動
+sudo systemctl start httpd
+
+# 再起動時の自動起動をONに
+sudo systemctl enable httpd
+
+# 自動起動設定を確認
+sudo systemctl is-enabled httpd
+```
+
+    <MdxImage month="202311" image="aws103.png" annotation="enabled とでます" />
+
+
+#### 2-5.GUIからhttpリクエストができるかを確認する。
+
+先程の[公式ドキュメント](https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/ec2-lamp-amazon-linux-2023.html)では、AWSのコンソール画面から7.でEC2による
+ポート解放の方法を開設していますが、
+
+Lightsailも同様にポートの解放を設定する画面があります。
+
+インスタンスの画面から、**ネットワーキング** をクリック
+
+    <MdxImage month="202311" image="aws104.png" annotation="" />
+
+80番ポートが**制限なしで解放されている** ことを確認します。（デフォルトは下記のようになっています）
+
+    <MdxImage month="202311" image="aws105.png" annotation="" />
+
+画像内に説明があるように、<span className="hoso">独自ドメインで接続を行いたい場合は、https用の接続ポートである443ポートを必ず開けておいてください。</span>
+
+#### 2-6. MariaDBを立ち上げ、初期設定する
+
+```
+# MariaDBを起動
+sudo systemctl start mariadb
+
+# パスワードなど初期設定
+sudo mysql_secure_installation
+```
+
+mysql_secure_installationを立ち上げると、対話式で初期設定を求められます。
+以下のように入力していきます。（日本語のコメントは私が独自で追加したものです。）
+
+```
+[ec2-user@ip-172-26-12-12 ~]$ sudo mysql_secure_installation
+
+NOTE: RUNNING ALL PARTS OF THIS SCRIPT IS RECOMMENDED FOR ALL MariaDB
+      SERVERS IN PRODUCTION USE!  PLEASE READ EACH STEP CAREFULLY!
+
+In order to log into MariaDB to secure it, we'll need the current
+password for the root user. If you've just installed MariaDB, and
+haven't set the root password yet, you should just press enter here.
+
+Enter current password for root (enter for none):
+OK, successfully used password, moving on...
+
+Setting the root password or using the unix_socket ensures that nobody
+can log into the MariaDB root user without the proper authorisation.
+
+You already have your root account protected, so you can safely answer 'n'.
+
+# unix_socket認証を採用するか。採用した方がセキュリティ的に安全なのでYesにしておく
+# Amazon Linuxのrootユーザーでログインした場合、パスワードは不要。Linuxにユーザーの確認は任せよう〜という
+# 仕組みです。
+Switch to unix_socket authentication [Y/n] y
+Enabled successfully!
+Reloading privilege tables..
+ ... Success!
+
+
+You already have your root account protected, so you can safely answer 'n'.
+
+# パスワードを変えるか。 => 複雑な桁数のものに変え、控えておきましょう。
+
+Change the root password? [Y/n] Y
+New password:
+Re-enter new password:
+Password updated successfully!
+Reloading privilege tables..
+ ... Success!
+
+
+By default, a MariaDB installation has an anonymous user, allowing anyone
+to log into MariaDB without having to have a user account created for
+them.  This is intended only for testing, and to make the installation
+go a bit smoother.  You should remove them before moving into a
+production environment.
+
+# 匿名ユーザーを削るか。=> 削るべき。
+
+Remove anonymous users? [Y/n] Y
+ ... Success!
+
+Normally, root should only be allowed to connect from 'localhost'.  This
+ensures that someone cannot guess at the root password from the network.
+
+# 外部からrootユーザーとして接続できないようにするか。
+# => 接続できないようにするべき。sshトンネリング経由など繋ぐ方法はいくらでもある。
+
+Disallow root login remotely? [Y/n] Y
+ ... Success!
+
+By default, MariaDB comes with a database named 'test' that anyone can
+access.  This is also intended only for testing, and should be removed
+before moving into a production environment.
+
+# テストデータベースをどうするか => 削除して全く問題ない。
+
+Remove test database and access to it? [Y/n] Y
+ - Dropping test database...
+ ... Success!
+ - Removing privileges on test database...
+ ... Success!
+
+Reloading the privilege tables will ensure that all changes made so far
+will take effect immediately.
+
+# 今変更をロードするか。=> リロードするべき
+
+Reload privilege tables now? [Y/n] Y
+ ... Success!
+
+Cleaning up...
+
+All done!  If you've completed all of the above steps, your MariaDB
+installation should now be secure.
+
+Thanks for using MariaDB!
+```
+
+#### 2-7. MariaDBへの疎通確認
+
+パスワードなどの初期設定が終わったので、**実際にコマンドラインからMariaDBにログインしてみます。**
+
+```
+# ルートユーザーにスイッチし
+sudo su - 
+
+# ログイン
+mysql -uroot
+
+[ec2-user@ip-172-26-12-12 ~]$ sudo su -
+m[root@ip-172-26-12-12 ~]# mysql -uroot
+Welcome to the MariaDB monitor.  Commands end with ; or \g.
+Your MariaDB connection id is 30
+Server version: 10.5.20-MariaDB MariaDB Server
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MariaDB [(none)]>
+```
+
+疎通が確認できました。ec2-user/apacheユーザーから接続する設定が必要になったら
+先程変更したパスワードを使いましょう。**(あとでWordpressからの接続時に使います。)**
+
+### 3. アプリケーションの置き場の準備・Apacheの設定
+
+Amazon Linuxでは、基本的に`/var/www/`以下にプロジェクトのディレクトリを切り、
+そこにApacheやnginxの**バーチャルホスト** 設定を行うようになると思います。
+
+そのために、パーミッションの設定から始めましょう。
+
+#### 3-1. ec2-userをapacheグループに追加する。
+
+Linuxにはユーザーグループがあると思いますが、Amazon Linuxデフォルトの`ec2-user`を`apache`と同じグループに入れておくと、
+**パーミッション設定時に「グループ」で、同じパーミッションで管理できるようになるのであとあと便利**です。
+
+```
+# ルートユーザーで、グループ追加
+sudo usermod -a -G apache ec2-user
+
+# /var/www以下をまとめて所有者・所有グループ変更
+sudo chown -R ec2-user:apache /var/www
+
+# まだ何もないので不要だと思うが、/var/www以下に既においてあるものに再起的に（深いディレクトリでも適用されるよう）設定しておく。
+sudo chmod 2775 /var/www && find /var/www -type d -exec sudo chmod 2775 {} \;
+find /var/www -type f -exec sudo chmod 0664 {} \;
+```
+
+#### 3-2. 初期疎通確認
+
+サーバの固定IPにリクエストすると、以下のようにApacheに疎通できていることが確認できます。
+
+    <MdxImage month="202311" image="aws106.png" annotation="" />
+
+現時点では、IPのドキュメントルートは`/var/www/html`に設定されているのですが、
+ここには「It Works!」のhtmlファイルは置かれていません。
+
+    <span className="hoso">では実態となるhtmlファイルはどこに置かれているのか...</span>と言いますと、
+`/usr/share/httpd/noindex/index.html`
+が、<span className="hoso">403エラー時の飛び先として指定されています。</span>
+
+設定しているのは、以下のファイルです。
+
+```
+// /etc/httpd/conf.d/welcome.conf
+
+<LocationMatch "^/+$">
+    Options -Indexes
+    ErrorDocument 403 /.noindex.html # エラー時の転送はここで設定
+</LocationMatch>
+
+<Directory /usr/share/httpd/noindex>
+    AllowOverride None
+    Require all granted
+</Directory>
+
+Alias /.noindex.html /usr/share/httpd/noindex/index.html # ここでフルパスをAlias定義
+Alias /poweredby.png /usr/share/httpd/icons/apache_pb3.png
+Alias /system_noindex_logo.png /usr/share/httpd/icons/system_noindex_logo.png
+```
+
+この辺りの設定については下記の記事が参考になりました。
+
+参考記事: [Apacheを触ってみる](https://ponsuke-tarou.hatenablog.com/entry/2018/12/19/233918)
+
+**無事、前提となるミドルウェアが正常に動いていることがわかった** ので、今日の作業はこちらまでといたしましょう。
+
+## まとめ
+
+いかがでしたでしょうか。**手順を追うだけで、必要なミドルウェアをインストールするのは思ったより簡単だったかと思います。**
+私としても普段使い慣れたミドルウェアばかりで、<span className="hoso">このような単純作業は他の人の作ったレシピで省力化して、サービス開発に注力したいなと日頃から思っている</span>ところです。
+
+次回の第3回では、**Wordpressをインストールし、疎通するまでを引き続き解説してまいります** ので、ぜひフォローアップくださいませ。
+
+↓下記に続く。
+
+   <RichLink
+         url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-install-wordpress"
+         icon='ri-links-line'
+         title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第3回 Wordpress導入編。"
+         subtitle="第3回はこちらからご覧いただけます。"
+         targetBlank={true}
+       />
+
+    <br />
+
+
+↓第1回はこちら
+
+    <RichLink
+          url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-middleware-install"
+          icon='ri-links-line'
+          title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。"
+          subtitle="第2回はこちらからご覧いただけます。"
+          targetBlank={true}
+        />
+
+ 
+
+    <br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

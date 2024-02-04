@@ -1,0 +1,52 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Codepen、CodeSandbox。ガジェットとしてソースコードを埋め込めるサービスを比較したので解説。',
+  date: '2023-10-31T07:56:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'ブログハック',
+    '比較記事',
+    'Javascript',
+    'ガジェット'
+  ]
+}
+
+## はじめに
+
+ブログで、実際動くJavascript製のパーツを紹介したいことがブロガーなら一度は経験があると思います。
+その際に、直接ソースコードを貼り付けるとうまく動かないので、僕は今までアニメーションGifを貼り付けていました。
+
+ただGifだけではせっかく弊ブログをご覧になってくださる方への訴求力が弱くなってしまうな、と思い、ブログにガジェットを埋めつけたくなり。どんな技術があるかを調査・整理してみました！
+
+### CodePen
+
+
+
+### CodeSandbox
+
+CodeSandboxはCodepenより
+
+- Next.jsのforkしたプロジェクトをそのままクラウドで動かして試すことができる。
+- 機能が豊富すぎて、学習コストが高そうに見える。
+
+
+
+### 解決策
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

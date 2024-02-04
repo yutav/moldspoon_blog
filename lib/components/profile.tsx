@@ -17,7 +17,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
   let darkLogoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short_white.png" : "/blog/assets/moldspoonblog_short_white.png"
   let logoUrl = process.env.NODE_ENV == 'production' ? "/blog/assets/moldspoonblog_short.png" : "/blog/assets/moldspoonblog_short.png"
   const linkClass = "leading-relaxed"
-  const linkTextClass = "text-white hover:text-gray-300 dark:text-white dark:hover:text-gray-500"
+  const linkTextClass = "text-white hover:text-gray-300 dark:text-white dark:hover:text-gray-500 font-normal"
   return (
     <div className="profile">
       <div className="user">
@@ -26,8 +26,8 @@ const Profile: React.FC<unknown> = React.memo(() => {
 
             <NextLink href="/">
               <p className="w-56 sm:w-80 md:w-80 lg:w-full p-0 m-0">
-                <Image src={logoUrl} width="400" height="50" alt={BLOG.title} className="block dark:hidden" />
-                <Image src={darkLogoUrl} width="400" height="50" alt={BLOG.title} className="hidden dark:block" />
+                <Image src={logoUrl} width="400" height="58" alt={BLOG.title} className="block dark:hidden" />
+                <Image src={darkLogoUrl} width="400" height="58" alt={BLOG.title} className="hidden dark:block" />
               </p>
             </NextLink>
           </div>

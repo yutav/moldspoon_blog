@@ -59,7 +59,7 @@ const Toc: React.FC<Prop> = ({ body }) => {
 
           return (
             <li key={key} className="p-0 m-0 text-xs">
-              <Link href={`#${key.replace(/\s+/g, "-").toLowerCase()}`} className="text-black dark:text-white">
+              <Link href={`#${key.replace(/\s+/g, "-").toLowerCase()}`} className="text-black dark:text-white font-normal">
                 {showNumberString && numberString + ". "}{key}
               </Link>
               {renderToc(data[key], currentNumbers)}
@@ -74,7 +74,7 @@ const Toc: React.FC<Prop> = ({ body }) => {
     <div className={`toc xl:fixed xl:pl-8 xl:top-16 hidden xl:block `}>
       <div className="toc-box p-2 rounded-xl break-words">
         <div className="rounded-xl shadow-xl bg-white dark:bg-black px-4 py-2">
-          <p className="pt-0 font-bold">目次</p>
+          <p className="pt-0 font-bold">< i className="ri-list-unordered mr-1"></i>目次</p>
           {renderToc(tocObject)}
         </div>
       </div>

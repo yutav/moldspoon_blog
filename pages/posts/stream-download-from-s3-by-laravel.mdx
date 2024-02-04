@@ -1,0 +1,391 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '大容量ファイルをAmazon S3+Laravelでサーバに落とす方法を詳細解説',
+  date: '2023-12-03T16:43:59.000Z',
+  updateDate: '2024-02-02T15:14:50.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'バックエンド',
+    'PHP',
+    'Laravel',
+    'AWS',
+    'AWS SDK'
+  ],
+  description: 'LaravelでAmazon S3から大きいファイルをダウンロードしようとしたときに、メモリオーバに突き当たった時の解決方法を解説します。'
+}
+
+## 概要
+
+[Laravel](https://laravel.com/)を使って、[Amazon S3](https://aws.amazon.com/jp/s3/)に設置したとても大きな容量（1GB〜）をダウンロードしようとしましたが、
+VPSなどのメモリリソースが少ないサーバでは、一時ファイルをメモリに保存できず、処理の途中で落ちたり
+サーバが反応しなくなったりします。
+
+それを解消する方法について解説します。
+
+## 具体的な解決までの過程
+
+今回の環境は
+
+- Mac OS Sonoma
+- Amazon Linux 2023
+- PHP 8.x
+- Laravel 10.x
+
+にて作業を行いました。そちらを前提として本記事をお読みいただければと思います。
+
+### 前提
+
+#### メモリ制限について
+
+ダウンロード処理を考えるときに、まず考えなければいけないのはサーバのPHPのメモリの制限だと思います。
+
+[こちらの公式ドキュメントの記述](https://www.php.net/manual/ja/ini.core.php#ini.memory-limit)には**128MB** と書かれています。
+
+```
+memory_limit=128MB
+```
+
+この制限は引き上げることも可能ですが、莫大な容量のファイルを一時的にメモリに載せるとすると、**引き上げたところで付け焼き刃** になってしまうと思います。
+従って、<span className="hoso">丸ごとメモリに載せない方法を考えます。</span>
+
+#### テストファイルの準備
+
+あらかじめ、ダウンロードテスト用の画像は、画面からAWS S3にアップロードしておいてください。
+
+    <MdxImage month="202312" image="s31.png" annotation="最初は疎通確認のために軽いファイルにしましょう。" />
+
+容量の大きなファイルの作り方は後ほどご解説します。
+
+### 元々行っていた実装
+
+簡単に元々の実装を解説します。
+
+#### S3接続・更新用のAWS IAMを作成し、アクセスキーとシークレットキーを取得する
+
+こちらは他に取得方法についてたくさんのポストが既にネットの海にありますので省略させていただきます。
+
+取得したアクセスキー・シークレットキーは`.env`の以下の箇所を変更して対応します。
+
+```
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1 # 日本のユーザーなら多分ap-northeast-1 か 2になるのでは
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+```
+
+#### 環境構築
+
+※ この点はLaravelを既にご利用の方は読み飛ばしていただいて良いかと思います。
+
+```shell
+# PHP/Composer/Laravelをあらかじめインストールしてください。
+
+# プロジェクト作成
+cd /path/to/ # projectの1つ上のディレクトリ
+composer create-project laravel/laravel test-laravel-s3-download
+
+# Dockerをテスト環境として使う
+php artisan sail:install # mysqlを選択
+sail up -d
+
+# 必要なライブラリを入れる
+sail composer
+
+# .envの下記の箇所を変更して、MySQLに接続できるようにする
+DB_CONNECTION=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=laravel # 「laravel」データベースを指定
+DB_USERNAME=root
+DB_PASSWORD=password
+```
+
+#### FlySystemライブラリをインストール
+
+<span className="hoso">AWS S3との送受信のために下記のライブラリを入れておきましょう。</span>
+
+```
+sail composer require league/flysystem-aws-s3-v3 "^3.0"
+```
+
+インストールしていない場合は、**下記のコマンドの実行時にこのようなエラーが出て行き詰まります。**
+
+```
+Class "League\Flysystem\AwsS3V3\PortableVisibilityConverter" not found
+```
+
+#### コマンドの作成
+
+バッチスクリプトに該当する、コマンドを`artisan`を使って作成します。
+これに今回実装を行っていくことになります。
+
+```
+sail artisan make:command S3DownloadCommand
+```
+
+#### S3DownloadCommandへの実装
+
+出来上がった、`S3DownloadCommand`を、VSCodeなどのエディターで開き以下のように実装します。
+前述のAWSアクセスキー・シークレットキーの変更をお忘れなく。
+
+```
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Storage;
+
+class S3DownloadCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:s3-download-command';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Command description';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $local = Storage::disk('local');
+        $s3 = Storage::disk('s3');
+
+        $filePath = "test/data/1.png";
+
+        $file = $s3->get($filePath);
+        $local->put($filePath, $file);
+
+    }
+}
+```
+
+[AWS SDK](https://docs.aws.amazon.com/ja_jp/sdk-for-php/v3/developer-guide/php_s3_code_examples.html#actions)に比べて**極端に書くコードの量が少ないので心配** ですが、ともかく動かしてみます。
+
+```
+sail artisan app:s3-download-command
+```
+
+実行したら...
+
+    <MdxImage month="202312" image="s32.png" annotation="できちゃいました" />
+
+プロジェクトのルートから、`storage/app/test/data/1.png`に**速攻でダウンロードができてしまいました...。**
+
+ダウンロードだけ実行するならこんなに短いコードでできるんですね。すごい。
+
+### 重いファイルを用意する
+
+さて、ここからが本番です
+
+この作業にあたっては、
+[Linux で任意のサイズのファイルを作る](https://qiita.com/toshihirock/items/6cb99a85d86f524bc153)
+こちらの記事を参考にさせていただきました。
+
+```
+dd if=/dev/zero of=2.png bs=1M count=1000
+```
+
+1GBのファイルをさくっと作ります。（拡張子は実際には開かないので.pngである必要はありませんが、テスト用に合わせます。）
+
+私は別途実際のサーバで試していたのですが、この、2.pngをAWS S3アップロードし。<br />
+**先ほどのCommandを実行すると...。**
+<br />
+**サーバが反応しなくなりました...**
+<br />
+今回はローカルでsailにて実行されていると思いますが、実行はやめておいた方がいいと思います。
+
+これは先述の、一時的にメモリに保存することによるキャパシティのオーバーが原因と思われます。
+
+### 解決方法
+
+さてここからが解決方法です。
+
+#### Storage::disk()でなんとかする方法を調べたものの見つからず。
+
+[こちら](https://laracasts.com/discuss/channels/laravel/stream-big-private-fiels-from-s3-trough-laravel)のように、
+直接ブラウザからダウンロードさせる方法だったり、
+
+```
+Storage::disk('local',Storage::disk('s3')->get(fopen($filePath, 'r')));
+```
+
+このように直接S3のファイルを`fopen`で開く方法もあったように思いますが、これも実行したところうまくいきませんでした。
+
+#### AWS SDK for PHPに活路を見出す
+
+AWS SDK for PHPの[公式ドキュメント](https://docs.aws.amazon.com/ja_jp/sdk-for-php/v3/developer-guide/s3-stream-wrapper.html)を見ていたところ、
+**StreamWrapper** というものを見つけました。
+
+確かに、以前もこのようにファイルを直接開き、段階的に読み込みを行う方法をS3で実行した記憶がありました。
+
+参考記事: [streamWrapper クラス](https://www.php.net/manual/ja/class.streamwrapper.php)
+
+どうやらこれがヒントに近そうです。
+
+#### AWS SDK for PHPをインストールし必要な設定を行う
+
+AWSがAWS SDKを使うためのとても便利なプラグインを用意してくれているので、
+README.mdの記述に沿って、これをインストールします。
+
+    <RichLink
+          url="https://github.com/aws/aws-sdk-php-laravel"
+          icon='ri-github-fill'
+          title="aws/aws-sdk-php-laravel"
+          subtitle="AWS公式が提供しているLaravel用プラグイン"
+          targetBlank={true}
+        />
+
+下記のコマンドでまずインストールします。
+
+```
+sail composer require aws/aws-sdk-php-laravel
+```
+
+##### 設定の詳細
+
+`config/app.php`に下記2箇所を追加。
+
+```
+   'providers' => array(
+        // ...
+        Aws\Laravel\AwsServiceProvider::class,
+    )
+```
+
+```
+    'aliases' => array(
+        // ...
+        'AWS' => Aws\Laravel\AwsFacade::class,
+    )
+```
+
+下記コマンドを実行。
+
+```
+# config/aws.phpを作成
+sail artisan vendor:publish  --provider="Aws\Laravel\AwsServiceProvider"
+
+# キャッシュ読み込み直し
+sail artisan config:cache 
+```
+
+これは必ず行う必要があります。
+
+#### S3DownloadComplete.phpを改修
+
+下記のように改修を行い、再度
+
+```
+sail artisan app:s3-download-command
+```
+を実行して様子を見ます。
+
+
+`ls`でちょくちょく当該ファイルの状況を確認し、少しずつ容量を増えていることを確認しました。
+
+十数分待ちましたが十数分待ちましたが、1GB無事ダウンロードできました。
+
+    <MdxImage month="202312" image="s32.png" annotation="きっかり1GB" />
+
+```
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Storage;
+
+class S3DownloadCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'app:s3-download-command';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Command description';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
+    {
+        $s3FilePath = "test/data/2.png"; // 重いファイルを指定。今回は1GB
+        $localFilePath = storage_path("app/" . $s3FilePath); //絶対パスが変える。ルートからの相対パスで言うとstorage/app/test/data/2.pngとなる。
+
+        if (!file_exists($localFilePath)) {
+            touch($localFilePath); // 空ファイルを一旦設置
+        }
+
+        $s3 = AWS::createClient('s3');
+        $s3->registerStreamWrapper();
+        $localFp = fopen($localFilePath, "w");
+        $s3Fp = fopen($s3FilePath, "r");
+        while (!feof($s3Fp)) {
+            $filePacket = fread($s3Fp, 1024); // 1KBごとにファイルをダウンロード
+            fwrite($localFp, $filePacket);
+        }
+        fclose($localFp);
+        fclose($s3Fp);
+    }
+}
+
+```
+
+どこで調べたか失念してしまったのでとても恐縮なのですが、**streamWrapperは最大で数MBしかメモリを消費しないと言うポストを見ました。**
+よって、この方法であれば、サーバのCPU/メモリリソースを大量に圧迫する可能性はなさそうですね。
+
+##### 補足
+
+重いファイルをCommandから実行する際に、
+
+- 非同期での実行
+- 失敗時のx回の再試行
+
+を行いたい場合は、**Laravel Queue** を実行にあたり採用した方がいいと思います。
+
+参考記事: [日本語の Laravel 8.x キュー ドキュメント](https://readouble.com/laravel/8.x/ja/queues.html)
+
+今回は直接Artisanコマンドを実現することで対処できたので、別稿に譲りたいと思います。
+
+## まとめ
+
+いかがでしたでしょうか。<br />
+    <br />
+以前も別の案件・別のフレームワーク別のフレームワークで<span className="hoso">この方法をとったように記憶はしていたのですがすっかり失念</span>していました。
+今回使ったのはLaravelですが、具体的な実装方法まで解説した記事がなかったのでならばまとめてみようと考えた次第でした。<br />
+    <br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

@@ -1,7 +1,8 @@
-import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
+//import { SyntaxHighlight } from 'lib/components/original/parts/SyntaxHighlight';
 import type { MDXComponents } from 'mdx/types';
 
 export function useMDXComponents(_: MDXComponents): MDXComponents {
+
   const CustomH1: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h1 id={(children as string).toLowerCase().replace(/\s+/g, '-')}>{children}</h1>
   );
@@ -22,7 +23,7 @@ export function useMDXComponents(_: MDXComponents): MDXComponents {
   );
 
   return {
-    code: ({ children }) => <SyntaxHighlight>{children}</SyntaxHighlight>,
+    //    code: ({ children }) => <SyntaxHighlight>{children}</SyntaxHighlight>,
     h1: CustomH1,
     h2: CustomH2,
     h3: CustomH3,

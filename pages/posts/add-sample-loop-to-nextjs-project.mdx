@@ -1,0 +1,131 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Next.js/Reactで同じサンプルパーツをたくさん、楽に並べたい時はどうするか？',
+  date: '2023-10-11T10:54:00.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'モックアップ',
+    '個人開発'
+  ]
+}
+
+今日はサイトの雛形を作っている時に考えた小ネタをご紹介します。
+
+## 問題
+
+[Next.js](https://nextjs.org/)は開発着手までの時間の短さから、本番のサイトだけでなく
+<span className="hoso">モックアップやサンプルプロジェクトの開発にも頻繁に利用されている</span>と思います。
+
+その際に、また実データがないブログにデータを埋め込んでいかなければいけないことが度々起こってきます。
+
+具体的には以下のような**横4列のグリッドレイアウト** の時などは、同じパターンのコンテンツを並べなければいけません。
+
+<iframe height="500" className="w-full" scrolling="no" title="grid-box-4" src="https://codepen.io/yuku_tas/embed/bGOZwqw?default-tab=html%2Cresult" frameborder="no" loading="lazy" allowtransparency="true" allowfullscreen="true" />
+
+### サンプルで使用している技術
+
+なお、上記の**Codepen** のサンプルでは、
+
+- react
+- react-dom
+- tailwindcss
+
+を使用していますが、**Next.js** でも、**JSX** の部分をコピーすれば問題なく使えます。
+(Next.jsの最新版では[tailwindcss](https://tailwindcss.com/)がビルトインされています。)
+
+## 解決策
+
+### サンプルコードを連続して出すループを組む...どうやって？
+
+モックアップの開発では環境を整えている時間も勿体無い、といったケースはよくあると思います。
+個人開発でも同様です。
+
+とはいえ、**初っ端からコピペコピペではさすがに開発効率が悪くなりすぎる**とは感じます。
+ソースコードの見栄えも良くない感じになり、結局[VSCode](https://azure.microsoft.com/ja-jp/products/visual-studio-code)や[Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12/)などのIDEを使って置換作業を繰り返しているなあと
+感じることもしばしば。
+
+<span className="hoso">そこで、今回は以下の方針で実装します。</span>
+
+<RichListNoBox
+  color="red"
+  list={
+  [
+    '1回以上使い回すパーツは、コンポーネント化し、他のページでも使いまわせるようにする。',
+    'そのパーツをループでn回呼び出し、コンテンツが並んでいる状況を再現する。',
+    'prop(引数)の実装は後回しにする。'
+  ]
+} />
+
+### できあがり
+
+具体的には、先ほど例示したソースコードを、以下のように変えていきます。
+
+<CodeBlockTitle title="sample.tsx" />
+
+```typescript
+// 繰り返したいコンポーネント。
+// もちろん import { SampleComponent } from "path/to/SampleComponent" の形で外部呼び出しできる。
+const SampleComponent = () => {
+  return (
+    <a href="https://moldspoon.jp/blog">
+      <div className="p-2 shadow hover:shadow-xl">
+        <div className="w-full h-20 p-8 text-center bg-red-500 text-white text-sm block mb-5 ">
+          画像
+        </div>
+        <h3 className="text-sm font-bold mb-2">
+          記事のタイトルがここに入ります。
+
+        </h3>
+        <p className="text-xs mb-5">2023.10.11</p>
+      </div>
+    </a>
+  );
+};
+
+// 呼び出し元のコンポーネント
+function App() {
+  return (
+    <div className="w-full p-4">
+      <div className="grid grid-cols-4 gap-4">
+        {Array.from({ length: 12 },(_, index) => (
+            <div key={index}>
+              <SampleComponent />
+            </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById("app"));
+```
+
+全体的なコード量としてはそこまで変わらないように見えますが、子コンポーネントを
+別ファイルとして切り出すと、<span className="hoso">2行加えるだけで繰り返し処理が書ける</span>のがお分かりいただけるかと思います。
+
+CodePenで実行すると以下のようになります。
+
+<iframe height="500" className="w-full" scrolling="no" title="grid-box-4-with-loop-and-child-component" src="https://codepen.io/yuku_tas/embed/OJrqRqp?default-tab=js%2Cresult&editable=true" frameborder="no" loading="lazy" allowtransparency="true" allowfullscreen="true" />
+
+こうした処理を積極的に使って、<span className="hoso">プロジェクト早期からの保守性の確保と、開発スピードアップを両立させたい</span>と思っています！
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+

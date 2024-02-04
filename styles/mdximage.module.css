@@ -7,3 +7,9 @@
   width: 100% !important;
   height: unset !important;
 }
+
+.imageHalf {
+  position: relative !important;
+  width: 50% !important;
+  height: unset !important;
+}

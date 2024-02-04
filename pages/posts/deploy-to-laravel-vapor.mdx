@@ -1,0 +1,225 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第1回 アカウント作成からIAMユーザー作成まで',
+  date: '2024-01-27T14:18:00.000Z',
+//  updateDate: '2024-01-13T08:05:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'Vapor',
+    'バックエンド',
+    'フレームワーク'
+  ],
+  description: '人気のPHPフレームワークLaravelをAWSが提供するサーバレス環境にデプロイする方法を丁寧に解説します。'
+}
+
+家族で日帰りで観光地に行ってきたんですが、**子供の希望で食事はファストフード** と相なりました...。
+
+あるあるなんでしょうか？私だけですかね...。
+
+そんなこんなな今日この頃ですが、Hackerの皆様はいかがお過ごしでございましょうか。
+本日はVaporに関しての連載記事を書いていきます。
+
+#### お知らせ
+
+**本連載は、かなり丁寧に手順を書いていきますので、環境構築に慣れておられる方にとってはちょっと冗長かもしれません。**
+その場合読み飛ばしを促すリンクを各所に入れますのでよろしければご利用ください。
+**連載回数も結構長くなりそう**です。
+
+## 本記事のゴール
+
+[Vapor](https://vapor.laravel.com/)をつかってLaravelをサーバレス環境にデプロイし、**インフラの運用コストの低減を試みる** 
+
+## 着手の経緯
+
+PHPのフレームワークとしてトップシェアを誇り、私自身もとても愛用しているフレームワーク[Laravel](https://laravel.com/)ですが、
+前から[Vapor](https://vapor.laravel.com/)を試してみたいとずっと思っていました。
+
+開発環境はともかく、**商用環境としてデプロイする場合** は、
+
+- オンプレミス (LAMP構成)
+- Compute EngineやEC2といったクラウドのインスタンス
+
+といった古典的な構成か
+
+- Amazon ECS
+
+といったちょっと少人数開発ではFATな環境しかないと認識しています。
+
+あるいは、[Elastic Beanstalk](https://aws.amazon.com/jp/elasticbeanstalk/)といったアプリエンジニア向けのインフラを気にせず注力できる！
+
+といったような
+サービスを使うという選択肢もありますが、正直開発環境が[Laravel Sail](https://laravel.com/docs/10.x/sail)で簡単に作れるのに比べてこれもまた
+学習コストが高いなぁと思っていました。
+
+というのも私のような**根元がバックエンドエンジニアの人間にとっては、LAMP構成を作ってしまうよりハードルが高いな** と常々思っていたので...。
+
+## Vaporについて
+
+[公式のドキュメント](https://docs.vapor.build/introduction.html)はこちらです。
+
+### LPを見る
+
+ということで、早速Vaporについて[LP(トップページ)](https://vapor.laravel.com/)を見てみます。
+
+<MdxImage month="202401" image="vp1.png" annotation="" />
+
+> Laravel Vapor is a serverless deployment platform for Laravel, powered by AWS. Launch your Laravel infrastructure on Vapor and fall in love with the scalable simplicity of serverless.
+>
+>Laravel Vaporは、AWSが提供するLaravelのサーバーレスデプロイプメントプラットフォームです。Vapor上でLaravelのインフラを立ち上げ、サーバーレスのスケーラブルでシンプルな機能に惚れ込んでください。
+
+おお、これは期待できそうです。
+
+下記の部分を見るとパイプラインがあったり、ビルトインCDNやCIの機能もあって、
+**VercelをLaravelでも使えるようにした**という印象がありますね。
+
+<MdxImage month="202401" image="vp2.png" annotation="機能盛りだくさん" />
+
+
+## 環境構築開始
+
+### 会員登録
+
+下記の「Price」の欄からFreeプランを立ち上げてみます。
+立ち上げにあたり**当然のことながらあらかじめAWSアカウントと決済手段の登録は必要になる**ことと、
+インフラのコストはかかってくるので要注意と書いてあります。
+
+<MdxImage month="202401" image="vp3.png" annotation="" />
+
+名前・メールアドレス・パスワードを入力して会員登録
+
+<MdxImage month="202401" image="vp4.png" annotation="" />
+
+すぐログインができました。
+
+<MdxImage month="202401" image="vp5.png" annotation="" />
+
+### AWSとの紐付け
+
+AWSとの紐付けを行います。下記ボタンをクリック。
+ここに、AWSの会員登録で発行した情報を登録していきます。
+
+<MdxImage month="202401" image="vp6.png" annotation="" />
+
+#### AWSに移動し、IAMを作成
+
+[こちら](https://console.aws.amazon.com/console/home?#)からAWSのマネジメントコンソールにログインし、
+[IAM](https://ap-northeast-1.console.aws.amazon.com/iam/home?)の画面に移動します。
+
+サイドメニューから
+**ユーザー**をクリックします。
+
+<MdxImage month="202401" image="vp7.png" annotation="" />
+
+**ユーザーの作成**を選択
+
+<MdxImage month="202401" image="vp8.png" annotation="" />
+
+
+後で事例で使うようにわかりやすいようにするため**LaravelVapor**と入力しますが、このユーザー名でなくとも大丈夫です。
+
+<MdxImage month="202401" image="vp9.png" annotation="" />
+
+**ポリシーを直接アタッチする**を選択し、AdministratorAccessを選択して、「次へ」を押します。
+詳しい手順は画像を見てください。
+
+<MdxImage month="202401" image="vp10.png" annotation="" />
+
+なお、**この権限はとても強いので、作成後のIAMユーザーの取り扱いには注意が必要**です。<span className="hoso">キーが万一漏洩すると不正なインスタンスを立ち上げられるなど
+金銭的に損害が出る可能性があり</span>、流用はせずにLaravel Vaporのためだけに使うようにしましょう。
+
+<MdxImage month="202401" image="vp11.png" annotation="" />
+
+確認して「ユーザーを作成」を押します。
+
+ユーザー一覧画面に「LaravelVapor」ユーザーが追加されています。
+<MdxImage month="202401" image="vp12.png" annotation="" />
+ユーザー名をクリック。
+
+ユーザー情報が表示されるので、**「セキュリティ認証情報」** を押して、下にスクロールして
+「アクセスキー」まで移動し、**「アクセスキーを作成」** を押します。
+
+<MdxImage month="202401" image="vp13.png" annotation="" />
+
+「サードパーティーサービス」を選択。
+
+<MdxImage month="202401" image="vp14.png" annotation="" />
+
+>ベストプラクティスとして、アクセスキーなどの長期的な認証情報を作成する代わりに一時的なセキュリティ認証情報 (IAM ロール) を使用し、AWS アカウントのルートユーザーアクセスキーを作成しないでください
+
+と代替案が表示されますが、**VaporではIAMユーザーを作らないと認証ができない**ので、、
+
+このまま進めます。
+
+<MdxImage month="202401" image="vp15.png" annotation="" />
+
+説明タグには何か適当に入れておきます。
+
+後で一覧から用途がわかるように入力しましたが...ぶっちゃけキーの名称で十分わかるので空欄でも良かったかもと思いました。
+
+
+「アクセスキーを作成」を押します。
+
+<MdxImage month="202401" image="vp16.png" annotation="" />
+
+作成したキー・シークレットは画像の通り、Vapor側で入力します。
+
+#### Vaporに戻り、必要事項を入力
+
+下記の画像のように入力します。
+
+<MdxImage month="202401" image="vp17.png" annotation="" />
+
+100ドルまでを上限としてAWSのインフラを使うように初期入力値が入っていますが、
+**100ドルは結構大金です。** 
+
+
+従量課金ということで<span className="hoso">毎月このコストがかかり、年だと2024/1現在の相場だと1200ドル=18  万円近い</span>ということになるので
+くれぐれも注意しましょう。
+
+不備の事態に懐が痛まないよう、また今回は検証目的ということで**5ドル**に私は変更しました。
+<br />
+クラウドインフラをご利用に慣れていない方は<span className="hoso">上限値を設定画面からあらかじめ設定することを習慣づけていただく</span>と、より安全にご利用いただけるかなと思っています。
+
+#### AWSとのリンク完了
+
+<MdxImage month="202401" image="vp18.png" annotation="" />
+
+無事、AWSとのリンク作業は完了しました。
+<br />
+即時設定が完了したことから、
+**誤った入力値が入っていないかどうかは実際にデプロイを行うまでわからない仕様になっている**と思います。
+(また、VaporからAWSにインフラ構築の確認のため、無駄なリクエストはしないでしょう。)
+
+ですので、次回の連載でその辺りを確認してまいります。
+
+<br />
+第1回の記事といたしましてはここまでとさせていただきます。
+
+## まとめ
+
+AWSとVaporに確認がまたがりその面で手間がかかりそうなこと、
+また自分自身も手順をひとつひとつ確認しながら、情報を発信したいと思っていることから。
+
+**連載が長くなりそうですが、どうかお付き合いを頂けますと幸いに存じます。**
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
+

@@ -1,0 +1,247 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+    title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第1回 サーバ立ち上げ編。',
+    date: '2023-11-05T13:37:39.000Z',
+    updateDate: '2023-11-20T16:21:00.000Z',
+    tags: [
+        'Blog',
+        '初級者向け',
+        'プログラミング',
+        '連載',
+        'LAMP',
+        'AmazonLinux2023',
+        'Amazon Lightsail',
+        'Lightsail',
+        'PHP',
+        'バックエンド'
+    ],
+    description: '新しくAWSに登場したOS、Amazon Linux2023のサーバを立ち上げるところから、Wordpressを疎通させ、SSLドメインでアクセスできるまでを解説する連載の第1回記事です。'
+}
+
+## 概要
+
+個人的に大好きなインフラが[AWS Lightsail](https://aws.amazon.com/jp/lightsail/)。とてもコストパフォーマンスに優れ、
+かつ**いわゆるVPSではある** ものの、**専用インスタンスである[Amazon EC2](https://aws.amazon.com/jp/ec2/)と変わらない使用感**で、小規模なプロジェクトでは頻繁に使っています。
+
+この連載では、Lightsailの2023年度版イメージである**Amazon Linux2023** をLAMP構成で運用開始できるまでを、画像付きで丁寧に解説していきます。
+本日は第1回、Lightsailインスタンスの立ち上げから、sshでログインできるところまでを書きます。
+
+### 本連載のゴール
+
+Amazon Linux2023カーネルのLightsailインスタンス・サーバで、インストール済みのWordpressにアクセスできるようにする。
+
+### 対象読者
+
+- AWSのアカウントを持っている方(まだの方は[こちら](https://aws.amazon.com/jp/free/)より開設をお願い致します。)
+- Amazon Linux2023でWorpdressを含むLAMP構成の開発を始めてみたいエンジニア・プログラマーの方。
+- 開発環境(ローカルPC)がMacの方。Windowsの方は適宜読み替えてみてください。
+
+## 1. AWS Lightsailインスタンスを立ち上げる
+
+#### 1-1. ログイン〜Lightsailコンソールへ移動
+
+まず、[こちら](https://aws.amazon.com/jp/lightsail/)にアクセスします。
+
+    <MdxImage month="202311" image="aws1.png" annotation="コンソールにサインインを押す" />
+
+個人ユーザであれば「ルートユーザーサインイン」で問題ないです。まずメールアドレスを入力。
+
+    <MdxImage month="202311" image="aws2.png" />
+
+次にパスワードを入力しログインします。
+
+    <MdxImage month="202311" image="aws3.png" />
+
+上部のアドレスバーに「Lightsail」と入れてエンターを押し、出てきた「Amazon Lightsail」をクリックします。
+
+    <MdxImage month="202311" image="aws4.png" />
+
+#### 1-2. インスタンス作成
+
+私のアカウントでは立ち上げ済みのインスタンスが並んでいますが、まだの方の場合は何も表示されないはずです。
+**「インスタンスの作成」** をクリック。
+
+    <MdxImage month="202311" image="aws5.png?n=1" />
+
+2023年11月現在では、デフォルトで、BitnamiイメージとくにWordpressが早く使い始められるイメージが推奨して
+選択されているのですが、今回はこちらではなく**Amazon Linux 2023**を選びたいです。
+
+よって、
+設計図の選択　から　「OSのみ」を選んで、
+    <MdxImage month="202311" image="aws6.png?n=1" />
+
+「Amazon Linux 2023」を選択します。
+
+    <MdxImage month="202311" image="aws7.png?n=1" />
+
+#### 1-3. 細かい設定・インスタンスタイプの選択
+
+下にスクロール移動し、
+
+「SSHキーペアの変更」からデフォルトキーを**必ずダウンロードしておきます。あとでサーバに入るときに使います。**
+
+    <MdxImage month="202311" image="aws8.png?n=1" />
+
+インスタンスタイプは最小の **「3.5ドル」** のものを選択します。
+
+インスタンス名も今回は **「TestAmazonLinux2023」** としておきます。
+
+    <span className="hoso">実際には利用するプロジェクトのものを選択・入力してください。</span>
+
+    <MdxImage month="202311" image="aws9.png?n=1" />
+
+**キーオンリータグ・キー値タグは多数のインスタンスを運用する際には必要になってきます** が、今回はあくまで評価ということで
+選択は不要になります。
+
+最後に「インスタンスを作成」すると起動します。実際に起動するまで少々待つ必要があります。
+
+    <MdxImage month="202311" image="aws10.png?n=1" isHalf={true} annotation="しばらく待つと" />
+    <MdxImage month="202311" image="aws11.png?n=1" isHalf={true} annotation="起動状態になります。" />
+
+## 2. 必要な事前設定を行う。
+
+Lightsailの場合、インスタンスの停止を行うとパブリックIPが解放され、同じIPを使うことができなくなります。
+これは、独自ドメインなどの疎通設定を行うに当たり、支障が出てしまいます。
+
+    <MdxImage month="202311" image="aws12.png?n=2" annotation="停止するとパブリックIPは「利用不可」と表示される" />
+
+
+### 2-1. 固定IPの取得
+
+よって、固定IPを取得しておく必要が出ます。
+
+Lightsail各画面から、**「ネットワーキング」** をクリックし、表示された画面で次は **「静的IPの作成」** をクリックします。
+
+
+    <MdxImage month="202311" image="aws13.png?n=2" annotation="停止するとパブリックIPは「利用不可」と表示される" />
+
+インスタンスをTestAmazonLinux2023を指定し、静的IPの名称を入力します。（デフォルトのままでもOK）
+
+    <MdxImage month="202311" image="aws14.png?n=2" annotation="" />
+
+**作成ボタン** を押すと静的IPがLightsailインスタンスにくっ付きます。
+
+    <MdxImage month="202311" image="aws15.png?n=1" />
+
+独自ドメインのDNS設定(Aレコード)はこのIPに行いましょう。
+
+    <MdxImage month="202311" image="aws16.png?n=1" annotation="静的パブリックIPが表示される" />
+
+### 2-2. 秘密鍵をわかりやすいところに置き、パーミッションを設定する
+
+これで**SSH** でサーバに入り、ミドルウェア等の設定を進める準備ができました。
+先ほどダウンロードした秘密鍵を、.sshに置くなど準備をしておきましょう。
+
+Downloadsフォルダにある`LightsailDefaultKey-ap-northeast-1.pem`（私の場合）を、わかりやすいユーザーディレクトリ直下の`.ssh`ディレクトリに移しておきましょう。
+
+```
+mv  ~/Downloads/LightsailDefaultKey-ap-northeast-1.pem ~/.ssh/
+```
+
+そのまま使おうとすると、以下のようなエラーが出るため、
+
+```
+yuta@yutanoMacStudio ~ % ssh ec2-user@13.112.240.0 -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+The authenticity of host '13.112.240.0 (13.112.240.0)' can't be established.
+ED25519 key fingerprint is SHA256:TEvFdvd5x24f3SNaAvThnhOTe468mksMCl+jINi9tEQ.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '13.112.240.0' (ED25519) to the list of known hosts.
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0644 for '/Users/yuta/.ssh/LightsailDefaultKey-ap-northeast-1.pem' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "/Users/yuta/.ssh/LightsailDefaultKey-ap-northeast-1.pem": bad permissions
+ec2-user@13.112.240.0: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).
+```
+
+以下のコマンドで正しい権限設定を行いましょう。
+
+```
+chmod 0600 ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+```
+
+これで、<span className="hoso">自分以外はこの秘密鍵は閲覧・更新できない、という意味になります。</span>
+
+### 2-3. サーバへsshログイン
+
+こちらを使って、以下のコマンドでログインします。
+
+```
+ssh ec2-user@[先ほど取得のIP] -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+```
+
+**-i オプションをつけることで、秘密鍵をつけてログインする　という意味になります。** 
+
+```
+yuta@yutanoMacStudio ~ % ssh ec2-user@13.112.240.0 -i ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+   ,     #_
+   ~\_  ####_        Amazon Linux 2023
+  ~~  \_#####\
+  ~~     \###|
+  ~~       \#/ ___   https://aws.amazon.com/linux/amazon-linux-2023
+   ~~       V~' '->
+    ~~~         /
+      ~~._.   _/
+         _/ _/
+       _/m/'
+[ec2-user@ip-172-26-12-12 ~]$
+```
+
+    <span className="hoso">無事ログインができました！</span>
+今日のところはここまでにしておきましょう。
+
+## まとめ
+
+いかがでしたでしょうか。ここまで**GUI（画面から操作するインターフェース）だけで、簡単にサーバを立ち上げることができました。**
+
+この環境は **「LightsailのWordpressイメージ」** ほど立ち上げが簡単ではないものの
+
+- 自由度が高く
+- 保守性が長期的に保て
+- バックエンドとしては習得難易度も低めのLAMP環境
+
+このような環境で、メリットも大きいです。
+引き続き、第2回でも解説しておりますのでぜひフォローアップくださいませ。
+
+↓下記に続く。
+
+    <br />
+    <br />
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-middleware-install"
+                icon='ri-links-line'
+                title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第2回 ミドルウェア整備編。"
+                subtitle="第2回はこちらからご覧いただけます。"
+                targetBlank={true}
+            />
+
+↓第3回はこちら
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-install-wordpress"
+                icon='ri-links-line'
+                title="Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第3回 Wordpress導入編。"
+                subtitle="第3回はこちらからご覧いただけます。"
+                targetBlank={true}
+            />
+
+    <br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+    return (
+        <Layout meta={meta}>
+            <>
+                {children}
+            </>
+        </Layout>
+    )
+}
+
