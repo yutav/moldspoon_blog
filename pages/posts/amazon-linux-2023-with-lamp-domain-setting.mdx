@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'Amazon Linux 2023@LightsailでWordpressブログを運用開始できるまでを丁寧に解説。第4回（最終回） ドメイン編。',
   date: '2023-11-16T08:19:00.000Z',
-  updateDate: '2023-12-27T17:01:45.000Z',
+  updateDate: '2024-02-05T10:30:59.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -22,11 +22,13 @@ export const meta = {
 
 ## 概要
 
-個人的に大好きなインフラが[AWS Lightsail](https://aws.amazon.com/jp/lightsail/)。とてもコストパフォーマンスに優れ、
-かつ**いわゆるVPSではある** ものの、**専用インスタンスである[Amazon EC2](https://aws.amazon.com/jp/ec2/)と変わらない使用感**で、小規模なプロジェクトでは頻繁に使っています。
-
 この連載では、Lightsailの2023年度版イメージである**Amazon Linux2023** をLAMP構成で運用開始できるまでを、画像付きで丁寧に解説していきます。
 本日は第4回（最終回）、IPでアクセスできるWordpressプロジェクトに、新たにドメインを当てて、httpsでアクセスできるようにしていきます。
+
+[前回](http://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-install-wordpress)はWordpressを導入するまでの手順を解説致しましたので
+そちらまだの方はご覧いただけますと幸いです。
+
+[初回の記事](http://moldspoon.jp/blog/posts/amazon-linux-2023-with-lamp-how-to-start)はこちらとなります。
 
 ### 本連載のゴール
 
