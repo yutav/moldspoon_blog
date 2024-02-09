@@ -1,0 +1,264 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第3回 DBを設定し疎通まで',
+  date: '2024-02-09T05:57:23.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'Vapor',
+    'バックエンド',
+    'フレームワーク'
+  ],
+  description: '人気のPHPフレームワークLaravelをAWSが提供するサーバレス環境にデプロイできるVaporについての連載です。第3回の今回はDB(MySQL)インスタンスを立ち上げ、すでに疎通ができているLaravel Vaporプロジェクトと接続するまでを解説します。'
+}
+
+複数の作業をやっているときに、マルチタスクが出来る派でしょうか？たとえば、iOSアプリのビルドをしながら、
+画像作成をGimpでやる...などできる?方の私です。**シングルタスクの方がかえって効率的なのかな...** とか妙なところで悩みます。
+
+そんな今日この頃ですが、Hackerの皆様はいかがお過ごしでございましょうか。
+
+#### 以前の連載ポストは以下から
+
+Laravel Vaporを立ち上げてみる連載となりますが、すでに
+
+- 第1回: [アカウント作成まで](https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor)
+- 第2回: [Vaporの管理ツールでプロジェクトをデプロイし、閲覧できるまで](https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor-will-create-project)
+
+を書かせていただきました。
+よろしければこちらも併せてご覧ください。
+
+## 本記事のゴール
+
+[Vapor](https://vapor.laravel.com/)をつかってLaravelをサーバレス環境にデプロイし、**インフラの運用コストの低減を試みる** 
+
+第3回の今回は、**立ち上げ済みのVaporに、データベース(Mysql)** を追加し、接続するまでを解説します。
+
+## DBの作成
+
+### データベースを画面から立ち上げる
+
+早速進めてまいります。
+
+サイドバーからプロジェクト名をクリックし、
+**Environments => production** をクリックします。
+
+<MdxImage month="202402" image="vp302.png" annotation="" />
+
+**Create database** をクリックします。
+
+<MdxImage month="202402" image="vp303.png" annotation="" />
+
+出てきた画面で「CREATE DATABASE」を再度クリック（少々わかりにくい）
+
+<MdxImage month="202402" image="vp304.png" annotation="" />
+
+MySQLとPostgresqlから選べるみたいですが、今回はMySQLにします。
+
+Free Tier(無料枠）があるdb.t2.microを選びます。
+後で試してみますが、複数プロジェクトで併用できると[こちら](https://docs.vapor.build/resources/databases.html#introduction)にも書いてありますが、
+中身がAWS RDSなので、やはり **趣味のプロジェクトなどではかなり割高** になってしまいますね。これはしょうがないかと思います。
+
+<MdxImage month="202402" image="vp305.png" annotation=""  isHalf={true}/>
+
+以下のように設定します。
+
+- Networkは変更なし
+- Nameは **「my-application-db」**
+- Typeは **「MySQL 8.0 Fixed Size Database」** を選択
+- Server Specsは **「db.t2.micro」** を選択
+- Maximum Disk Size は25GBを選択(自動的に拡張されるので、 **今回のテストという用途を考えると小さめにしておきましょう**　最小は25です。 )
+- Backup Retention Window (Days)はデフォルトのまま **「3」** とする
+- **Public** を選択。セキュリティの観点ではPrivateの方が望ましいでしょうが、有料のNATが必要になるとのことで、ちょっと選びにくそうです
+- Enable Storage Encryptionにチェック入れません（** db.t2.microでは対応していない** ようです）
+
+
+<MdxImage month="202402" image="vp306.png" annotation="" />
+
+
+<span className="hoso">AWS RDSを背後のアーキテクチャとしてそのまま利用していて、ラッパーするような形になっていますね</span>。
+公式ドキュメントにも
+
+> Laravel Vapor is an auto-scaling, serverless deployment platform for Laravel, powered by AWS Lambda.
+>
+> Laravel Vaporは、AWS Lambdaを利用したLaravelの自動スケーリング、サーバーレスデプロイメントプラットフォームです。
+
+と[書かれて](https://docs.vapor.build/introduction.html)います。
+
+**UserとPasswordが出来上がるので保存しておきましょう** 
+(このパスワードは事後的に管理ツールから確認できるみたいではありますが)
+
+
+立ち上がりました。
+
+<MdxImage month="202402" image="vp307.png" annotation="" />
+
+こちらのUserとPasswordを、使っていきます
+
+### プロジェクトをgitでローカルにチェックアウトする
+
+githubにアクセスし、当該プロジェクトページを開きます。
+
+以下のコマンドでローカルに、ここまでの手順で立ち上げ済みの**laravelVapor**プロジェクトをクローンしてきます。
+（プロジェクト名などは各自の環境に併せて読み替えてください。）
+
+```
+git clone git@github.com:yutav/laravelVapor.git
+```
+
+このLaravelは**Vaporのための機能がすでに組み込まれている状態** になっています。
+
+### ローカルで必要な設定を実施
+
+以下はMacでの実行を前提とします。
+順番に実行していきます。
+
+```
+# ライブラリをインストール
+composer install
+
+# 設定ファイルを準備
+cp -i .env.example .env
+php artisan key:generate
+
+# 秘密鍵を生成
+php artisan key:generate
+
+# 開発用の簡易Webサーバを立ち上げ
+php artisan serve
+```
+
+#### ブラウザから確認
+
+この状態で
+
+```
+http://localhost:8000/
+```
+
+にアクセスを行います
+
+<MdxImage month="202402" image="vp310.png" annotation="閲覧できました" />
+
+この状態で、databaseに接続する設定を行います。
+
+### .envを書き換え
+
+<span className="hoso">先ほど画面から作成したdatabaseのUserとPasswordをここで使います。</span>
+
+.envを開き以下のように書き換えます。
+
+```
+DB_CONNECTION=mysql
+DB_HOST=laravelvapordb.xxxxxxx.us-east-1.rds.amazonaws.com // Databasesの当該データベースのホストを入力
+DB_PORT=3306
+DB_DATABASE=vapor // データベース名は「vapor」
+DB_USERNAME=vapor // ユーザー名は「vapor」
+DB_PASSWORD=xxxxxxxxxxx // 発行済みのパスワード
+```
+
+**ちょっと通常のAWS RDSインスタンスや、Laravel SailでMySQLサーバを立ち上げた時と違うところがあるのでご注意ください。** 
+
+なお、Laravel Sailについては以下の記事でも紹介しています。ご興味がございましたら併せてご覧ください。
+
+参考記事: [【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。 第1回 ベース構築編](https://moldspoon.jp/blog/how-to-start-laravel-filament)
+
+### .envの変更を取り込む
+
+```
+php artisan config:cache
+```
+
+そして、この状態でマイグレーションを実行し、vaporのデータベースとの疎通を確認します。
+
+```
+php artisan migrate
+```
+
+<MdxImage month="202402" image="vp311.png" annotation="マイグレーションを実行" />
+
+マイグレーションファイルに沿った新しいテーブルができ、
+無事ローカル => vaporのDBとの接続ができました。
+
+ただ、**めちゃくちゃ実行が遅いですね。。** おそらく、無料DBということで複数のプロジェクトと共有のインスタンスになっているのでしょう。
+このまま利用するのは実用面では厳しいと思うので、その点は注意が必要です。
+
+### Vapor上のプロジェクトとVaporのDBとの接続を行う
+
+プロジェクトルート直下の`vapor.yml`を以下のように書き換えます。
+
+```
+// 基本的には以下以外は書き換えないでください。
+
+id: xxxx // 初期値のままでOK
+name: laravelVapor // Vaporプロジェクトの名称
+environments:
+    production:
+        database: laravelVaporDB // 立ち上げたVaporDBの名称
+```
+
+この状態でgitにコミットします。なお、初期設定で.envは除外されていると思いますが、コミットはしないようにしてください。
+パスワードが書かれていますので、不正利用されるリスクもゼロとはいえないため（githubのレポジトリをpublicにしなければ晒されることはないですが
+この点は注意です）
+
+#### gitにプロジェクトの変更を反映
+
+```
+git add *
+git commit -m 'changed vapor.yml'
+git push
+```
+
+Gitにプッシュを行うとデプロイが行われるので少々待ちます。
+
+プロジェクトには、あらかじめLaravel Vaporに「production」ブランチをプッシュするたび
+変更を反映する設定が組み込まれています。
+
+よって、githubの**「Actions」**からデプロイ状況の確認が可能です。
+
+<MdxImage month="202402" image="vp301.png" annotation="" />
+
+URLは私の作成した「laravelVapor」レポジトリでは以下でした。
+
+```
+https://github.com/yutav/laravelVapor/actions
+```
+
+特に問題なければ、**グリーンのチェックがつく** と思います。
+赤枠のURLを閲覧して問題がなければ接続設定は完了です。
+
+<MdxImage month="202402" image="vp312.png" annotation="" />
+
+次回から、<span className="hoso">Localで動作確認できたDBの参照設定はVapor上でも動く</span>と思います。
+Localからと、Vaporからで接続するDBが同じになりますからね。
+
+## まとめ
+
+Databaseについては**無料ではPublicが基本で、外部からの接続ができてしまうということでセキュリティ面に問題がありそうだったり、**
+（といっても、そこまで厳格なセキュリティを求められないプロジェクトならば、ID/PWの接続は許容される範囲か）
+
+共有インスタンスでは実用面で厳しいということで色々ウィークポイントも見えてきたところはあります。
+
+<span className="hoso">LaravelはバックエンドフレームワークなのでDBとの連携は必須となってくる場合がほとんどでしょうから、
+その辺りは将来に向けて改善が図られるといいな</span>と思いました。個人的には**もう少し安い有料のミニマムプランがあると商用でも
+使いやすいかな** と思います！
+
+次回は、ストレージの追加について解説してまいります。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
