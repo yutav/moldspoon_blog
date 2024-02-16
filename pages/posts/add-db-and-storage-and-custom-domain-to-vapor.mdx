@@ -60,7 +60,7 @@ Laravel Vaporを立ち上げてみる連載となりますが、すでに
 
 MySQLとPostgresqlから選べるみたいですが、今回はMySQLにします。
 
-Free Tier(無料枠）があるdb.t2.microを選びます。
+Free Tier(無料枠）があるdb.t2.microを選びます。（※後ほど検証したので下記注意点！の項をご覧ください）
 後で試してみますが、複数プロジェクトで併用できると[こちら](https://docs.vapor.build/resources/databases.html#introduction)にも書いてありますが、
 中身がAWS RDSなので、やはり **趣味のプロジェクトなどではかなり割高** になってしまいますね。これはしょうがないかと思います。
 
@@ -76,6 +76,30 @@ Free Tier(無料枠）があるdb.t2.microを選びます。
 - Backup Retention Window (Days)はデフォルトのまま **「3」** とする
 - **Public** を選択。セキュリティの観点ではPrivateの方が望ましいでしょうが、有料のNATが必要になるとのことで、ちょっと選びにくそうです
 - Enable Storage Encryptionにチェック入れません（** db.t2.microでは対応していない** ようです）
+
+##### 注意点！
+
+仮に、最小の「db.t2.micro」を選択したとしても、**状況により請求はされることがあります** のでご注意ください。
+**Free Tier Eligible** という表記があったので、無料枠に収まるかなと思っていたのですが...
+
+下記のように<span className="hoso">きっちり請求されています（おそらく2000円/月くらいは請求されます）</span>。
+
+これは、私の場合 **AWSのアカウントを開設してから1年以上経過しているため、
+無料の対象から出てしまったことによる** ものと思います。
+
+[RDSの無料利用枠説明のページ](https://aws.amazon.com/jp/rds/free/)でも
+
+>AWS 無料利用枠には、Amazon Relational Database Service (RDS) での、1 年間毎月 750 時間の db.t2.micro インスタンス、20 GB のストレージ、20 GB のバックアップ用ストレージが含まれます。
+
+と **1年間限定である旨が書かれています。**
+
+そういう意味では、Vapor上の「Free Tier Eligble」という表記は間違ってはないのですが、ちょっとわかりにくいです。
+（Free Tier適用可能、という感じでしょうか）
+<span className="hoso">特にAWSの料金体系に慣れていない方はDBの利用にあたってはご注意</span>ください。
+
+##### Vaporに戻って立ち上げを続ける
+
+さて、話を戻します。Vaporの作成画面に戻ると
 
 
 <MdxImage month="202402" image="vp306.png" annotation="" />
