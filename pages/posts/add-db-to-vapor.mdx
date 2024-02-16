@@ -69,13 +69,13 @@ Free Tier(無料枠）があるdb.t2.microを選びます。（※後ほど検�
 以下のように設定します。
 
 - Networkは変更なし
-- Nameは **「my-application-db」**
+- Nameは **「my-application-db」** => AWSのRDSの管理画面でこの名称で表示されます。
 - Typeは **「MySQL 8.0 Fixed Size Database」** を選択
 - Server Specsは **「db.t2.micro」** を選択
 - Maximum Disk Size は25GBを選択(自動的に拡張されるので、 **今回のテストという用途を考えると小さめにしておきましょう**　最小は25です。 )
 - Backup Retention Window (Days)はデフォルトのまま **「3」** とする
 - **Public** を選択。セキュリティの観点ではPrivateの方が望ましいでしょうが、有料のNATが必要になるとのことで、ちょっと選びにくそうです
-- Enable Storage Encryptionにチェック入れません（** db.t2.microでは対応していない** ようです）
+- Enable Storage Encryptionにチェック入れません（ **db.t2.microでは対応していない** ようです）
 
 ##### 注意点！
 
