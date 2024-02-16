@@ -1,0 +1,189 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第4回 StorageをS3に追加し疎通する',
+  date: '2024-02-16T06:14:49.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'Vapor',
+    'バックエンド',
+    'フレームワーク'
+  ],
+  description: '人気のPHPフレームワークLaravelをAWSが提供するサーバレス環境にデプロイできるVaporについての連載です。第4回の今回はストレージの基盤となるS3のバケットと、Vapor上のLaravelを接続する手順をご説明します。'
+}
+
+自宅のマンションの庭にカモちゃんが帰ってきました。
+昨年は2羽だったところ、なんと3羽に増えて！ ただ、 **小さい池なので餌の取り合いにならないか心配** です...。
+
+<span className="hoso">パイが小さいところではなく、大きいところで勝負したい</span>ものですね。
+
+そんな今日この頃ですが、Hackerの皆様はいかがお過ごしでございましょうか。
+
+## おさらい
+
+前回の連載ではDBをプロジェクトに追加するところまでをご紹介いたしました。
+
+第4回の今回は、**「ストレージ」をvaporのプロジェクトに追加し、デプロイが何度行われても永続的に保存される** ように進めていきます。
+
+### 普通のサーバのようにファイルを永続的に保存することはできない。工夫をしなければ。
+
+基本的にvaporではコンテナ形式をとっており、**productionブランチにコミットが行われるたびに
+環境は初期化され、ローカルに保存されたファイルは消える** と思ってよいかとおもいます。
+
+よって **永続的に保存するにはAWS S3または AWSEFSに領域を確保して、Vaporプロジェクトに設定を追加する必要がある** と理解しました。
+
+※ [こちら](https://docs.vapor.build/resources/storage.html)の公式ドキュメントを読みました。
+
+### storageを選択
+プロジェクトにまず移動します。
+
+<MdxImage month="202402" image="vp401.png" />
+
+下にスクロールして、Storage欄から「Add Storage」を選択
+
+<MdxImage month="202402" image="vp402.png?n=1" />
+
+すると[こちら](https://docs.vapor.build/resources/storage.html#introduction)
+の **解説ドキュメント** に飛ばされました。
+
+### 解説ドキュメントを読む
+
+第3回にご説明したDB(データベース)同様、Vaporの裏側はAWSでできていますので、AWS上にストレージができることになります。
+
+[第1回](https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor)でIAMユーザーを作成しましたが、
+それを使って、半自動的にS3にストレージを作れるようです。
+
+>To ensure that an application environment has a place to store file uploads, you may add a storage key to the environment's vapor.yml configuration. This value should be a valid S3 bucket name. During deployment, Vapor will ensure that this bucket exists. If the bucket does not exist, Vapor will create and configure it. Remember, bucket names must be unique across all of AWS:
+>
+>アプリケーション環境にファイルのアップロードを保存する場所を確保するために、環境の vapor.yml 設定にストレージキーを追加できます。この値は有効なS3バケット名でなければなりません。デプロイ時に、Vaporはこのバケットが存在することを確認します。バケットが存在しない場合、Vaporはバケットを作成して設定します。バケット名はAWS全体で一意でなければならないことを忘れないでください：
+
+先ほどの解説ドキュメントにもこのように説明がありました
+
+### laravelVaporプロジェクトのvapor.ymlを変更
+
+早速保存領域を作っていきます。
+
+今回、[S3のコンソール]()から **「vapor-upload2」** というバケットを作ってみましょう。(vapor-upload出ないのは理由があります。後述）
+
+[前回の第3回の連載](https://moldspoon.jp/blog/posts/add-db-to-vapor#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92git%E3%81%A7%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%AB%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E3%82%A2%E3%82%A6%E3%83%88%E3%81%99%E3%82%8B)でダウンロードしていた、ローカルのlaravelVaporプロジェクトのフォルダをVSCodeなどで開きます。
+
+vapor.ymlがルート直下にあるので開きます。
+以下のように保存して、
+
+```
+id: 57326
+name: laravelVapor
+environments:
+    production:
+        database: my-application-db
+        databse-user: vapor
+        memory: 1024
+        cli-memory: 512
+        runtime: 'php-8.2:al2'
+        build:
+            - 'COMPOSER_MIRROR_PATH_REPOS=1 composer install --no-dev'
+            - 'php artisan event:cache'
+          # - 'npm ci && npm run build && rm -rf node_modules'
+		# ここから下を追加。yamlファイルなので、インデントは気をつけて。
+        storage: vapor-upload2
+                # 私の事例ではこのバケット名ですが、適宜書き換えてください。
+                memory: 1024
+                build:
+                    - 'composer install --no-dev'
+                deploy:
+                    - 'php artisan migrate --force'
+```
+
+こちらの手順で **gitにコミット＆プッシュ** してvapor-upload2への疎通設定を行います。
+
+```
+cd /path/to/laravelVapor # laravelVaporが置いてあるところまで移動
+git add *
+git commit -m 'add storage to vapor.yml'
+git push origin production
+```
+
+しばらく待ちます。（数分間）
+
+Vaporに再度アクセスし、
+
+成功している場合、プロジェクトをクリックした際の **「Storage」欄にも「vapor-uplaod2」が表示され、疎通ができている** ことがわかります。
+
+<MdxImage month="202402" image="vp406.png" annotation="" />
+
+#### 「vapor-upload」ではなぜかバケットはできなかった
+
+私が公式サイトのドキュメントを読んだ限りでは、yamlファイルにバケット名を指定するだけで、
+
+- もう存在すればそのバケットを参照してくれる
+- 存在しなければ、バケットを新たに作る
+
+という動きをしてくれるとのことでした。
+
+私は先ほどバケット名を「vapor-upload2」にしてくださいと書きました。**2**がついています。
+これは、「vapor-upload」でyamlに指定してバケットを作った結果、以下のような問題があったためです。
+
+S3の **バケット一覧** に確認しに行ったところバケットはできておらず...
+VaporのDeploymentの結果を確認したところ
+Ensure Storage Existsまでいったところでエラーが出ていました。
+
+<MdxImage month="202402" image="vp403.png" />
+
+S3の画面に見に行ったところ「vapor-upload」は存在せず。
+
+無理やり以下のURLでアクセスした結果、
+```
+https://s3.console.aws.amazon.com/s3/buckets/vapor-upload
+```
+
+以下のエラーが出ていました。
+
+> オブジェクトを一覧表示するアクセス許可が不十分です
+> お客様または AWS 管理者が s3:ListBucket アクションを許可するようにアクセス許可を更新してから、ページを更新します。詳細については、Amazon S3 での Identity and Access Management  をご覧ください。
+
+どうも作成した「vapor-upload」バケットの閲覧権限がないということで、、
+テスト用のバケットのなので、権限問題を解決するまではする必要はないかなと思い、
+今回は妥協して新たにバケットを作るようにした次第でした。
+
+<MdxImage month="202402" image="vp404.png" annotation="StorageLens関連の権限エラーが出て解決まで時間がかかりそうな見通し。" />
+
+#### バケットができなかった原因
+
+おそらく、原因は **Vaporに設定したIAMユーザーでは作成の権限はあるけど、閲覧の権限を適切につけられなかった？**
+深掘りは今回のテストという目的を考えるとしないようにします。
+
+ということで、「vapor-upload」は見えないまま放棄していますのでご了承ください...。
+なんでしょうね、手順通りにIAMユーザーを作っているはずなのですが、権限が足りないというのは、、
+
+vapor-upload2にしたところ、VaporのIAMユーザーからも閲覧ができたらしく、デプロイは通りました。
+
+<MdxImage month="202402" image="vp405.png" annotation="次は問題なく成功" />
+
+
+### 実際のアップロード処理は次回に
+
+ここまででポストが長くなってきてしまったので、
+実際に<span className="hoso">S3バケットに画像をアップロードし、閲覧できるようにする処理のサンプル</span>は次回の連載に回させていただければと思いました。
+
+どうぞ、次回の連載もよろしくお願いいたします。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+※ **前回の連載** は下記のリンクからどうぞ！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
