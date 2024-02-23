@@ -1,0 +1,299 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第5回 VaporのStorageを使ってみる',
+  date: '2024-02-23T09:40:05.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'Laravel',
+    'PHP',
+    'Vapor',
+    'バックエンド',
+    'フレームワーク'
+  ],
+}
+
+春一番が吹いてあったかくなったと思ったらすぐ真冬並みの気候で雨ですか...<br />
+**北側に面した非常に冷えやすい自宅の環境** でこちらのポストを書いています。
+
+<MdxImage month = "202402" image = "vp501.png" annotation = "記事作成当日の2024年2月23日の天気" isHalf = { true } />
+
+
+
+
+
+**まだしばらくは暖房は手放せそう** ですね。。
+
+そんな今日この頃ですが、Hackerの皆様はいかがお過ごしでございましょうか。
+
+## おさらい
+
+前回の連載ではVaporの「ストレージ」を**プロジェクトにアタッチ** して、疎通ができるところまで進めました。
+
+第5回の今回は、追加した「ストレージ」に画面からCSVファイルをアップロードできる処理を追加し、
+実際に「ストレージ」のバックボーンとなっている**AWS S3**にファイルがアップロードされていることを確認します。
+
+またそのファイルをダウンロードできる処理も作り、仮想環境の一種であり、
+一般のWebサーバのように保存領域がないVapor上でも、
+「ストレージ」を介して
+**ファイルの入出力を恒久的に行える** ところを確認していきます。
+
+##### 前提
+
+- 引き続き`laravelVapor`プロジェクトをもとに対応していきますので、まだの方は第1回〜4回の連載をお読みくださいませ。
+
+## 実装
+
+### 実装時はローカルの開発環境を使う
+
+すでにここまでの連載で、 `production`ブランチに**コミットをすれば自動的にVaporに
+更新した処理が反映される** のを確認しています。
+
+しかし、毎回ファイルを修正するたびにデプロイを行なっていてはあまりに効率が悪すぎるので、
+前回の[第3回](https://moldspoon.jp/blog/posts/add-db-to-vapor#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%A7%E5%BF%85%E8%A6%81%E3%81%AA%E8%A8%AD%E5%AE%9A%E3%82%92%E5%AE%9F%E6%96%BD)でご説明をした手順で
+ローカルのサーバを立ち上げて確認をしていきます。
+
+```
+php artisan serve
+```
+
+<MdxImage month = "202402" image = "vp502.png" annotation = "簡単に簡易Webサーバの立ち上げが可能" isHalf = { true } />
+
+
+#### ローカルの開発環境を使う場合の問題点
+
+vaporのストレージは、裏側はAWS S3のバケットであることはここまでご説明してきました。
+かつ、ファイルアップロードを行う際には[AWS Lambda](https://aws.amazon.com/jp/lambda/) (サーバレスで関数単位での処理を行ってくれるAWSのサービスのうちの一つ)を経由し、
+<span className="hoso" >ファイル容量の上限は4.5MBに制限される</span>
+
+
+のはVaporの[公式ドキュメントのStorageのページ](https://docs.vapor.build/resources/storage.html)で確認しました。
+
+これを具体的にどうやっているかですが、Vaporのアプリデプロイ時に設定を環境変数として割り当て、自動でアップロードできるようになる設定してくれるだろうと思っていました。
+
+
+
+##### ローカルから自動的にS3にアップロードしてくれる仕組みはVaporにはない
+
+しかし、今回のように
+
+- ローカル(ユーザーのPCの仮想環境)からアップロードを試したい場合
+
+かつ
+
+- Vaporの環境と同様にS3をストレージとして使いたい場合
+
+
+には
+
+
+**従来のLaravelプロジェクトと同様に`.env`にAWS S3への疎通設定を
+するしかない、というポスト** を見つけました。（以下の参考記事URL様）
+
+
+参考記事: [HOW TO UPLOAD FILES WITH LARAVEL VAPOR?](https://www.2hatslogic.com/blog/file-upload-laravel-vapor/)
+
+>Note:
+>But when you try in your local file system the file only gets placed in the storage directory since the local file system may have the default driver as ‘local’. You can configure your ‘.env’ file with the AWS configurations and default filesystem as S3 if you want to place the file in the S3 bucket locally.
+>
+>注意してください：
+>しかし、ローカルファイルシステムで試すと、ローカルファイルシステムのデフォルトドライバが'local'になっている可能性があるため、ファイルはストレージディレクトリにしか置かれない。ローカルにあるS3バケットにファイルを置きたい場合は、AWSの設定とデフォルトのファイルシステムを'.env'ファイルに設定することができる。
+
+今回はテスト用途ということもあり、そのまま<span className="hoso" >S3ではなくファイルストレージを使う形で進めます</span>が、商用であれば、テスト用のバケットを作成し、
+AWS IAMのシークレットトークン・アクセスキーを発行して利用すると思います。
+
+その点の違いがあるので予めご承知おきください。
+
+### アップロード処理の実装
+
+以下のように各ファイルを変更していきます。**トップページはそのままで、リンクがなく見えないところにテスト用の処理を作っていく** イメージです
+
+#### app/Http/Controllers/UploadController.php
+
+<CodeBlockTitle title = "app/Http/Controllers/UploadController.php" />
+
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class UploadController extends Controller
+{
+  public function index()
+  {
+    return view('upload.index');
+  }
+
+  public function save(Request $request)
+  {
+
+    if ($request->hasFile('file')) {
+      $file = $request->file('file');
+
+      // S3にファイルをアップロード
+      $filePath = Storage::put("data", $file);
+
+      return view('upload.complete', compact('filePath'));
+    }
+    return view('upload.index');
+  }
+
+  public function download(Request $request)
+  {
+    $filePath = $request->filePath;
+
+    if (Storage::exists($filePath)) {
+      $file = Storage::get($filePath);
+      $fileName = basename($filePath);
+
+      // ダウンロード処理
+      return response()->streamDownload(function () use ($file) {
+        echo $file;
+      }, $fileName);
+    } else {
+      // TODO: エラー処理を適切にする。
+      abort(404);
+    }
+  }
+}
+```
+
+
+#### routes/web.php
+
+<CodeBlockTitle title = "routes/web.php" />
+
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UploadController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/upload', [UploadController::class, 'index'])->name('upload');
+Route::post('/upload/save', [UploadController::class, 'save'])->name('upload.save');
+Route::get('/upload/download', [UploadController::class, 'download'])->name('upload.download');
+
+```
+
+#### resources/views/upload/index.blade.php
+
+<CodeBlockTitle title = "resources/view/upload/index.blade.php" />
+
+```php
+<h1>アップロードテスト</h1>
+
+<form method="POST" action="{{route('upload.save')}}" enctype="multipart/form-data">
+  @csrf
+  <input type="file" name="file" />
+  <button type="submit">送信する</button>
+</form>
+```
+
+#### resources/view/upload/complete.blade.php
+
+<CodeBlockTitle title = "resources/view/upload/complete.blade.php" />
+
+```php
+<h1>アップロード完了</h1>
+
+<p>無事アップロードを行いました。</p>
+<p>アップロードしたパスは{{$filePath}}です。</p>
+
+<h2>今あげたファイルをダウンロード</h2>
+<p>ダウンロードしたい時はこちらをクリックしてください。</p>
+
+<form method="GET" action="{{route('upload.download')}}" enctype="multipart/form-data">
+  @csrf
+  <input type="hidden" name="filePath" value="{{$filePath}}" />
+  <button type="submit">ダウンロード</button>
+</form>
+
+<a href="{{route('upload')}}">戻る</a>
+```
+
+以上のソースコードを、`production`ブランチにコミットすると、Vaporにリリースされます
+
+### 動作確認
+
+ここまでの作業を終えたら、実際に画面で確認します。
+
+Vaporのトップページから、割り当てられているURLを確認しアクセス。
+<MdxImage month = "202402" image = "vp503.png" annotation = ""/>
+
+larvelのデフォルトの画面が開くので、`/upload`を末尾につけたURLに**アドレスバーからアクセス** します。
+
+<MdxImage month = "202402" image = "vp504.png" annotation = ""/>
+
+**「アップロードテスト」** と出るので、テスト用CSVファイルを選択。
+
+<MdxImage month = "202402" image = "vp505.png" annotation = ""/>
+
+※ なお、テストに用いるのみのため、CSVの内容はなんでも良いかとおもいます、もしテスト用のCSVがない場合は以下の内容をメモ帳に貼り付けて、`test.csv`としてファイル名をリネームして使ってみてください。
+
+```
+id,name,type,category,created_at,updated_at
+1,yuta,1,0,2024-02-23 19:50:00,2024-02-23 19:50:00
+2,hiroshi,1,1,2024-02-23 19:50:00,2024-02-23 19:50:00
+3,akira,2,0,2024-02-23 19:50:00,2024-02-23 19:50:00
+4,taro,2,1,2024-02-23 19:50:00,2024-02-23 19:50:00
+5,goro,2,2,2024-02-23 19:50:00,2024-02-23 19:50:00
+```
+
+<MdxImage month = "202402" image = "vp506.png" annotation = ""/>
+
+アップロードが無事完了するとダウンロードボタンが表示されるので、ダウンロードしてみます。
+
+<MdxImage month = "202402" image = "vp507.png" annotation = ""/>
+
+ダウンロードできました。ダウンロードしたファイル名をAWS S3に移動して直接確認します。
+
+<MdxImage month = "202402" image = "vp508.png" annotation = ""/>
+
+**想定通りアップロードができていました。** <span className="hoso">何も設定していないのに、気軽にクラウドストレージが使えてスゴい...。</span>
+
+## まとめ
+
+確かに、**Laravel側で特段の設定なくS3に対してファイルアップロードができてしまったのはスゴい** なと思いました。
+
+<span className="hoso">商用利用で、一定の予算が最初から確保できるようなシステムであれば（例えば月額数千円インフラにかけられるのであれば）
+最初からVaporの利用を考えるのもありだな</span>とこの機能を使ってみて思いました。
+
+<br />
+いったん**Vaporのご紹介については本記事で最終回** といたします。
+
+**ご愛顧いただき、また最後までお読みをいただきましてありがとうございました。** 
+
+<br />
+引き続き連載記事などやPHP/Next.jsなどに関する便利なTipsを発信していければと思いますので、
+ご愛読、また[XへのDM](https://twitter.com/yuku_tas)などもお待ちしております。引き続き**モルドスプーンブログ** をよろしくお願いいたします。
+
+export default function Page({ children }) {
+  return (
+    <Layout meta= { meta } >
+    <>
+    { children }
+    </>
+    </Layout>
+  )
+}
