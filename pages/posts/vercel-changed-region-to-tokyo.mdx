@@ -1,0 +1,168 @@
+
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【小ネタ】Vercelが遅いので確認したらリージョンが東京じゃなかった話',
+  date: '2024-03-11T01:10:00.000Z',
+//  updateDate: '2024-01-13T08:05:00.000Z',
+  tags: [
+    'Tips',
+    '初級者向け',
+    'プログラミング',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'Vercel',
+    '小ネタ'
+  ],
+  description: '商用環境として使っているVercelがあまりに遅かったので確認してみたら、リージョンの問題だった話をまとめた小ネタです。'
+}
+
+家族で温泉に行ったら、**露天風呂に先に入っている大家族がいてなんとなく尻込み** してしまった
+yuku_tasとその子でした。。
+
+そんなこんなですが、ハッカーの皆様はいかがお過ごしでしょうか。
+
+## 概要
+
+さて、本日は小ネタです。Vercelを商用環境として使っているサービスがありまして、
+APIへのリクエストをかけたのですが、妙に遅かったのでそれを解決した方法を簡単にまとめます。
+
+結論から言うとリージョンの設定に問題がありました。
+
+## 前提条件
+
+まず簡単に前提条件をまとめます。
+
+- フロントエンド(Next.js)はVercel
+- バックエンド(Rest) + DBはLightsail (東京リージョン)
+
+という構成で置いていました。
+
+ところが、
+```
+yarn run dev
+```
+
+でローカルでNext.jsを試したときに比べて、**妙にアプリケーションのリクエスト完了までの時間が長かった** です。
+
+そこで調査をしてみました。
+
+### useEffectが2回呼ばれている可能性を疑う
+
+Google Chromeの「要素を検証」を確認すると、
+<span className="hoso">なぜか、useEffectが2回呼ばれてしまっていました。</span>
+
+```
+useEffect(() => {
+    try {
+      // 以下のrequest()の中でHTTPリクエストを行うfetch()を呼んでいる。
+      const response = await request({ token: session?.user?.accessToken || "" });
+		setResponse(response)
+      } catch (e: any) {
+    }
+},[])
+```
+
+これを避けるために、ChatGPTにも聞いてみたところ以下のようにする
+というアドバイスをもらいましたがうまくいきません。
+
+```
+  useEffect(() => {
+    let isFirstRender = false
+    async function readFirst() {
+   	if(isFirstRender == true) {
+		  return
+		}
+    try {
+      const response = await request({ token: session?.user?.accessToken || "" });
+		  setResponse(response)
+    } catch (e: any) {
+    }
+
+    // 初回のみ呼ばれるはず
+    readFirst()
+    return () => {
+      isFirstRender = true;
+    };
+  }, [])
+```
+
+`isFirstRenderer`が起動直後にtrueになるので、次は呼ばれない、、と思いきや、同じタイミングで
+useEffect()が2度呼ばれているようです。
+
+#### StrictModeが原因で呼ばれていた
+
+これはReactの従来からある問題で、`useStrictMode`をoffにしないと、
+2度useEffect()が呼ばれているようです。
+
+これに対する対処としては、
+
+`next.config.js`のuseStrictModeを当該箇所を変更します。
+
+```
+const nextConfig = {
+  ...
+  reactStrictMode: false,
+  ...
+}
+```
+
+しかし、**今回の事例はこれでは解決しませんでした。**
+
+## vercelのリージョンを変更する
+
+そこでそもそものアーキテクチャから考えてみたのが、**レイテンシの問題** です。
+
+Vercelほどのサービスで、単純なAPIリクエストだけでここまで遅くなることがあるだろうか？
+自分の実装が全て悪いとも思えないと、、
+
+### リージョンを確認・変更
+
+そこでリージョンを確認してみます。
+
+Project Settings -> Functions
+ここのリージョンが**「Washington, D.C., USA (East) – iad1」** になっていました。
+
+<MdxImage month="202402" image="vercel1.png" annotation="" />
+
+こちらを**「Tokyo, Japan (Northeast) - hnd1」**に変更したら、
+あら不思議。。ローカルで試したのと同じく、サクサク挙動に。
+
+**vercelのデフォルトのリージョンってワシントンDC** なんですね、、
+**ここの解決に1日かかった** 。。
+
+APIのリクエストで日米を往復していれば、いかに光の速度で通信が行われたとしても
+時間は生じてしまいますね。古典的な確認ミスでした。
+
+<span className="hoso">クラウドのサービスを利用する時はリージョンのチェックは必須...</span>ということで
+また経験が溜まった次第でした。
+
+#### 補足
+
+こちらのリージョンはEdge CDNみたいな仕様となっており、**最寄りのCDNに接続してくれるので、再デプロイなどは不要** です。
+<span className="hoso">セレクトボックスを変更した瞬間東京にあるものとして扱われる</span>ので、その点はVercelすごい、と思った次第でした。
+
+## まとめ
+
+最近業務が忙しくブログのポストがちょっと遅れ気味ですが、継続することが大事なので
+アウトプットはしっかり続けていきたいと思っています。
+どうか引き続き本ブログをご愛顧いただければ幸いです。
+
+[Xアカウント](https://twitter.com/yuku_tas)も細々と続けておりまして、そちらにメンション・DMいただけると
+喜びますのでお待ち申し上げております。
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
