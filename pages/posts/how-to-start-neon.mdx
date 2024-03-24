@@ -1,0 +1,134 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+    title: 'PostgreSQLのサーバレス環境。Neonの環境を立ち上げまで解説',
+    date: '2024-03-25T16:31:14.000Z',
+    tags: [
+        'Blog',
+        '連載記事',
+        '経験者向け',
+        'プログラミング',
+        'Postgres',
+        'Neon',
+        'サーバレス',
+        'オンボーディング',
+        'バックエンド'
+    ],
+    description: 'PostgreSQLのサーバレス環境Neonについて、立ち上げとTablePlusによる接続まで進めてみたので解説します。'
+}
+
+やっと花粉の目のシバシバが取れてきました...。
+
+例年より **スギの東京近郊の飛散完了は時間がかかっている** ようです...。
+この時期だけ永久に感じますね。
+
+<br />
+そんな春を迎えているこの頃、Hackerの皆様は如何にお過ごしでしょうか。
+
+## 概要
+
+PostgreSQLを最近触る機会が出そうで、せっかくですので
+[以前に本ブログにてご紹介したMySQLのサーバレス環境、Planetscale](https://moldspoon.jp/blog/posts/add-planetscale-to-nextjs-project)の
+PostgreSQL版（というよりポスグレの方がサーバレスは広まっていますが）である[Neon](https://neon.tech/) をご紹介します。
+
+<MdxImage month="202403" image="neon1.png" annotation="クールな印象のUI" />
+
+本記事ではまず、接続までを設定・試していきます。
+
+下記のドキュメントを読み進め参考にしてまいります。
+参考URL: [公式ドキュメント](https://neon.tech/docs/)
+
+2024/3 現在 **無料枠** として利用できる最小スペックは以下のようです。
+
+- Projects	1 Neon project
+- Branches	10 branches
+- Databases	Unlimited
+- Storage	0.5 GiB
+- Compute	Always-available primary branch compute, 5 compute hours (20 active hours)/month on branch computes. Free Tier computes have 0.25 vCPU with 1GB RAM.
+<br />
+
+要約しますと
+- 作れるプロジェクトは1個だけ
+- 500MBのストレージ
+- 0.25の分割CPU
+
+あたりがポイントでしょうか。**いかにも心許ない** ですがこちらで試していきます。
+
+### 立ち上げまで
+
+日本リージョンはないようなので、レイテンシが気になりますが取り敢えず **シンガポール(ap-southeast-1)リージョン** を選択し
+DB、プロジェクト名ともに **「test」** という名称を設定します。
+
+<MdxImage month="202403" image="neon2.png" />
+
+※ 本番稼働のDBインスタンス立ち上げ時には適切な名称を設定してください。「test」ではセキュリティレベルが落ちます。
+
+### パスワードを設定
+
+**なんだかわからないまま初期設定を進めた** 結果、PostgresDBがサーバレスで立ち上がってしまった...のですが
+パスワードが不明です。
+
+よって、パスワードを設定します。
+
+<MdxImage month="202403" image="neon3.png" annotation="DB立ち上げ後のランディングページはこんな感じ" />
+
+DBを立ち上げ終えたページで、 **「Reset Password」** を押すと新しいパスワードが表示されるので手元にコピーして控えます。
+
+<MdxImage month="202403" image="neon4.png" annotation="こんなダイアログが出る" />
+
+### TablePlusで接続してみる
+
+以下の公式ドキュメントページに接続方法が乗っているので試してみます。
+
+参考URL: [Connect a GUI application](https://neon.tech/docs/connect/connect-postgres-gui)
+
+こちらの方法では、pgAdminをGUIツール(OSでアプリとして動かせる)として紹介していますが、
+設定の各パラメーターをのみ見れば、Postgresのみならず、MySQLやredisなどさまざまなDBに対応している
+[TablePlus](https://tableplus.com/)でも見れるはず。
+
+ということでやっていきます。
+
+#### 具体的な接続子を抽出
+
+私の設定ではこうでした。
+上にあげたneonの公式ドキュメントに沿って記述します。
+
+```
+postgresql://test_owner:************@ep-rapid-hall-xxxxxxxx.ap-southeast-1.aws.neon.tech/test
+                ^                    ^                                                   ^
+                |- <role>            |- <hostname>                                       |- <database>
+```
+
+具体的にはTableplusではこのようになります
+
+- User: test_owner
+- hostname: ep-rapid-hall-xxxxxxxx.ap-southeast-1.aws.neon.tech
+- database: test
+- Password: 前述の方法でリセットしておく
+
+<MdxImage month="202403" image="neon5.png" annotation="それぞれこのように入れます。" isHalf={true} />
+
+こちらの画像のように設定し、「test」を押すと接続ができました！
+
+## まとめ
+
+**本日はあくまでneonに接続するところまで** を解説しました。
+次回以降は公式ドキュメントを読み進めつつ、PHPアプリケーション(Laravel)との接続方法や
+**neonならではの癖** などを探っていきたいと思います。
+
+<br />
+
+**連載記事をお読みいただきありがとうございました！** <br />
+引き続き当ブログをよろしくお願いいたします。<br />
+
+export default function Page({ children }) {
+    return (
+        <Layout meta={meta}>
+            <>
+                {children}
+            </>
+        </Layout>
+    )
+}
+
