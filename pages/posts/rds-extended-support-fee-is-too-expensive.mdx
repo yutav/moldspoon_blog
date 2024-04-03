@@ -1,0 +1,110 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【小ネタ】AWS RDS の MySQL5.7で延長サポート料が1年目から「倍かかっていた」話',
+  date: '2024-04-02T13:49:34.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'AWS',
+    'RDS',
+    'インフラ',
+    'MySQL',
+    'RDBMS',
+    'コスト管理'
+  ],
+  description: 'AWSのクラウドデータベース「RDS」で古くから運用しているMySQL5.7インスタンスの費用が倍かかっていたので、経緯も含めて解説します。'
+}
+
+桜の花が急に開花したうえ、花粉症が終わって身も心もウキウキの中年男性yuku_tasです。
+
+ハッカーの皆様、4月はチャレンジの季節、いかが、お過ごしでしょうか。
+
+### 概要
+
+AWS RDS MySQL 5.7の延長サポート料が大量にかかっていたので調査したら、納得の結果だった。
+
+### 事前調査
+
+[こちら](https://docs.aws.amazon.com/ja_jp/AmazonRDS/latest/UserGuide/extended-support.html)の公式ドキュメントでもまとめられている通り、
+**2024年2月29日以降**RDSの中でも古い、MySQL 5.7を利用しているインスタンスにに延長サポート料がかかることになりました。
+
+調査したところ、以下のページで延長サポート料は確認できます。
+
+参考URL:[Amazon RDS for MySQL の料金](https://aws.amazon.com/jp/rds/mysql/pricing/)
+
+<MdxImage image="rds1.png" month="202404" annotation="" />
+
+こちらによると、MySQL5.7のサポートをオープンソースのコミュニティに変わり、AWSが行う。
+パッチなどの提供を行う代わりにお金をいただく　と言う内容でした。
+
+重要なのは、 **2024/03/1からの最初の1・2年目と3年目以降ではその料金が変わってくる** と言うことです。
+<span className="hoso">3年目からは2倍になる</span>とのこと。。
+
+移行対象のRDSインスタンスは、db.t2.smallの1台。
+計算式は、表を見る限りでは
+
+```
+# 東京リージョンのため0.120 USD / hour
+0.120 * 24 * 30 = 86.4 USD
+```
+
+今までかかってこなかったものが、<span className="hoso">月額換算で86.4ドル（日本円では今のレート(1ドル150円)で約12,960円!)</span>もかかってくるのです。
+
+これは早めに移行した方がよさそうです。
+
+### 発覚まで
+
+今回私の方で対応していたプロジェクトでは、 **すぐに移行を行わず、開発中のアプリ機能の完成を待つ必要がありました。**
+そうしている間に、3月が過ぎ、4月に入ってAWSの請求が出たのですが...
+
+なんと、
+**172.8 USD(日本円では現レートで25,920円)もかかっていました。**
+
+早速原因を考えました。
+ドキュメントを読み返すとこうあります。
+
+> RDS for MySQL のプロビジョニングされたインスタンスの場合、RDS 延長サポートの料金は 1 時間あたりの vCPU 単位の料金です。
+
+ん？vCPU単位...聞きなれないワードだなぁ。
+
+[RDSのスクリーン]()から、問題のインスタンス => 設定 に行くとなんと。
+
+<MdxImage image="rds2.png" month="202404" annotation="" isHalf={true} />
+
+そう、smallのみならず<span className="hoso">最小クラスのインスタンスであるmicroであれど、CPUは2つある</span>のです。
+
+smallの月額料金は肌感ですが、5,000円前後なので、20,000円以上の請求はすごいです。microの人はもっとインパクトあったでしょうね。
+この仕組みをしらず **もっと大きいインタンスを大量に使っていたところではどでかい請求が来た** でしょうね、なんと言っても掛け算ですから、、、
+
+各インスタンスタイプのvCPU数は下記にありますのでよろしければ参考になさってください。
+
+<MdxImage image="rds3.png" month="202404" annotation="よほど大きいサイズにならない限り、意外にコア数は変わらないようですね" isHalf={true} />
+
+参考URL: [Amazon RDS インスタンスタイプ](https://aws.amazon.com/jp/rds/instance-types/)
+
+### まとめ
+
+今日は小ネタでした。
+**クラウドも適切に管理を行わないと、知らず知らずのうちに変更により費用が跳ね上がります。**
+
+弊社ではこうしたインフラ管理業務も行なっておりますのでお困りの際はお問合せくださいますと幸いです。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
