@@ -1,0 +1,198 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS AppRunner+AWS RDSでLaravelプロジェクトを動かしてみる。第1回 Dockerを準備する',
+  date: '2024-04-15T06:52:30.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'AWS',
+    'RDS',
+    'MySQL',
+    'App Runner',
+    'サーバーレス',
+    'PaaS',
+    'バックエンド',
+    'インフラ',
+    '連載記事'
+  ],
+  description: 'サーバレスアーキテクチャのAWS AppRunnerとRDSを基盤としてLaravelを動かす構成を試してみました。初級者の方でもわかるよう、丁寧に解説を行なっていきます。'
+}
+
+4月も半ば、左からも散った後ににわかに気温もとても上がって、1日中お休みを心穏やかに過ごせた [yuku_tas](https://twitter.com/yuku_tas)です。
+
+<br />
+日が高くなりつつあるこんな時期は **昼間にしっかり仕事** して、夜は **趣味や遊びに、アクティブに過ごしたい** ものです。
+
+季節が徐々に、しかし一方で劇的にも変わるこの頃、プログラマーの皆様はいかがお過ごしでしょうか。
+
+### 概要
+
+AWS AppRunnerを試してみた。その評価を主観的に行う。
+
+**手順が長くなりそうなので複数回に分けて解説したいと思います。**
+
+### AWS AppRunner導入までの経緯
+
+[こちら](https://aws.amazon.com/jp/blogs/news/app-runner-case-study-by-peraichi/)の記事を読み、気になっていたAppRunnerの
+導入を試してみました。
+
+- すでに稼働から一定時間が経過しトラフィックが一定数多く、スケーラビリティを確保する必要がある。
+- インフラに充てる保守運営コストを最小限にとどめたい
+
+この辺りが導入を検討した契機でした。
+
+### 導入手順
+
+#### Dockerの用意
+
+普段開発環境として利用している環境は、Docker Composeを使った構成なのですが、
+App Runnerでは **単体のDocker として動かす必要** があります。
+
+そのため、ローカルで単体のDockerの動作確認をまず行う必要があります。
+本稿ではあくまで動作確認目的ということでPHPのブートストラップスクリプト(index.php)を設置するのみにとどめますが、
+<span className="hoso">Laravelなどのフレームワークも、Docker内のApacheのVirtualHost設定を当てることにより利用が可能</span>です。
+
+**これは次回以降に解説をしてまいります。**
+
+なお、Laravelについては、弊ブログでたくさんの記事を書いてありますのでよろしければ、以下リンクからご参照くださいませ。
+
+参考URL:
+[Laravelの様々なバリデーションパターンをわかりやすい実例付きで解説](https://moldspoon.jp/blog/posts/laravel-validation-patterns)
+[VaporにLaravelアプリをデプロイしてサーバーレス環境を作る](https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor)
+[LaravelとNextjsの両方で設定ファイルを兼用する 第1回YAML化](https://moldspoon.jp/blog/posts/yaml-file-using-both-laravel-and-nextjs)
+[【開発環境】Laravel+Filamentでらくらく管理画面を構築する方法。](https://moldspoon.jp/blog/posts/how-to-start-laravel-filament)
+
+#### ファイル構成
+
+今回はDockerfileは以下で構成します。
+
+- php:8.3-apache
+- ホストの`src`がゲスト(Docker)の`/var/www/html`にマッピングされる
+- Docker立ち上げ後、`http://localhost:8010/`で疎通できる。（他と被らなそうなポートを指定）
+
+プロジェクトの構成は以下のようになります。
+
+```
+/sample-docker-app-runner
+|
++-- Dockerfile
+|
++-- src
+   |
+   +-- index.php
+```
+
+
+[AWS ECR](https://us-east-1.console.aws.amazon.com/ecr/home?region=us-east-1#)
+
+##### Dockerのインストール
+
+もしDockerのインストールがまだの方がいれば
+[こちら](https://docs.docker.com/desktop/install/mac-install/)
+からインストールしましょう。※ Mac向けのリンクとなります。
+
+##### Dockerfileの記述
+
+`Dockerfile`は以下のように記述しました。
+
+<CodeBlockTitle title="Dockerfile" />
+
+```php
+FROM php:8.3-apache
+
+WORKDIR /var/www/html/
+
+# srcをゲストマシンの/var/www/htmlに丸ごとコピー
+COPY src .
+
+# apacheを再起動する
+RUN service apache2 restart
+```
+
+##### phpファイルの記述
+
+次に、ブートストラップファイル（サイトのアクセス時に叩かれるファイル）となる`/src/index.php`を以下のように記述します。
+
+<CodeBlockTitle title="src/index.php" />
+
+```php
+<html>
+
+<head>
+  <title>疎通テスト</title>
+</head>
+
+<body>
+  <span style="font-weight:bold;">成功しました。</span>
+</body>
+
+</html>
+```
+
+中身はご覧の通りhtmlファイルとなっています。(もちろん、PHPファイルを動かすことも可能です。)
+
+#### Dockerの立ち上げ
+
+以下のコマンドで立ち上げてみます
+
+```bash
+# 下記を実行すると、新しいDockerImageの立ち上げを許可することになります。
+export DOCKER_CONTENT_TRUST=0
+
+# ビルド(初回は時間がかかります。2回目からはキャッシュを利用)
+docker build t sample-docker .
+
+# 立ち上げ 8010番ポートを80番ポートに内部的に転送する（Docker側で設定を変える必要はなし）
+docker run -d -p 8010:80 --name sample-docker sample-docker
+
+# コンテナ内にアクセス
+docker exec -it sample-docker bash
+```
+
+<MdxImage month="202404" image="ar2.png" isHalf={true}/>
+
+**無事疎通まで行えました。**
+
+#### (すぐにしなくて良い) Dockerを止めたい時
+
+Dockerを止めたい時は、以下のコマンドを実行するか、GUI(Dockerアプリ)から停止を実行します。
+
+```
+# 停止
+docker stop sample-docker
+
+# 作成したImageを削除(ビルドを最初からし直す時など)
+docker rm sample-docker
+```
+
+<MdxImage month="202404" image="ar1.png" isHalf={true}/>
+
+### まとめ
+
+ということで、今回はローカル環境の`http://localhost:8010/`から疎通を行うところまで解説しました。
+
+次回は、`AWS ECR`に今回作成したDocker Imageをプッシュし、経由して 肝心の`App Runner`にデプロイ・疎通確認する
+までを解説してまいります。
+
+弊社ではこのような新しい技術を通じたWebサービスの開発・保守・運営を承っておりますので
+御用の際にはぜひお申し付けくださいませ。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
