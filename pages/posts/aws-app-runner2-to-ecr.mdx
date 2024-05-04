@@ -4,6 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'AWS AppRunner+AWS RDSでLaravelプロジェクトを動かしてみる。第2回 AWS ECRにコンテナを登録する。',
   date: '2024-04-21T16:32:11.000Z',
+  updateDate: '2024-05-04T17:40:58.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -261,6 +262,42 @@ latest: digest: sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx size: 3655
 **認証周りの問題を修正する必要はないと判断** しました。（商用利用時には、パスワード認証がきくように適切に設定を行うべき）
 
 このプッシュしたECRイメージをどうAppRunnerに連携するかは、次回以降解説してまいります。
+
+### トラブルシューティング
+
+#### Error: trust data missing for remote repository 
+
+push時に
+
+rootキー・レポジトリキーを入力後
+以下のエラーが出た時は、
+
+```
+Signing and pushing trust metadata
+Enter passphrase for root key with ID xxxxx:
+Enter passphrase for new repository key with ID xxxxx:
+Repeat passphrase for new repository key with ID xxxxx:
+Error: trust data missing for remote repository xxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test or remote repository not found: timestamp key trust data unavailable.  Has a notary repository been initialized?
+```
+
+ログインから、プッシュまで「プッシュコマンドの表示」に沿ってやり直せば
+**プッシュ自体は成功しているのでそのまま、次へ進められました。**
+（実運用時にこれでよいかは確認が必要）
+
+### 補足: Apple Mac Siliconマシーンで実行される方は以下のようにすること！
+
+次のApp Runner立ち上げの段階で、以下のようなエラーが出てしまいました。
+
+```
+05-04-2024 12:46:38 AM exec /usr/local/bin/docker-php-entrypoint: exec format error
+```
+
+これは、Apple Mac Siliconマシーンでビルドを実行する際のオプションが足りていないことに起因していたようです。
+以下のように実行すると動くので、 **ビルドおよび、後続のpushをやり直し** ましょう。
+
+```
+docker build --platform linux/amd64 -t ecr-test .
+```
 
 ### まとめ
 
