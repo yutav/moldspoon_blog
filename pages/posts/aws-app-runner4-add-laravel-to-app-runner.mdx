@@ -1,0 +1,298 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS AppRunner+AWS RDSでLaravelプロジェクトを動かしてみる。第4回 DockerにLaravelプロジェクトを追加',
+  date: '2024-05-22T16:14:24.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'AWS',
+    'App Runner',
+    'AWS ECR',
+    'サーバーレス',
+    'Laravel',
+    'PaaS',
+    'バックエンド',
+    'インフラ',
+    '連載記事'
+  ],
+  description: 'AWS AppRunnerとRDSを基盤としてLaravelを動かす構成を試します。第4回はPHPの人気フレームワークLaravelをDockerに同梱してローカルで動作確認するまでを解説していきます。'
+}
+
+こんにちは。
+
+ここのコメントを密かに見ているという連絡を同僚からもらった
+三流裏アカエンジニアの [yuku_tas](https://twitter.com/yuku_tas)です。
+
+<br />
+**成果物は全て人に見ていただいているもの** 、との意識と自戒を常に持ちつつ
+コンテンツ作りを楽しみながらやっていきたいと思っている今日この頃です。
+
+それにしても5月は開発で忙しかったです...
+
+プログラマーの皆様はいかがお過ごしでしょうか。
+
+### 概要
+
+AWS AppRunner + Laravelフレームワークの導入と動作確認。<br />
+<br />
+
+前回は、AWS App Runnerでの、シンプルなphpスクリプトを利用しての疎通・動作確認までを行いました。
+第4回の今回はPHPフレームワークLaravelを導入し、動作確認を行うまでを解説します。
+
+※ 以下は **Macでの開発を前提** とします。WindowsでもWSLをご利用いただくことで概ね同じように開発は可能だと思います。
+
+### LaravelをAppRunnerプロジェクトに導入
+
+本連載の[第1回](https://moldspoon.jp/blog/posts/aws-app-runner#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E6%A7%8B%E6%88%90)で
+以下のようにファイルを構成しました。
+
+```
+/sample-docker-app-runner
+|
++-- Dockerfile
+|
++-- src
+   |
+   +-- index.php
+```
+
+今回は、この `src`以下にLaravelプロジェクトを作成していきます。
+今回を手順通りに進めると **最終的には以下のような構成** になります。
+
+```
+/sample-docker-app-runner
+|
++-- Dockerfile
+|
++-- apache
+|  |
+|  +- sample-docker-app-runner.conf
+|
++-- src # ここ以下にLaravelの本体がぜんぶ入ります！
+|
++-- Dockerfile
+```
+
+#### Composerインストール
+
+ComposerはPHPのライブラリ管理ツールです。こちらを使ってLaravelのインストールを行うため
+必須となります。（また、Laravelを導入後に必要なライブラリを管理するためにもあった方が間違いなく良いので
+入れましょう）
+
+[Composerの手順]にそって、MacにComposerを入れます
+
+```
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php -r "if (hash_file('sha384', 'composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
+
+# インストールできたことを確認
+composer -v
+```
+
+こちらでComposerのインストールは完了です。
+
+#### コンソールでsrcに移動してLaravelをインストール
+
+Laravelを早速導入していきます。
+インストーは[公式ドキュメントの version 11.x の手順](https://laravel.com/docs/11.x)に沿って行います。
+
+```bash
+cd /path/to/sample-docker-app-runner
+rm -rf src // srcは空にしないとLaravelが入れられないので、中身を確認した上で消してください
+
+# laravelのシェルからのインストール。srcの一つ上のディレクトリから入れます
+composer create-project laravel/laravel src
+cd src
+php artisan -v // インストールを確認
+```
+
+##### 必要な初期設定をLaravelで行う
+
+早速必要な初期設定をLaravelのルートディレクトリから、artisanコマンドを実行することにより
+進めていきます。
+
+```bash
+# 秘密鍵の作成
+php artisan key:generate
+
+   INFO  Application key set successfully.
+
+sudo chmod -R 0777 storage
+```
+
+### Apache(Webサーバ)の疎通設定を変更
+
+ここまで進みましたら、DockerコンテナのApacheの疎通設定を、前回までの初期設定の
+
+```bash
+/var/www/html
+```
+
+から
+
+```bash
+/var/www/html/src/public
+```
+
+に変更します。
+
+これを実現するためには、 広く利用されているWebサーバミドルウェアの **Apache** の設定を変更します。
+通常のLinuxサーバと同様に直接 `vim` などで設定を変更するのではなく、 `Dockerfile` を変更しましょう。
+
+```
+FROM php:8.3-apache
+
+WORKDIR /var/www/html/
+
+# srcをゲストマシンの/var/www/html/srcに丸ごとコピー
+COPY ./src ./src
+
+# バーチャルホスト設定をそのままデフォルトのconfファイルに上書き
+COPY ./apache/sample-docker-app-runner.conf /etc/apache2/sites-available/000-default.conf
+
+RUN cd src && php artisan key:generate
+
+## 以下は、テスト用のsqliteのパーミッション設定ということで、777を設定していますが
+## 基本的に設定しないようにしましょう。セキュリティ面で脆弱です。
+RUN chmod 777 /var/www/html/src/database/database.sqlite
+
+# Apache mod_rewriteを有効化
+RUN a2enmod rewrite
+
+# apacheを再起動する
+RUN service apache2 restart
+```
+
+※ まだこれだけでは動かないので、下記を読みconfファイルを追加ください。
+
+##### バーチャルホスト設定
+
+このうち、 `/etc/apache2/sites-available/sample-docker-app-runner.conf` に格納される **confファイル** が
+いわゆる 「バーチャルホスト設定」と呼ばれるものになります。
+
+サイトごとに並列でこのファイルを増やしていくわけですが、今回はDockerで1サイトのみの運用となるので必要になるのはこのファイルだけです。
+
+以下のように追加します。
+
+<CodeBlockTitle title="./apache/sample-docker-app-runner.conf" />
+
+```php
+<VirtualHost *:80>
+    DocumentRoot /var/www/html/src/public
+</VirtualHost>
+  <Directory /var/www/html/src/public>
+      Options Indexes FollowSymLinks
+      AllowOverride All
+      Require all granted
+  </Directory>
+```
+
+先ほど、参照を変更すると書いた `/var/www/html/src/public` つまり、<span className="hoso">Laravelのpublic = リクエストを受け付けるディレクトリ宛に
+DocumentRootが設定されていることがお分かりいただけるか</span>と思います。
+
+#### Dockerコンテナの再度ビルド
+
+ここまできたら、 **コンテナをリビルド** します。
+
+```bash
+cd /path/to/sample-docker-app-runner
+docker build --platform linux/amd64 -t ecr-test .
+```
+
+エラーメッセージが出なければ成功です。
+
+```bash
+=> exporting to image 0.3s
+=> => exporting layers 0.3s
+=> => writing image sha256:************************************************ 0.0s
+=> => naming to docker.io/library/ecr-test 0.0s
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/***************
+Build multi-platform images faster with Docker Build Cloud: https://docs.docker.com/go/docker-build-cloud
+```
+
+#### Dockerをローカルから接続し動作確認
+
+ECRにプッシュして確認するより前に、まずローカルでLaravelの画面が出るかを検証しましょう。
+
+※ [第1回で実行したのとほぼ同じコマンド](https://moldspoon.jp/blog/posts/aws-app-runner#docker%E3%81%AE%E7%AB%8B%E3%81%A1%E4%B8%8A%E3%81%92)ですがおさらいとなります。
+
+```bash
+export DOCKER_CONTENT_TRUST=0
+docker run -d -p 8010:80 --name ecr-test ecr-test
+
+WARNING: The requested images platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested
+
+# もしコンテナ内にsshで入って、中身を確認したい場合はこちらを実行
+docker exec -it ecr-test bash
+
+# もしコンテナが不要になったり、作り直したい場合は以下を実行
+docker stop ecr-test
+docker rm ecr-test
+****************************************************************
+```
+
+この例では `http://localhost:8010` をブラウザのアドレスバーに入力し確認を行います。
+
+以下のようにエラーが出ました
+
+<MdxImage month="202405" image="ar4_1.png" />
+
+まだ **データベース関連の何か、パーミッションが足りない** ようです。
+
+##### テスト用に使用するsqliteデータベースにパーミッションを設定する
+
+Laravel8から `sqlite` がデフォルトのデータベースとして `.env` に設定されるようになったので
+`database/database.sqlite` にアプリケーションから参照され、このファイルの閲覧権限がないのがエラーの原因のようです。
+
+**プロジェクトのルートで以下のように実行** します。
+
+```
+sudo chmod 777 database/database.sqlite
+```
+
+※ テストにしか使用しない database.sqliteであるがため、777パーミッションを設定していますが、こちらは **誰でも書き換え自由** という意味になるので
+　本番運用時には使わないようにしましょう。<span className="hoso">ユーザーが投稿できる処理をLaravel内に設置した場合、セキュリティ面での設定が甘い場合は
+　悪意のあるプログラムを設置され、書き換えられる可能性があります。</span>
+
+※ 先ほど本記事に書いた `Dockerfile` にこの手順は追加してあるのでエラーは出ないかもしれませんが、もしこのエラーが発生したら困る方のために章を書きました。
+
+#### 疎通を確認
+
+以下のように `http://localhost:8010` で疎通を確認できました。
+
+<MdxImage month="202405" image="ar4_2.png" />
+
+今日はここまでとなります。
+
+### まとめ
+
+いかがでしたでしょうか。
+
+AppRunner+Laravelの導入は思ったより簡単にできたように、私には感じました。
+次回のECRのプッシュ => App Runnerでの実運用が山場となりますのでぜひ
+最後までお付き合いください！
+
+また弊社では、このような一般的な開発環境構築の支援を業務として行っております。
+ぜひインフラ・Webサイト構築にお困りの方は弊社までお声がけくださいませ。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
