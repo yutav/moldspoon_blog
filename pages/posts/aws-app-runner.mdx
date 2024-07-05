@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: 'AWS AppRunner+AWS RDSでLaravelプロジェクトを動かしてみる。第1回 Dockerを準備する',
   date: '2024-04-15T06:52:30.000Z',
-  updateDate: '2024-04-22T05:52:37.000Z',
+  updateDate: '2024-07-05T17:47:15.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -105,8 +105,18 @@ FROM php:8.3-apache
 
 WORKDIR /var/www/html/
 
-# srcをゲストマシンの/var/www/htmlに丸ごとコピー
-COPY src .
+# srcをゲストマシンの/var/www/html/src以下に丸ごとコピー
+COPY src src
+
+# バーチャルホスト設定をそのままデフォルトのconfファイルに上書き
+COPY ./apache/sample-docker-app-runner.conf /etc/apache2/sites-available/000-default.conf
+
+# ※ 下記はテスト用のsqliteファイルとなるため、777で設定していますが、本番稼働する場合は絶対に755などに変更してください！
+RUN cd src && php artisan key:generate
+RUN chmod 777 /var/www/html/src/database/database.sqlite
+
+# Apache mod_rewriteを有効化
+RUN a2enmod rewrite
 
 # apacheを再起動する
 RUN service apache2 restart

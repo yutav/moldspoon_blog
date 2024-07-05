@@ -1,0 +1,179 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS AppRunner+AWS RDSでLaravelプロジェクトを動かしてみる。第5回 ECRでLaravelを動作確認',
+  date: '2024-07-04T18:08:39.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'AWS',
+    'App Runner',
+    'AWS ECR',
+    'サーバーレス',
+    'Laravel',
+    'PaaS',
+    'バックエンド',
+    'インフラ',
+    '連載記事'
+  ],
+  description: 'AWS AppRunnerとRDSを基盤としてLaravelを動かす構成を試します。第5回の今回は、ECRで前回作成したLaravel Dockerの構成を動かすまでを解説していきます。'
+}
+
+こんにちは。
+
+激務にかまけて、ブログの更新がずいぶん遅れてしまいました。
+ **忙しいのつれーわ...的な、意識高い系** エンジニアの [yuku_tas](https://twitter.com/yuku_tas)です。
+
+<br />
+引きこもってコーディングしてたら、季節はあっという間に梅雨を通り越して、もはや夏ですね。
+
+そんな今日この頃ですが、プログラマーの皆様はいかがお過ごしでしょうか。
+
+### 概要
+
+Docker化したLaravel構成を、ECRにプッシュを試みます。<br />
+<br />
+
+前回は、Laravel+Dockerの構成を作成し、ローカル(PC・Mac)で動作確認を行うまでを解説しました。
+第5回は、このDockerコンテナを使い、AWS ECRにプッシュを実行して本番環境として動作させるまでを解説します。
+一部、第2回の裸のPHPをデプロイする構成と重複しておりますがご容赦ください。
+
+※ 今回も **Macでの開発を前提** としておりますが、作成したDockerコンテナはWindowsでも環境の準備を行えば問題なく使える想定ですのでよろしくお願いいたします。
+
+### 前回のおさらい
+
+第4回のおさらいとして、以下のコマンドでローカルの環境を立ち上げ直しましょう。
+（私自身も前回のブログポストから間隔が空いてしまったので、反省の再デプロイ...！）
+
+**もちろん、Docker Desktopは起動しておきましょう。**
+
+```bash
+# もしイメージを消した方は、再ビルドからやりましょう
+docker build --platform linux/amd64 -t ecr-test .
+
+export DOCKER_CONTENT_TRUST=0
+docker run -d -p 8010:80 --name ecr-test ecr-test
+```
+
+### 第2回の設定を流用する
+
+本連載の[第2回](https://moldspoon.jp/blog/posts/aws-app-runner2-to-ecr)の設定を設定をそのまま使っていきます。
+
+<MdxImage month="202407" image="ar5_1.png" annotation="赤色を選択" />
+
+次の画面で「プッシュコマンドを選択」を押します。
+
+<MdxImage month="202407" image="ar5_2.png" />
+
+表示されたプッシュコマンドのうち、3と4を使います。
+いちいちこの画面に戻ってきて、コマンドをコピーするのは手間なので、 **一旦メモ帳などにコピーしておいてください。**
+
+<MdxImage month="202407" image="ar5_3.png" />
+
+### コマンドを順番に実行し、ECRにLaravel入りのDockerイメージをデプロイする
+
+コピーした以下のコマンドを、 `sample-docker-app-runner` プロジェクトのディレクトリまで移動し、
+エンターを押して順番に実行してください。
+
+```bash
+※ 実際のコマンドはマスキングされていません。
+
+docker tag ecr-test:latest xxxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test:latest
+
+docker push xxxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test:latest
+```
+
+先ほどの `docker build` コマンドで、 `ecr-test` イメージは出来上がっていますので、それを
+<span className="hoso">AWS ECRで使える形に指定していく作業</span>となります。
+
+下の権限周りの問題もなく、プッシュがスムーズにいくと以下のようなメッセージが出て
+処理が終わります。
+
+```
+latest: digest: sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx size: 4490
+```
+
+### App Runnerのデフォルトのドメインで動作確認
+
+[第2回](https://moldspoon.jp/blog/posts/aws-app-runner2-to-ecr)で、登録したDocker Imageが AWS ECRからApp Runnerに
+自動反映される処理はできているわけですから、
+
+[App Runnerの管理コンソール](https://ap-northeast-1.console.aws.amazon.com/apprunner/home?region=ap-northeast-1#/)を確認し、あらためてURLを取得しましょう。
+
+<MdxImage month="202407" image="ar5_5.png?n=1" />
+
+サービス名を選択 →  **「デフォルトドメイン」** をクリックし、今までの設定が全て合っているのであれば、
+Laravelのトップ画面が表示されます。
+
+<MdxImage month="202407" image="ar5_6.png" annotation="前回と異なり、App Runnerのドメインで疎通確認できている。" />
+
+#### エラー対応:docker pushでエラーが出た時は
+
+ここからは、作業途中でエラーが出たケースについて説明します。
+
+```bash
+docker push xxxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test:latest
+```
+
+後者のコマンドで下記の権限エラーが出た時には、
+
+```bash
+denied: Your authorization token has expired. Reauthenticate and try again.
+```
+
+先ほどの **プッシュコマンドを選択** の **1** をやり直して、ログイン状態としてください。
+
+<MdxImage month="202407" image="ar5_4.png" isHalf={true} annotation="1を実行するだけで、すぐログイン状態になります" />
+
+#### エラー対応: App Runnerドメインへのアクセス時に「General error: 8 attempt to write a readonly database」が出た時は
+
+[第4回](https://moldspoon.jp/blog/posts/aws-app-runner4-add-laravel-to-app-runner#docker%E3%82%92%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%8B%E3%82%89%E6%8E%A5%E7%B6%9A%E3%81%97%E5%8B%95%E4%BD%9C%E7%A2%BA%E8%AA%8D)で
+説明した通り、組み込んでいるテスト用データベース `sqlite` のファイルのパーミッション権限が足りないことに起因するので、 **以下の手順を全てやり直しましょう。**
+
+```bash
+# ビルドのやり直し
+docker build --platform linux/amd64 -t ecr-test .
+
+# DockerImageへのタグ付けとプッシュのやり直し
+docker tag ecr-test:latest xxxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test:latest
+docker push xxxxxxxxxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ecr-test:latest
+```
+
+
+### まとめ
+
+いかがでしたでしょうか。
+<br />
+
+今回は、 **連載の第２回・第４回の方法の焼き直し？合わせ技？** で<span className="hoso">ECRでのDocker + Laravel構成の
+動作確認まで持っていくことができました。</span>
+
+インフラの構築はこうした地道で繰り返しの作業が品質を確保するために重要だと思っています。今後も苦労を厭わず一つ一つの構築・検証を大事に進めてまいりたいと思います。
+
+次回は、 **AppRunnerで動くようになったこのシステムに、AWS RDSを追加して
+クラウド上のフルマネージドサービスとできれば、と思っています。** ぜひご期待ください。
+
+<br />
+<br />
+
+また弊社では、このような一般的な開発環境構築の支援を業務として行っております。
+ぜひインフラ・Webサイト構築にお困りの方は弊社までお声がけくださいませ。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
