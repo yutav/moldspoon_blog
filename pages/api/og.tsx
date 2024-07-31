@@ -5,15 +5,15 @@ export const config = {
   runtime: "edge",
 };
 
-// const font = fetch(
-//   process.env.baseUrl + "/assets/TsunagiGothic.ttf"
-// ).then((res) => res.arrayBuffer());
+const font = fetch(
+  process.env.baseUrl + "/assets/TsunagiGothic.ttf"
+).then((res) => res.arrayBuffer());
 
 
 export default async function handler(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    // const fontData = await font;
+    const fontData = await font;
 
     const options = {
       title: searchParams.get("title")?.slice(0, 100) || "My default title",
@@ -78,13 +78,13 @@ export default async function handler(req: NextRequest) {
       {
         width: options.width,
         height: options.height,
-        // fonts: [
-        //   {
-        //     name: "GenJyuuGothic",
-        //     data: fontData,
-        //     style: "normal",
-        //   },
-        // ],
+        fonts: [
+          {
+            name: "GenJyuuGothic",
+            data: fontData,
+            style: "normal",
+          },
+        ],
       }
     );
   } catch (e: any) {
