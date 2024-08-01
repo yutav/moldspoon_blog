@@ -32,7 +32,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
         <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name).replace(/(%20)(.*)/, '$1' + '$2'.replace(/%20/g, '_'))}
+              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name).replace(/%20/g, '%E3%80%80')}
               width="100"
               height="44"
               alt={post.name}
@@ -43,7 +43,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             />
           ) : (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name).replace(/(%20)(.*)/, '$1' + '$2'.replace(/%20/g, '_'))}
+              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name).replace(/%20/g, '%E3%80%80')}
               width="320"
               height="140"
               alt={post.name}
