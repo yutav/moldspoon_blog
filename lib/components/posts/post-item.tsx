@@ -31,12 +31,12 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
       <div className="flex">
         <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
-            <Image src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name.length > 40 ? post.name.slice(0, 40) + '...' : post.name)} width="100" height="44" alt={post.name} style={{
+            <Image src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name)} width="100" height="44" alt={post.name} style={{
               borderRadius: '5px'
             }} className='hover:opacity-80'
             />
           ) : (
-            <Image src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name.length > 40 ? post.name.slice(0, 40) + '...' : post.name)} width="320" height="140" alt={post.name} style={{
+            <Image src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(post.name)} width="320" height="140" alt={post.name} style={{
               borderRadius: '12.5px'
             }} className='hover:opacity-80'
             />
