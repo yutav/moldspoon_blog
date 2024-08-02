@@ -5,10 +5,12 @@ export const config = {
   runtime: "experimental-edge",
 };
 
-const font = fetch(
-  process.env.baseUrl + "/assets/TsunagiGothic.ttf"
-).then((res) => res.arrayBuffer());
-
+const font = fetch(process.env.baseUrl + "/assets/TsunagiGothic.ttf")
+  .then((res) => res.arrayBuffer())
+  .catch((error) => {
+    console.error("Failed to load font:", error);
+    return null;
+  });
 
 export default async function handler(req: NextRequest) {
   try {
@@ -89,7 +91,7 @@ export default async function handler(req: NextRequest) {
     );
   } catch (e: any) {
     console.log(`${e.message}`);
-    return new Response(`Failed to generate the image`, {
+    return new Response(`Failed to generate the image: ${e.message}`, {
       status: 500,
     });
   }
