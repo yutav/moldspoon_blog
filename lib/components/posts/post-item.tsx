@@ -25,15 +25,15 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
   const { isMedium } = useIsMobile()
 
   const theme = useTheme()
+  const searchParams = new URLSearchParams(`title=${post.name}`);
 
   return (
     <div className="item">
-      <div style={{ overflow: 'visible' }}>{process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)}</div>
       <div className="flex">
         <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)}
+              src={process.env.baseUrl + `/api/og?title=${searchParams.toString()}`}
               width="100"
               height="44"
               alt={post.name}
@@ -44,7 +44,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             />
           ) : (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURI(post.name)}
+              src={process.env.baseUrl + `/api/og?title=${searchParams.toString()}`}
               width="320"
               height="140"
               alt={post.name}
