@@ -4,7 +4,7 @@ import Link from 'next/link'
 // import Image from "next/image"
 import { getTagColor } from 'lib/utils'
 import DateDisplay from 'lib/components/date-display'
-import { useIsMobile } from 'hooks/useIsMobile'
+// import { useIsMobile } from 'hooks/useIsMobile'
 
 
 export interface PostItemProps {
