@@ -5,12 +5,9 @@ export const config = {
   runtime: "edge",
 };
 
-const font = fetch(process.env.baseUrl + "/assets/TsunagiGothic.ttf")
-  .then((res) => res.arrayBuffer())
-  .catch((error) => {
-    console.error("Failed to load font:", error);
-    return null;
-  });
+const font = fetch(
+  process.env.baseUrl + "/assets/TsunagiGothic.ttf"
+).then((res) => res.arrayBuffer());
 
 export default async function handler(req: NextRequest) {
   try {
