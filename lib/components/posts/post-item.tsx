@@ -30,6 +30,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   return (
     <div className="item">
+      <div style={{ overflow: 'visible' }}>{process.env.baseUrl + "/api/og?title=" + encodeURIComponent(postNameSpaceReplaces)}</div>
       <div className="flex">
         <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
