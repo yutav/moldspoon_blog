@@ -26,13 +26,13 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  // const postName = encodeURI(post.name)
-  const postName = ""
+  const postName = encodeURI(post.name)
+  // const postName = ""
 
   return (
     <div className="item">
       <div className="flex">
-        <Link href={post.url} passHref className="flex-none">
+        {/* <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
             <Image
               src={process.env.baseUrl + "/api/og?title=" + postName}
@@ -56,7 +56,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
               className='hover:opacity-80'
             />
           )}
-        </Link>
+        </Link> */}
         <div className="p-0 md:p-3">
           <div className="flex flex-wrap">
             {post.meta?.tags?.includes('Tips') && (
