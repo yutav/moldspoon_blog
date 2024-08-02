@@ -26,7 +26,8 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  const postName = encodeURI(post.name)
+  // const postName = encodeURI(post.name)
+  const postName = ""
 
   return (
     <div className="item">
