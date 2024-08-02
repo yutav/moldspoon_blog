@@ -26,16 +26,16 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  const postNameSpaceReplaces = post.name.replace(/ /g, '　')
+  const postNameSpaceReplaces = post.name.replace(/\s/g, '　')
 
   return (
     <div className="item">
-      <div style={{ overflow: 'visible' }}>{process.env.baseUrl + "/api/og?title=" + encodeURIComponent(postNameSpaceReplaces)}</div>
+      <div style={{ overflow: 'visible' }}>{process.env.baseUrl + "/api/og?title=" + encodeURI(postNameSpaceReplaces)}</div>
       <div className="flex">
         <Link href={post.url} passHref className="flex-none">
           {isMedium ? (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(postNameSpaceReplaces)}
+              src={process.env.baseUrl + "/api/og?title=" + encodeURI(postNameSpaceReplaces)}
               width="100"
               height="44"
               alt={post.name}
@@ -46,7 +46,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
             />
           ) : (
             <Image
-              src={process.env.baseUrl + "/api/og?title=" + encodeURIComponent(postNameSpaceReplaces)}
+              src={process.env.baseUrl + "/api/og?title=" + encodeURI(postNameSpaceReplaces)}
               width="320"
               height="140"
               alt={post.name}
