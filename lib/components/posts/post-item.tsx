@@ -26,7 +26,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
   const theme = useTheme()
 
-  const postNameSpaceReplaces = post.name.replace(/\s/g, '　')
+  const postNameSpaceReplaces = post.name.replace(/\s/g, '')
 
   return (
     <div className="item">
