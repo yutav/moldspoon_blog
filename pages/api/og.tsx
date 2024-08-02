@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { ImageResponse } from "@vercel/og"
 
 export const config = {
-  runtime: "experimental-edge",
+  runtime: "edge",
 };
 
 const font = fetch(process.env.baseUrl + "/assets/TsunagiGothic.ttf")

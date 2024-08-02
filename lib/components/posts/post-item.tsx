@@ -1,7 +1,7 @@
 import React from 'react'
 import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
-import Image from "next/image"
+// import Image from "next/image"
 import { getTagColor } from 'lib/utils'
 import DateDisplay from 'lib/components/date-display'
 import { useIsMobile } from 'hooks/useIsMobile'
@@ -22,11 +22,11 @@ export interface PostItemProps {
 
 const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
-  const { isMedium } = useIsMobile()
+  // const { isMedium } = useIsMobile()
 
   const theme = useTheme()
 
-  const postName = encodeURI(post.name)
+  // const postName = encodeURI(post.name)
   // const postName = ""
 
   return (
