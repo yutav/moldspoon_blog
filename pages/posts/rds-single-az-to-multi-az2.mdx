@@ -1,0 +1,173 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS RDSをシングルAZ↔︎マルチAZに変更する際にダウンタイムは生じるの？第2回 実証編',
+  date: '2024-08-26T02:54:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'AWS',
+    'RDS',
+    'インフラ',
+    'MySQL',
+    'RDBMS',
+    'マルチAZ',
+    'シングルAZ',
+    'スケールダウン'
+  ],
+  description: 'AWS RDSのマルチAZ => シングルAZに変更した際にどのくらいダウンタイムが生じるかを今回の記事で実際に実行して確かめます。'
+}
+
+真夏の忙しさにかまけて前回のポストから1ヶ月も空いてしまいました...。
+
+夏バテで多少食が細りつつ、クーラーが効いた涼しい部屋でプログラミングのお仕事を頑張っている中年[yuku_tas](https://twitter.com/yuku_tas)です。
+
+そんな今日この頃ですが、プログラマーの皆様はいかがお過ごしでしょうか。
+
+## 先に結論
+
+- データが入っていないdb.t3.micro（最小）のインスタンスでは公式ドキュメントに記述(60秒)に反して、どちらの向きの変更でもダウンタイムはほとんど感じられませんでした。
+- 5~10分前後で変更作業自体は終わるようです。
+- データが多数入っていると状況は変わりそうなので、それは別の機会に検証します。
+
+## 概要
+
+[前回の記事](https://moldspoon.jp/blog/posts/rds-single-az-to-multi-az)で環境構築まで行ったRDSを今回、
+実際に切り替えてみてダウンタイムを計測します。
+
+AWSの[公式ドキュメント](https://aws.amazon.com/jp/rds/features/multi-az/)では **マルチAZでの自動フェイルオーバーは
+「60秒」** であるとの記載があります。一方、<span className="hoso">マルチAZから料金の問題でシングルAZに運用を変更するというのはよくある話かとは思うのですが、
+ダウンタイムがどのくらいかの記載がありません。</span>それを、今回 **逆方向のシングル => マルチに変更するのとともに** 、確認してみるというわけです。
+
+### 下準備
+
+- testデータベース
+- tests table
+
+をTablePlusから作成し、参照(select)を行うようにする。
+
+※ **データ量の多寡によって切り替え時間は変わってくるかと思いますが、今回は最小量だったらどのくらいかかるか
+というのを実験してみる次第ですので、あらかじめご了承ください。**
+
+### テスト手順
+
+1. シングルAZ => マルチAZに変更
+2. マルチAZ => シングルAZに変更
+
+その中で、TablePlusで常時接続を確認し、接続状況を記録する。
+
+## 実行
+
+上記のテスト手順に従い順番に実行してみます。
+
+### シングルAZをマルチAZに変更
+[RDSのコンソール](https://ap-northeast-1.console.aws.amazon.com/rds/home?region=ap-northeast-1)から
+
+右上の「アクション」→マルチAZ 配置への転換
+
+<MdxImage month="202408" image="rds21.png" isHalf="true" />
+
+「すぐに適用」を押してマルチAZへの切り替えを始めます。
+※ 一時的に利用料金が増えますので、忘れずに本記事の「後始末」項を実行するようにしてください。
+
+<MdxImage month="202408" image="rds22.png" isHalf="true" />
+
+今回の実験では、11:40:23にマルチAZへの変更を始めました。
+
+<MdxImage month="202408" image="rds23.png" isHalf="true" />
+
+TablePlusを開いたまま、`test.tests`テーブルへの参照(select) を繰り返します。
+
+<MdxImage month="202408" image="rds24.png" isHalf="true" annotation="F5リロードを一定間隔で繰り返す原始的な確認方法です...。" />
+
+##### RDS内部の切り替え状況は「ログとイベント」に出力される
+
+表題の通りですが、[こちら](https://ap-northeast-1.console.aws.amazon.com/rds/home?region=ap-northeast-1#database:id=test-single-to-multi;is-cluster=false;tab=logs-and-events)
+の「最近のイベント」にAZの切り替え状況は細かく出ます。
+
+#### 5分で完了
+
+11:48にはステータスが「利用可能」になり、
+
+<MdxImage month="202408" image="rds25.png" isHalf="true" />
+
+「ログとイベント」には `Finished applying modification to convert to a Multi-AZ DB Instance` が出ました。
+
+<MdxImage month="202408" image="rds26.png" isHalf="true" />
+
+<span className="hoso">実質5分程度で切り替え完了しました。</span><br />
+思ったより早かったですし、ダウンタイムも体感ではほぼなかったように思います！
+
+シングルAZではフェイルオーバー機能がない、というのが公式の触れ込みでしたが、 **マルチAZに使用する2台目のインスタンスを立ち上げる際には
+1台を2台に増やしているので、フェイルオーバーが働いているのかも** しれません。
+
+### マルチAZをシングルAZに変更
+
+次に、マルチAZをシングルAZに戻してみます。
+
+<span className="hoso">マルチAZに変更した時と違い</span>、[RDSのコンソール](https://ap-northeast-1.console.aws.amazon.com/rds/home?region=ap-northeast-1)の
+右上の「変更」 => ページ真ん中あたりの「可用性と耐久性」を「スタンバイインスタンスを作成しないでください」に変更し、
+
+<MdxImage month="202408" image="rds27.png" isHalf="true" />
+
+一番下までスクロールして「続行」を押すと
+
+<MdxImage month="202408" image="rds28.png" isHalf="true" />
+
+確認画面が出るので、「すぐに適用」を押して、「DBインスタンスを変更」を押します。
+
+**（変な日本語ですね...）**
+
+<br />
+
+今回は12:23:40に切り替えを始めました。
+<MdxImage month="202408" image="rds29.png" isHalf="true" />
+
+##### 6分で完了
+12:30過ぎに完了しました。
+結果、**マルチAZからシングルAZに戻すのは約6分で完了した** ようです。
+
+<MdxImage month="202408" image="rds210.png" isHalf="true" annotation="スムーズに完了"/>
+
+シングルAZ => マルチAZに変更する際と同じで、
+**TablePlusでリロードを繰り返しました** が、<span className="hoso">ダウンタイムが生じた感じはほとんどなかった</span>です。
+
+こちらでも縮退時とはいえフェイルオーバーが働いているのかもしれませんね。
+
+### 後始末
+
+余計な課金が発生しないように、忘れずに以下を行います。
+
+- RDSインスタンスの終了 (RDSコンソールから該当のインスタンスを右クリック => 「削除」)
+- セキュリティグループのIPを開けた設定の削除
+
+### まとめ
+
+いかがでしたでしょうか。<br />
+データ量の多寡にもよるのですが、データが少ない場合は無停止に近い感覚で切り替えが行えました。
+<br />
+
+<span className="hoso">今後予算が少なめ・重要なトランザクションデータがあまりない案件のデータベース</span> **については、状況に柔軟に対応するため
+積極的にこの切り替えを実行しても良いのかなと思いました。** そのあたりはクライアント様と都度ご相談、ということにはなるかと思います。
+
+<br />
+弊社ではAWSを中心にクラウドインフラの構築・保守運営業務も行っておりますのでお困りの方は是非お声がけください。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
