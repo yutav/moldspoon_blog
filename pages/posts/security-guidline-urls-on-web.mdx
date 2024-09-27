@@ -1,0 +1,166 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+
+import { useRouter } from 'next/router'
+
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '【厳選】Webサービスのセキュリティを強化する上で参考になるページ',
+  date: '2024-09-24T01:36:18.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'セキュリティ',
+    'プログラミング',
+    'IPA',
+    'ガイドライン',
+    '情シス',
+    '情報セキュリティ'
+  ],
+  description: 'Webサイトを構築する際に、物差しとなるURLがまとまっていると便利だなと思いまとめてみました。自分の長期的な備忘録も兼ねての整理となります。'
+}
+
+最近、個人的にセキュリティ分野に対しての興味がとても高まっております。
+2024年6月に発生し、なお問題として継続をしている[ドワンゴのランサムウェアによる一連の被害](https://dwango.co.jp/news/5131439897051136/)も合まって、世間の皆様の
+セキュリティに対する投資も今後一層理解が深まっていくものと思われます。
+
+本記事では、<span className="hoso">ここを見るとWebサービスのセキュリティ対策が推進できる</span>というURL集を**私観を交えながら、かつ不要と思われるものはしっかりと削って**整理していきたいと思います。
+
+もしツッコミなどございましたらぜひ[弊社までご指摘](https://moldspoon.jp/contact)いただければと思います。よろしくお願いいたします。
+
+### 本記事のゴール
+Webサービス構築にあたり、個人的にも、読者の皆様にも役にたつ「セキュリティの物差し」となる
+URL集を提供する。<br />
+<br />
+しかも、見つけ次第五月雨の形式で追加していく。
+
+## IPA (情報処理推進機構) によるもの
+もともと **IPAはセキュリティ関連の活動を行う団体だったこともあり、無料かつ適切かつ豊富な情報提供がなされています。**
+
+わたしは悩んだ時はまずIPAで探すことが多いです。
+
+### 安全なWebサイトの作り方
+    <RichLink
+          url="https://www.ipa.go.jp/security/vuln/websecurity/about.html"
+          icon='ri-links-line'
+          title="安全なWebサイトの作り方"
+          subtitle="情報処理推進機構（IPA）の「安全なウェブサイトの作り方」に関する情報です。"
+          targetBlank={true}
+        />
+
+具体的なセキュリティ強度を高める技術というよりも、総体的・概念的にセキュリティ強度を高める方法が列挙されています。
+特に初学者などにお勧めできる資料だと思います。<span className="hoso">これを読んでおけば、「危険」を感じる設計・実装を行う前にエンジニアの
+立場から意見を言うことができるようになるかな</span>と思います。
+
+### 情報セキュリティ10大対策
+    <RichLink
+          url="https://www.ipa.go.jp/security/10threats/index.html"
+          icon='ri-links-line'
+          title="情報セキュリティ10大対策"
+          subtitle="情報処理推進機構（IPA）の「情報セキュリティ10大脅威」に関する情報です。"
+          targetBlank={true}
+        />
+
+<span className="hoso">セキュリティ業界は情報のアップデートがとても早いので、こうした実例を年に一度でもよいので、把握しておくことは重要なことかな</span>と思いました。
+
+**個人的には「xx年ぶりxx度目」みたいな表現が紅白歌合戦や甲子園みたいだな** と思いましたが、これは余計ですね、、w
+
+### 中小企業のためのクラウドサービス安全利用のための手引き
+    <RichLink
+          url="https://www.ipa.go.jp/security/sme/f55m8k0000001wpl-att/outline_guidance_cloud.pdf"
+          icon='ri-links-line'
+          title="中小企業のためのクラウドサービス安全利用のための手引き"
+          subtitle=""
+          targetBlank={true}
+        />
+
+システム利用者 (非IT技術者) の環境を整備するための資料となりますが、**情シスを任されたエンジニアさんは取り敢えず読んでおく必要があると思います。**
+(下記の「ガイドライン」と同じページからのアクセスとなるため、PDFへの直リンクで悪しからず。)
+
+### 中小企業の情報セキュリティ対策ガイドライン
+
+    <RichLink
+          url="https://www.ipa.go.jp/security/guide/sme/about.html"
+          icon='ri-links-line'
+          title="中小企業の情報セキュリティ対策ガイドライン"
+          subtitle="情報処理推進機構（IPA）の「中小企業の情報セキュリティ対策ガイドライン」に関する情報です。"
+          targetBlank={true}
+        />
+
+<span className="hoso">上記の「手引き」の詳しい版・教科書に近いボリュームの資料</span>となります。
+こっちの方は **何か迷ったことがあった時に逆引きで使うこともできる** でしょう。
+<br />
+経営者の観点で情報セキュリティを考えるための材料も資料の中で提示されています。
+**（情セキ施策はトップダウンで行う必要があるので当然）**
+
+### サイバーセキュリティ経営ガイドライン　
+
+    <RichLink
+          url="https://www.meti.go.jp/policy/netsecurity/mng_guide.html"
+          icon='ri-links-line'
+          title="サイバーセキュリティ経営ガイドラインと支援ツール"
+          subtitle="サイバーセキュリティ経営ガイドラインと支援ツール（METI/経済産業省）"
+          targetBlank={true}
+        />
+
+IPA所轄団体の経済産業省による整理・ページとなりますがあらかじめご承知おきください。
+後述の総務省によるガイドラインと内容としては近く、かつ実践例が多数掲載されているので
+一読する価値はあると思います。
+
+対象読者としてはCISOやCTOなど、技術部門やセキュリティ部門のTOPという印象です。
+（ビジネスも踏まえて計画立案を行う必要がある人向け）
+
+特に、付随する資料の下記がとてもいいと思いました。（こっちはIPAへのリンク）
+
+    <RichLink
+          url="https://www.ipa.go.jp/security/economics/csm-practice.html"
+          icon='ri-links-line'
+          title="サイバーセキュリティ経営ガイドライン Ver 3.0実践のためのプラクティス集"
+          subtitle="情報処理推進機構（IPA）の「サイバーセキュリティ経営ガイドライン Ver 3.0実践のためのプラクティス集」に関する情報です。"
+          targetBlank={true}
+        />
+
+大元のガイドラインが抽象的な事例としてまとめられているのに対して、こちらは具体的な発生事例をイメージして
+まとめられていまして、IT関連団体の面目躍如というところかなと思いました。
+
+## 総務省によるもの
+
+### クラウドサービス提供における情報セキュリティ対策ガイドライン
+    <RichLink
+          url="https://www.soumu.go.jp/johotsusintokei/whitepaper/ja/r04/html/nd245620.html
+"
+          icon='ri-links-line'
+          title="クラウドサービス提供における情報セキュリティ対策ガイドライン"
+          subtitle="令和4年版 情報通信白書｜「クラウドサービス提供における情報セキュリティ対策ガイドライン」の策定"
+          targetBlank={true}
+        />
+IPAが提供しているものに比べて体裁がそっけなく見にくいです。（総務省の方申し訳ございません、、！）
+<span className="hoso">【ベストプラクティス】という項目があり、これが個人的にはとてもいいと思いました。</span>
+<br />
+中小企業だと完璧な施策を全部打てないんですよね。<span className="hoso">まずはできることからやるという情報セキュリティの鉄則に沿ったまとめ方で素晴らしい</span>と感じました。
+<br />
+基本的にお勧めできる資料ですね！
+
+## まとめ
+
+基本的にセキュリティ対策は、終わりがない。
+運用を続ける、PDCAを回して改善し続けることが重要なので今後も学習を続けていこうと思いました。
+
+個人的には、同じ規模や同じ業界で情報交換をできる機会が少ない分野なので、<br />
+そうしたニーズを叶えてくれる場がもっとあればいいのに...とは最近思っている、本ブログ編集担当の[yuku_tas](https://twitter.com/yuku_tas)です。
+
+もしご意見がございましたら、弊社問い合わせからでも、Twitterからでもお声をいただけますと嬉しいです。
+
+**最後までお読みいただきありがとうございました！** <br />
+引き続き当ブログをよろしくお願いいたします。<br />
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
