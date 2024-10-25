@@ -1,0 +1,107 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+
+import { useRouter } from 'next/router'
+
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Flutterでshared_preferencesを使っているときに生じたエラーと解決方法',
+  date: '2024-10-25T13:01:03.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'スマートフォンアプリ',
+    'Flutter',
+    'エラー',
+    'Dart',
+    'ライブラリ',
+    'プログラミング'
+  ],
+  description: ''
+}
+
+Flutter、便利ですよね。最近スマホアプリを作る際にはネイティブではなく、もっぱらこちらを提案しています。
+おまけに書き味もいいので気に入っています。
+
+今日はそんなFlutterに関係する小ネタとなります。
+
+## トラブルの概要
+
+```
+flutter run
+```
+
+で `shared_preferences`を使ったプログラムを動かそうとしたところ以下のエラーが出ました。
+
+```
+Launching lib/main.dart on iPhone 15 Pro in debug mode...
+Running pod install...                                             24.8s
+Running Xcode build...
+Xcode build done.                                           276.6s
+Failed to build iOS app
+Error (Xcode): Invalid depfile: /Users/yuta/flutter-srcs/xxxx/.dart_tool/flutter_build/0d92fc18c6b337662fe2d1ba24694591/kernel_snapshot_program.d
+```
+
+## Google検索で解決方法を探してみる
+
+これを、Google検索して似たような事例でビルドが通らないケースを探しました。
+「Error (Xcode): Invalid depfile」といったキーワードで。
+
+すると、
+
+[Invalid depfile: Flutter](https://stackoverflow.com/questions/60872753/invalid-depfile-flutter)
+
+こちらのポストが見つかりました。
+
+- flutter pub clean および fluter pub get した後に flutter runをやりなおせ
+- ios/Podfile.lockやPodsを削除した後 `pod install` をやりなおせ
+- .dart_toolの下の `flutter_build` または、buildの下の乱数で生成されたフォルダを消した後上記2行をやりなおせ
+
+ということでしたが、全てやっても私の環境ではダメ。
+
+ダメ元で、dartのキャッシュを消す。
+
+```
+dart cache clean
+```
+もやりましたがダメでした。
+
+## 試行錯誤して解決方法を見つけた
+
+その後、 **gitのコミットをだいぶ前まで戻し、ステップバイステップで原因究明を試みました ** が、
+どうも`shared_preferences` をやっているところから問題が生じているようです。
+
+そこで、一度消して、VSCodeのflutterプラグインの補足機能で呼び出し元を以下のように定義してもらった
+途端ビルドが通るようになりました。。
+
+```
+before)
+import 'package:shared_preferences.dart';
+
+after)
+import 'package:shared_preferences/shared_preferences.dart';
+```
+
+## まとめ
+
+何が原因でこうなっちゃってたんでしょうね、、 **もしかしたら生成AIに頼ったからかも？ **
+
+<br />
+皆さんも便利な生成AIの利用に際しては安易に考えず、**必要に応じて公式ドキュメントにあたるなど
+徹底して参りましょう...**
+
+自戒も兼ねて今回のポストでした。
+もし同じトラブルに遭った方がおられれば、何かの参考になれば幸いです。
+最後までご覧いただきありがとうございました。
+
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
