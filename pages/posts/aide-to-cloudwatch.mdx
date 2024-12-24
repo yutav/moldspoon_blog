@@ -1,0 +1,277 @@
+import { Layout } from 'lib/components'
+import { Button } from '@geist-ui/core'
+
+import { useRouter } from 'next/router'
+
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AIDEをEC2インスタンスで動かし、CloudWatchに連携して監視',
+  date: '2024-12-24T15:12:03.000Z',
+  tags: [
+    'Tips',
+    '経験者向け',
+    'AWS',
+    'インフラ',
+    'AIDE',
+    'EC2',
+    'インスタンス'
+  ],
+  description: ''
+}
+
+AWSで改ざん監視を行う場合、AIDEを最近は使っています。
+もちろんGuardDutyも併用しますが、AIDEはオープンソースソフトウェアなので（自分の人件費を
+無視できれば...）実質無料で利用できるからです。
+
+今日は、AIDEをそのままCloud WatchのMetricsに接続し、グラフとして監視できるようにしたので
+そのTipsをご紹介します。
+
+## インストール
+
+まずEC2にAIDEをインストールするところからです。
+私の環境は以下です。
+
+```
+- AWS EC2 (Amazon Linux 2023)
+```
+
+Amazon Linux 2023では Debian系のパッケージ管理ツールであるdnfを利用しますが、
+Amazon Linux 2の場合は yumを使います。
+
+```
+sudo su -
+dnf install aide
+
+# 初期データベースを移動
+cp -f /var/lib/aide/aide.db.new.gz /var/lib/aide/aide.db.gz
+```
+
+初期データベースファイルである `aide.db.new.gz` を手でリネームして移動しています。
+
+これだけで準備は完了ですが、この後行う設定にこそAIDEのキモがあります。
+
+## 設定
+
+`aide.conf` を設定していきます。
+私の環境では、 `/var/www/` 以下にアプリケーションを置いたりしていますので
+そこを読み込み環境に追加して行っています。
+
+元々ある設定の末尾に追加していく形でOKです。
+
+```
+cd /etc/
+mv -i aide.conf aide.conf.20241225
+vi aide.conf
+
+# 以下のように設定を追加
+
+# 独自定義
+/var/www/[application_name]    NORMAL
+
+# 除外
+!/var/www/[application_name]/logs
+!/var/www/[application_name]/cache
+!/var/www/[application_name]/storage/uploades
+...
+
+# GithubActionのログファイル
+!/root/actions-runner/_diag/
+
+# vimやbashの履歴ファイルをパーミッションだけの監視に変更する
+/root/.bash_history PERMS
+/root/.viminfo PERMS
+
+# lastlogはパーミッションだけの監視に変更する
+/var/log/lastlog PERMS
+```
+
+`PERMS` とすると、頻繁に上書きが行われるログファイルなども、パーミッションの監視のみに止められるので便利です。
+こうして、 <span className="hoso">監視しすぎない</span>設定にするのも大事です。
+
+監視を行う人的リソースも有限ですからね。
+
+この状態で、
+
+```
+sudo su -
+aide --check
+```
+
+で改ざんチェックは動かせますが、もう少し手間を今回は加えて、 **デイリーで実行する自動スクリプト化** します。
+
+## スクリプトの作成
+
+今回は
+1. チェックを行うスクリプト
+2. CloudWatchに送信するスクリプト
+
+の二つに分割し、
+時間差で実行するようにします。
+
+1でファイルに保存。2でログシステムに送信 という流れです。
+
+ファイルは
+
+`/home/ec2-user/scripts/aide`
+
+に設定していきます。
+
+### チェックを行うスクリプト
+
+名称は `run-aide.sh`とします。
+単にAIDEを実行するのみならず、 **世代間管理** を実行し、30日以上経過すると
+古いものはEC2上に残さないようにします。
+
+```
+#!/bin/bash
+
+LOGFILE=/var/log/aide/aide.log
+
+# 2重起動防止
+OLDEST=$(pgrep -fo $0)
+if [ $$ != $OLDEST ] && [ $PPID != $OLDEST ]; then
+    echo "[ERROR] 二重起動を検知したため、$0 の実行を中止します。"
+    exit 1
+fi
+
+# LOG BACKUP (日時が30個世代以上古いものはrmで削除)
+sudo cp -f $LOGFILE $LOGFILE.`date +%Y%m%d%H%M`
+sudo find /var/log/aide/ -name 'aide.log*' -mtime +30 -exec rm {} \;
+
+# AIDE実行
+/usr/sbin/aide -u > $LOGFILE
+```
+
+### CloudWatchに送信するスクリプト
+
+次に、CloudWatchに送信するするスクリプトを作ります。
+名称は `send-aide-to-cloudwatch.sh`とします。
+
+```
+#!/bin/bash
+
+export AWS_SHARED_CREDENTIALS_FILE=/home/ec2-user/.aws/credentials
+export AWS_PROFILE=aide
+LOGFILE=/var/log/aide/aide.log
+
+# インスタンス名を取得
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+INSTANCE_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/instance-id)
+INSTANCE_NAME=$(aws ec2 describe-tags --filters "Name=resource-id,Values=$INSTANCE_ID" "Name=key,Values=Name" --query "Tags[0].Value" --output text)
+
+# 変更の検出を "AIDE found differences" の有無で判定
+isDifferent=$(grep "AIDE found differences between database and filesystem!!" $LOGFILE | wc -l)
+if [ $isDifferent -eq 0 ]
+then
+    # 差分なしの場合、全て0を報告
+    aws cloudwatch put-metric-data --metric-name added --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value 0
+    aws cloudwatch put-metric-data --metric-name changed --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value 0
+    aws cloudwatch put-metric-data --metric-name removed --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value 0
+else
+    # 差分ありの場合、各値を抽出
+    added=$(cat $LOGFILE | grep "Added entries:" | head -n 1 | sed -E 's/[^0-9]*([0-9]+)[^0-9]*/\1/')
+    changed=$(cat $LOGFILE | grep "Changed entries:" | head -n 1 | sed -E 's/[^0-9]*([0-9]+)[^0-9]*/\1/')
+    removed=$(cat $LOGFILE | grep "Removed entries:" | head -n 1 | sed -E 's/[^0-9]*([0-9]+)[^0-9]*/\1/')
+
+    # 値が取得できなかった場合は0を設定
+    [ -z "$added" ] && added=0
+    [ -z "$changed" ] && changed=0
+    [ -z "$removed" ] && removed=0
+
+    # CloudWatchに送信
+    aws cloudwatch put-metric-data --metric-name added --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value $added
+    aws cloudwatch put-metric-data --metric-name changed --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value $changed
+    aws cloudwatch put-metric-data --metric-name removed --dimensions Instance=$INSTANCE_NAME --namespace "AIDE" --value $removed
+fi
+```
+
+ポイントとしては、 **実行するEC2がもし複数台ある場合は、どれで実行しても
+自動的にインスタンス情報を付与して送ってくれるところ** です。
+
+スケーラビリティを考慮した開発では書かせないところですね。
+
+これで、CloudWatchに「AIDE」のカテゴリーで
+
+- 追加
+- 変更
+- 削除
+
+が行われたファイル数が、日時で記録されていくことになります。
+
+さて、こちらのシェルスクリプトをテストしたいところですが...
+
+#### 実行前に、profile登録をしておく
+
+このままでは上記の実行はまだできません。
+実行権限がないからです。
+
+IAMユーザーを登録する必要があります。
+
+- 名称は **「aide」**
+- IAMユーザー作成後、ユーザー => 「セキュリティ認証情報」タブ => アクセスキーから「アクセストークン・シークレット」を発行する必要がある。
+
+ポリシーは以下のものを **直接アタッチ ** してください。
+
+<MdxImage month="202412" image="aide01.png" annotation="ポリシーを直接アタッチで良いが、必要に応じて権限を絞ること。" />
+
+
+発行したトークン・シークレットは、以下のように `.aws/credentials`に登録する必要があります。
+
+```
+[aide]
+aws_access_key_id = AKIXXXXXXXXXXXXXX
+aws_secret_access_key = XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+こちらを忘れずにEC2サーバ上の `/home/ec2-user/.aws/credentials` に追記をお願いします。
+(viなどで開くこと)
+
+```
+vi /home/ec2-user/.aws/credentials
+```
+
+これで、cronへの登録ができます。
+
+## 時間差で動作するようcronに設定
+
+AIDEは重いソフトウェアなので、実行に時間がかかることも見越して、送信処理は
+**30分後にあらかじめ設定** します。
+
+改竄されたかどうかを確かめられるように、必ずルートユーザーのほうでcron設定を行いましょう。
+
+```
+sudo su -
+
+crontab -e
+
+# AIDE(改竄検知) 
+## AIDEを実行
+00 01 * * *  /home/ec2-user/scripts/aide/run-aide.sh > /dev/null 2>&1
+
+## AIDEのログを送信
+30 01 * * *  /home/ec2-user/scripts/aide/send-aide-to-cloudwatch.sh > /dev/null 2>&1
+```
+
+## まとめ
+
+いかがでしたでしょうか。
+<span className="hoso">今回対応したのはあくまで初歩的な改竄検知設定となりますが、ここから極端な変動があった場合のみメールアラートを関係者に投げる。など
+の運用が考えられます。</span>
+
+運用のベースはあくまで日々のエンジニア自身による確認です。
+完全自動化するほどのリソースは自分の置かれている状況ではないのです。
+
+よって今後の実際の運用値をみて、CloudWatchを継続的に精査することで、最適解を見出していければと思っています。
+
+最後までご覧いただきありがとうございました。
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
