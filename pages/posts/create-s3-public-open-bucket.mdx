@@ -1,0 +1,199 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS S3で、画像など静的ファイルを置くためだけのバケットと初期設定を秒で作る 前半',
+  date: '2025-03-21T17:03:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'AWS',
+    'S3',
+    '画像置き場',
+    'クラウドストレージ',
+    'バックエンド',
+    'インフラ',
+  ],
+  description: 'クラウドストレージであるAWS S3の、簡単なファイル置き場を作る'
+}
+
+前回のポストから3ヶ月も空いてしまいました。花粉症のせいで生産性が大変落ちている[yuku_tas](https://twitter.com/yuku_tas)です。
+
+家の中にいれば心も穏やか。甜茶が効くらしいのでよろしければお試しください。
+
+プログラマーの皆様はこの頃、いかがお過ごしでしょうか。
+
+### 概要
+
+<RichList
+  color="orange"
+  title="本記事の概要"
+  list={
+  [
+    'Web制作において簡単な画像置き場を作成する。',
+    'クラウドストレージとしてAWS S3を利用しますが、その際のセキュリティ設定手順を解説する。',
+  ]
+} />
+
+
+### 要件
+
+あるサイトを作成するにあたり、S3を画像置き場にする必要が生じました。
+
+画像を設置するにあたっては、AWSのマネジメントコンソールを経由するのではなく、作業者（非エンジニア）の方に
+ツールを使って設置を行っていただく想定です。
+
+このような場合、 **IAMユーザー** を用途ごとに作成し適切なセキュリティ設定を行う必要があります。
+
+### S3バケットを作成
+
+まずS3バケットを作成します。
+[Amazon S3 コンソール](https://ap-northeast-1.console.aws.amazon.com/s3/home?region=ap-northeast-1#)
+こちらから作成します(東京リージョン・大阪の場合は右上から切り替えてください)
+
+「バケットを作成」をクリック
+
+バケット名: (任意のお名前) 
+**重複する名称は許可されないので、誰が作ったバケットとも被らない名前を指定してください**
+
+オブジェクト所有者: ACL無効（推奨）
+
+<MdxImage month="202503" image="s11.png"/>
+
+で進めます。
+
+#### パブリックアクセスを一部外す
+
+このバケットのブロックパブリックアクセス設定: パブリックアクセスをすべて ブロック
+が初期設定になっているかと思いますが、こちらのうち、下2つを外します。
+
+<MdxImage month="202503" image="s12.png"/>
+
+下の2つは、<span className="hoso">部分的にアクセスを許可する設定をできるようにするために、厳しすぎるガードを一部緩める</span> 設定になります。
+
+あとはデフォルトのままページ下部に進み、「バケットを作成」を押します。
+
+<MdxImage month="202503" image="s13.png"/>
+
+### S3バケットに設定を行うところを確認
+
+S3のトップページ => バケットを選択し、その画面で「アクセス許可」タブをクリックします。<br />
+すると、下記のような画面となります。
+
+<MdxImage month="202503" image="s14.png"/>
+
+このページのうち、
+
+- バケットポリシー
+- Cross-Origin Resource Sharing (CORS)
+
+の2つを後で変更するので、一旦はこのページから離れても大丈夫です。
+
+### IAMユーザーを作成
+
+IAMユーザーの設定画面に移動します。
+
+    <RichLink
+          url="https://us-east-1.console.aws.amazon.com/iam/home?region=ap-northeast-1"
+          icon='ri-links-line'
+          title="AWS IAMコンソール"
+          subtitle=""
+          targetBlank={true}
+        />
+
+<MdxImage month="202503" image="s15.png"/>
+
+右上「ユーザーの作成」に移動します。
+
+ユーザー名は任意のものを。
+次の画面の許可設定ですが、
+
+<span className="hoso">何もポリシーを与えず、そのまま次の画面に進んでください。</span>
+後ほど、先ほど作成したS3バケットのみ許可をする設定を、json形式というテキストにより設定することで対応できますので
+安心してください。
+
+<MdxImage month="202503" image="s16.png" annotation="そのままでOK"/>
+
+次の画面で **「ユーザーの作成」** をクリック
+
+<MdxImage month="202503" image="s17.png"/>
+
+
+#### 許可ポリシーを事後的に追加
+
+一覧に戻ってくるので、作成したばかりのユーザーをクリック。
+
+<MdxImage month="202503" image="s18.png"/>
+
+この画面で、 **「許可を追加」** をクリックします。
+
+
+<MdxImage month="202503" image="s19.png"/>
+
+クリックした直後に **「インラインポリシーを追加」** を選択。
+
+この画面で次は、「ビジュアル」=> **「JSON」** にタブを動かし、添付のように設定を行います。
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:ListAllMyBuckets",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::[yourbucketname]",
+                "arn:aws:s3:::[yourbucketname]/*"
+            ]
+        }
+    ]
+}
+```
+
+<MdxImage month="202503" image="s20.png"/>
+
+「次へ」を押し、さらにその次の名前で **ポリシー名** を設定します。
+私は、ユーザー名に加えて 「moldspoon-test-static-files-policy」のように名称をつけています。
+
+<MdxImage month="202503" image="s21.png"/>
+
+設定が終わると現時点ではこのようになっているはずです。
+
+<MdxImage month="202503" image="s22.png"/>
+
+
+### まとめ
+
+少し長くなったので、第2回の記事に分割しようと思います。
+**恐れ入りますが少々お待ちをいただければと...。**
+
+弊社ではこのような新しい技術を通じたWebサービスの開発・保守・運営を承っておりますので
+御用の際にはぜひお申し付けくださいませ。
+
+参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+<br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
