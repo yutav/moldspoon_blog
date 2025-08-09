@@ -1,0 +1,256 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'AWS S3で、画像など静的ファイルを置くためだけのバケットと初期設定を秒で作る 後半',
+  date: '2025-08-09T10:27:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'AWS',
+    'S3',
+    '画像置き場',
+    'クラウドストレージ',
+    'バックエンド',
+    'インフラ',
+  ],
+  description: '簡単なファイル置き場であるS3の疎通確認を行う'
+}
+
+前回から5ヶ月も空いてしまいました。仕事の忙しさにかまけて、本業？であるブログのエントリーを
+怠りがちであった[yuku_tas](https://twitter.com/yuku_tas)です。
+
+季節は移り変わりすっかり盛夏に...みなさま夏バテせずお元気にお過ごしでしょうか。
+
+### 概要
+
+- 前回のおさらい... 画像の簡単な置き場として、AWS S3のバケット作成までを行った
+
+- 今回... AWS S3のバケットにファイルを設置し、画像ファイルが参照できることを確認する。
+
+### 要件（前回から引き続き）
+
+あるサイトを作成するにあたり、S3を画像置き場にする必要が生じました。
+
+  画像を設置するにあたっては、AWSのマネジメントコンソール(GUI画面)を経由するのではなく、作業者（非エンジニア）の方に
+CyberDuckなどのツールを使って設置を行っていただく想定です。
+
+このような場合、 ** IAMユーザー ** を用途ごとに作成し適切なセキュリティ設定を行う必要があります。
+
+### 前回作ったもの
+
+- バケット「moldspoon-test-static-files」
+- IAMユーザー「moldspoon-test-static-files」
+
+詳しくは前回記事をご覧ください
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/create-s3-public-open-bucket"
+                icon='ri-links-line'
+                title="AWS S3で、画像など静的ファイルを置くためだけのバケットと初期設定を秒で作る 前半"
+                subtitle="前半の記事はこちらからご覧いただけます。"
+                targetBlank={true}
+            />
+
+### ファイルの設置
+
+AWS に再度ログインを行います。（すでにログインしている方はそのままで構いません
+[Amazon S3 コンソール](https://ap-northeast-1.console.aws.amazon.com/s3/home?region=ap-northeast-1#)
+の画面に移動します。
+こちらのURLは東京リージョンのものなので、大阪の方は右上の「アジアパシフィック（東京）」から切り替えてください。
+
+バケット一覧から、「moldspoon-test-static-files」を選択します。
+
+<MdxImage month="202508" image="s32_2.png" />
+
+現時点ではオブジェクトが空です。
+「アップロード」のアイコンから画像をアップロードします。
+
+<MdxImage month="202508" image="s32_3.png" />
+
+今回は弊社のロゴ(jpegファイル)をアップロードしてみます。
+
+<MdxImage month="202508" image="s32_4.png" />
+
+アップロードが成功するとこのように表示が出ます。
+あっけないですが、この時点で画像置き場としての準備はできているので、
+疎通確認をしてみます。
+
+### 疎通確認をしてみる
+
+右上の「閉じる」を押し、元のバケット画面に戻ります。
+
+<MdxImage month="202508" image="s32_5.png" />
+
+リストに先ほどアップロードされたファイルが表示されています。
+これをクリックします。
+
+<MdxImage month="202508" image="s32_6.png" />
+
+** 画像が表示されません ** 下記のようなエラー画面が出ると思います。
+権限がこの時点で不足しています。
+
+<MdxImage month="202508" image="s32_7.png" />
+
+### バケットポリシーを設定
+
+バケット画面にもどり、
+**アクセス許可タブ** をクリックします。
+<MdxImage month="202508" image="s32_8.png" />
+
+バケットポリシー欄の **「編集」** をクリックします。
+<MdxImage month="202508" image="s32_9.png" />
+
+以下の内容で、入力欄に貼り付けを行います
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::[作成したバケット名。今回の例ですとmoldspoon-test-static-files]/*"
+        },
+        {
+            "Sid": "AllowIAMUserFullAccess",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::[作成したIAMユーザーのID]:user/[IAMユーザーのユーザー名]"
+            },
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation",
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:PutObjectAcl",
+                "s3:DeleteObject",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
+            ],
+            "Resource": [
+                "arn:aws:s3:::moldspoon-test-static-files",
+                "arn:aws:s3:::moldspoon-test-static-files/*"
+            ]
+        }
+    ]
+}
+```
+
+念のためですが、上記の `[]`部分は消してもらって大丈夫です。
+
+`/*` の部分は、**「このバケットの中の全ファイルを対象にする」** という意味になります。
+
+<MdxImage month="202508" image="s32_10.png" />
+
+変更を保存し「バケットポリシーが正常に編集されました。」と出たのを確認します。
+
+### 再度疎通確認
+
+バケット画面に再度戻り、画像画面にもう一度移動します。
+
+<MdxImage month="202508" image="s32_11.gif" />
+
+
+今度は無事表示されました！
+
+### CyberDuckで画像アップロードをしよう
+
+ここまで出来ましたら、基本的な設定は完了しています。IAMユーザーを使い **AWSのGUIを使わずとも**
+アップロードをできる環境を整えましょう。
+
+[CyberDuck](https://cyberduck.io/)の公式ページから
+Download => Windows / Macのボタンを押して、ダウンロードします。
+
+CyberDuckを起動したら、設定を行います。
+バー部分の **「新規接続」** をクリックし
+
+Amazon S3を選択。
+
+アクセスキーID・シークレットアクセスキーに、[前回の記事](https://moldspoon.jp/blog/posts/create-s3-public-open-bucket)で作ったIAMユーザーのものを設定します。
+
+下記のVapor記事にアクセスキーID・シークレットアクセスキーの発行方法は記載されているので、よければご覧になってください。
+
+    <RichLink
+                url="https://moldspoon.jp/blog/posts/deploy-to-laravel-vapor"
+                icon='ri-links-line'
+                title="VaporにLaravelアプリをデプロイしてサーバーレス環境を作る 第1回 アカウント作成からIAMユーザー作成まで"
+                subtitle="主要なベストプラクティスは「コマンドラインインターフェース(CLI)」に変えていただく"
+                targetBlank={true}
+            />
+
+簡単に補足すると[IAMユーザー](https://us-east-1.console.aws.amazon.com/iam/home?region=ap-northeast-1#/users) から今回のIAMユーザーの詳細画面の **「セキュリティ認証」** タブから **「アクセスキーを作成」** ボタンを押す。
+
+<MdxImage month="202508" image="s32_13.png" />
+CLIを選択し
+
+<MdxImage month="202508" image="s32_14.png" />
+出来たアクセスキーをコピーして保存しておきます
+
+発行したID・シークレットは以下のように設定します。
+<MdxImage month="202508" image="s32_17.png" isHalf={true} />
+※ URLは添付のものに変えてください。
+
+<span className="hoso">バケット一覧が表示されたら接続自体は出来ています</span>
+バケットを選択すると
+<MdxImage month="202508" image="s32_16.png" isHalf={true} />
+
+画像が表示されました。
+
+<MdxImage month="202508" image="s32_19.png" isHalf={true}  />
+
+ここに、新しい画像をアップロードしてみます。
+
+<MdxImage month="202508" image="s32_20.png" isHalf={true}  />
+
+無事アップロードされたら対応は完了です！
+お疲れ様でした。
+
+以後こちらにアップロードした画像は、
+
+```html
+https://[バケット].s3.ap-northeast-1.amazonaws.com/[画像名]
+```
+
+で確認できますので、参考になさってください。
+
+### まとめ
+
+いかがでしたでしょうか、S3を画像ファイルの置き場に利用することができるようになり、
+サイト制作で部分的にAWSのクラウドサービスを利用できることがご理解いただけたかと思います。
+
+こちらのS3は
+
+- さくらインターネット
+- Conoha
+- ペパボ
+
+など国内のレンタルサーバー会社からも利用が可能なので、利用用途に合わせて
+ぜひ使ってみてください。
+
+加えて、<span className="futo">AWS S3の利用料金は低廉なので、大量にリクエストが来るキャンペーンサイトなどの用途にS3は適している</span>と思います。
+
+<span className="hoso">もう一歩進めて、S3上にhtmlファイルをおき、ホスティング（サイト配信）をするのもありかもしれない</span>ですね。
+
+    弊社ではこのような新しい技術を通じたWebサービスの開発・保守・運営を承っておりますので
+御用の際にはぜひお申し付けくださいませ。
+
+    参考URL: [モルドスプーン株式会社](https://moldspoon.jp/)
+
+      <br />
+
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
+
