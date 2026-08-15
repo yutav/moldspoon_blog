@@ -1,6 +1,9 @@
 {
   "name": "unix.bio",
   "version": "1.0.0",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "npm run collect && next dev",
     "dev": "export NODE_ENV=dev && npm run collect && next dev -p 3001",
