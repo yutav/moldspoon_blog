@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import Head from 'next/head'
 import Profile from './profile'
 import Footer from './footer'
@@ -133,12 +133,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     childrenHtml = renderToString(children);
   }
 
-  const [showAfterRender, setShowAfterRender] = useState(false)
   const inDetailPage = useMemo(() => meta && meta.title, [])
-  useEffect(() => setShowAfterRender(true), [])
 
   const router = useRouter()
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+  // window.location から取るとサーバー側が空になり、og:url が初期HTMLから消えるうえ
+  // ハイドレーションで値が入れ替わる。basePath を除いた asPath から組み立てて、
+  // サーバーとクライアントで同じ値にする
+  const currentUrl = process.env.baseUrl + router.asPath.split('?')[0].split('#')[0]
   const isDetailPage = router.pathname.startsWith('/posts') as boolean;
 
   const [{ pageView }] = usePageCounter({
@@ -157,24 +158,12 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     window.open(googleSearchUrl, '_blank')
   };
 
-  if (!showAfterRender) {
-    return (
-      <div className="article-content">
-        <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
-        {children}
-        <style jsx>{`
-          .article-content {
-            opacity: 0;
-            display: none;
-          }
-        `}</style>
-      </div>
-    )
-  }
-
+  // かつてはマウントするまで本文を display:none で隠していたが、プロフィール・
+  // タグ・前後記事・フッターごと初期HTMLから消えるため、クローラーからは
+  // 内部リンクの無いページに見えていた。ちらつき対策は個々のコンポーネント側で持たせる。
   return (
     <section>
-      <LayoutHeader meta={meta} isDetailPage={isDetailPage} />
+      <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
       <div className="flex">
         <div className="container p-0 lg:px-12 bg-white dark:bg-black lg:shadow">
           <Spacer />
