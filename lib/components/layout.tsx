@@ -150,8 +150,14 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   // トップは asPath が '/' なので、そのまま繋ぐと baseUrl 末尾と合わせて
   // https://moldspoon.jp/blog/ になる。実際の /blog/ は /blog へ308される側なので、
   // canonical がリダイレクト元を指してしまう。ルートだけ空にして正規化する。
-  const currentPath = router.asPath.split('?')[0].split('#')[0]
-  const currentUrl = process.env.baseUrl + (currentPath === '/' ? '' : currentPath)
+  //
+  // さらに本番の /blog は pages/top.tsx が返っており asPath が '/top' になる
+  // （ローカルの dev では index.tsx が出るので再現しない）。素直に組み立てると
+  // インデックス済みのトップが、未登録の /blog/top を正規URLだと主張してしまう。
+  // 中身は /blog と完全に同一なので、どちらもトップに寄せる。
+  const rawPath = router.asPath.split('?')[0].split('#')[0]
+  const currentPath = rawPath === '/' || rawPath === '/top' ? '' : rawPath
+  const currentUrl = process.env.baseUrl + currentPath
   const isDetailPage = router.pathname.startsWith('/posts') as boolean;
 
   const [{ pageView }] = usePageCounter({
