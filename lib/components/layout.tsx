@@ -34,6 +34,11 @@ export type LayoutHeader = {
   meta: PostMetadata
 }
 
+// canonical はこれまでブログ全体で1つも出していなかった。記事ページは内容が
+// 個別なので Google が自己参照を推測してくれていたが、タグページのように
+// 中身が同一のページでは正規URLの判断を委ねることになる。currentUrl は
+// basePath を除いた asPath から組み立てた絶対URLで、サーバーとクライアントで
+// 同じ値になる（og:url と同じもの）。
 const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }) => {
 
   const domain = useMemo(() => getDNSPrefetchValue(BLOG.domain), [])
@@ -48,6 +53,9 @@ const LayoutHeader: React.FC<LayoutHeader> = ({ isDetailPage, currentUrl, meta }
         <title>{BLOG.title}</title>
       )}
       {domain && <link rel="dns-prefetch" href={domain} />}
+      {/* 静的最適化されたページの初期HTMLでは asPath に [code] のような未解決の
+          動的セグメントが残る。誤った正規URLを主張するくらいなら出さない */}
+      {currentUrl && !currentUrl.includes('[') && <link rel="canonical" href={currentUrl} />}
       <link rel="icon" href={process.env.baseUrl + "/favicon.ico"}></link>
       <meta name="google" content="notranslate" />
       <meta name="referrer" content="strict-origin" />
@@ -139,7 +147,11 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   // window.location から取るとサーバー側が空になり、og:url が初期HTMLから消えるうえ
   // ハイドレーションで値が入れ替わる。basePath を除いた asPath から組み立てて、
   // サーバーとクライアントで同じ値にする
-  const currentUrl = process.env.baseUrl + router.asPath.split('?')[0].split('#')[0]
+  // トップは asPath が '/' なので、そのまま繋ぐと baseUrl 末尾と合わせて
+  // https://moldspoon.jp/blog/ になる。実際の /blog/ は /blog へ308される側なので、
+  // canonical がリダイレクト元を指してしまう。ルートだけ空にして正規化する。
+  const currentPath = router.asPath.split('?')[0].split('#')[0]
+  const currentUrl = process.env.baseUrl + (currentPath === '/' ? '' : currentPath)
   const isDetailPage = router.pathname.startsWith('/posts') as boolean;
 
   const [{ pageView }] = usePageCounter({

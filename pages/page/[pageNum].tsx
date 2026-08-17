@@ -1,8 +1,19 @@
 import React from 'react'
+import Head from 'next/head'
 import { Layout, Posts } from 'lib/components'
 import { useRouter } from "next/router"
 import CategoryBox from 'lib/components/original/parts/CategoryBox'
 import { Loading } from '@geist-ui/core'
+
+// ページネーションもタグページと同じく title / description が全ページ同一で、
+// ブログトップからの内部リンクは0本（sitemap にしか存在しない孤立URL だった）。
+// 検索流入も12ヶ月で0。記事へのリンクは辿らせたいので follow は残す。
+const NoIndex: React.FC = () => (
+  <Head>
+    <meta name="robots" content="noindex,follow" />
+  </Head>
+)
+
 const Page: React.FC<unknown> = () => {
   const router = useRouter()
 
@@ -10,15 +21,17 @@ const Page: React.FC<unknown> = () => {
 
   if (page == undefined) {
     return <Layout>
+      <NoIndex />
       <Loading />
     </Layout>
   }
 
   return (
     <Layout>
-      <div className="mt-2 md:mt-8 
+      <NoIndex />
+      <div className="mt-2 md:mt-8
        mb-8 md:mb-20
-       px-0 py-5 
+       px-0 py-5
        w-full lg:w-full grid grid-cols-4 lg:gap-x-16 gap-y-16 justify-items-center">
         <CategoryBox url={"/tags/Tips"} imageUrl={process.env.baseUrl + "/assets/f_f_business_48_svg_f_business_48_0bg.svg"} title="Tips" />
         <CategoryBox url={"/tags/Blog"} imageUrl={process.env.baseUrl + "/assets/f_f_business_41_svg_f_business_41_1bg.svg"} title="Blog" />
