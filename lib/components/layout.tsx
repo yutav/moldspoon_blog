@@ -17,6 +17,7 @@ import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import SearchBox from './original/parts/SearchBox'
+import DetailAds from './original/parts/DetailAds'
 import "../../scripts/marker.js";
 import Script from 'next/script'
 export type PostMetadata = {
@@ -183,6 +184,11 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 {children}
               </div>
               <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
+              {/* 記事詳細の広告（slot 6371182287）。以前は DetailLeftBox の中にあり
+                  スマホでも出ていたが、サイドバー集約時に DetailLeftBox ごと外して
+                  1280px 未満では広告ゼロになっていた。通常フローで記事末尾に置き、
+                  全画面幅で表示されるよう戻す */}
+              <DetailAds />
             </>
           ) : (
             <div className="dynamic-content">

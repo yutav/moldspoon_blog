@@ -9,9 +9,9 @@ const DetailAds: React.FC<Prop> = () => {
       className="detailAd"
 
     >
-      <div className="px-6 py-2 max-h-20"
-        style={{ minWidth: '250px' }}
-      >
+      {/* 以前は左脇のフロート枠（幅250px・高さ80px上限）だったが、
+          記事末尾の通常フローに置くため本文幅いっぱいに広げる */}
+      <div className="px-0 py-2 w-full">
         {/* blog-top-square */}
         {process.env.NODE_ENV == 'production' && (
           <GoogleAdsense
@@ -25,11 +25,7 @@ const DetailAds: React.FC<Prop> = () => {
       <style jsx>{`
         .detailAd {
           position: relative;
-        }
-        @media (min-width: 1600px) {
-          .detailAd {
-            margin-top: 1rem;
-          }
+          margin-top: 1rem;
         }
       `}
       </style>
