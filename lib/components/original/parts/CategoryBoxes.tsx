@@ -11,7 +11,9 @@ const CATEGORIES = [
 
 const CategoryBoxes: React.FC<unknown> = () => {
   return (
-    <div className="mt-2 md:mt-6 mb-8 md:mb-12 px-0 py-4 w-full
+    // container が広い画面で伸びるので、こちらは上限を決めておかないと
+    // 4つの箱が横に散らばって間延びする
+    <div className="mt-2 md:mt-6 mb-8 md:mb-12 px-0 py-4 w-full max-w-3xl mx-auto
       grid grid-cols-4 gap-x-2 md:gap-x-6 lg:gap-x-12 gap-y-6 justify-items-center">
       {CATEGORIES.map(category => (
         <CategoryBox

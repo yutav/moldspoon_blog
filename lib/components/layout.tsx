@@ -171,7 +171,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     <section>
       <LayoutHeader currentUrl={currentUrl} meta={meta} isDetailPage={isDetailPage} />
       <div className="flex">
-        <div className="container p-0 lg:px-12 bg-white dark:bg-black lg:shadow">
+        <div className={"container p-0 lg:px-12 bg-white dark:bg-black lg:shadow" + (inDetailPage ? "" : " is-list")}>
           <Spacer />
           <Profile />
           {inDetailPage ? (
@@ -250,6 +250,27 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           display: flex;
           flex-direction: column;
           justify-content: flex-start;
+        }
+
+        /* 記事詳細は読み物なので 780px で固定するが、一覧やトップは読み物ではないので
+           広い画面ではもっと幅を使う。1920px だと左右の余白が 35% あり、
+           ファーストビューに記事が2件しか入らなかった。 */
+        @media only screen and (min-width: 1400px) {
+          .container.is-list {
+            max-width: 900px;
+          }
+        }
+
+        @media only screen and (min-width: 1500px) {
+          .container.is-list {
+            max-width: 1000px;
+          }
+        }
+
+        @media only screen and (min-width: 1800px) {
+          .container.is-list {
+            max-width: 1120px;
+          }
         }
 
         .container :global(h1) {

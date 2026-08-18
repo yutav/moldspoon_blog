@@ -56,13 +56,13 @@ const Posts: React.FC<PostsProps> = ({ page, tag, router }) => {
         </title>
       </Head>
       {title !== "" && <h2 className="section-heading">{title}</h2>}
-      <div className="content">
+      {/* 広い画面では2列。カード同士の間隔は gap に任せる */}
+      <div className="content grid grid-cols-1 min-[1400px]:grid-cols-2 gap-x-5 gap-y-5">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />
         ))}
-        <Pager postCount={postCount} page={page} router={router} tag={tag} />
-        {/*isLatest && <span className="more">{getMoreLink(posts.length)}</span>*/}
       </div>
+      <Pager postCount={postCount} page={page} router={router} tag={tag} />
       <style jsx>{`
         section {
           margin-top: calc(${theme.layout.gap} * 2);

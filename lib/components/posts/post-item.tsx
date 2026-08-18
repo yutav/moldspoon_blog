@@ -56,7 +56,7 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+      <div className="mt-3 pt-1 flex flex-wrap items-center gap-x-4 gap-y-1 meta-row">
         <DateDisplay date={post.meta?.date ?? ""} updateDate={post.meta?.updateDate} />
         {otherTags.length > 0 && (
           <p className="py-0 m-0 text-xs text-gray-600 dark:text-gray-300">
@@ -72,7 +72,11 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
       <style jsx>{`
         .item {
           max-width: 100%;
-          margin-bottom: ${theme.layout.gap};
+          /* 2列に並べたとき行の高さが揃うよう、カード自身を縦に伸ばす。
+             grid item に height:100% を付けるとグリッド全体の高さを参照して
+             カードが重なるので、stretch（既定）に任せる */
+          display: flex;
+          flex-direction: column;
           padding: 1.25rem;
           border-radius: 0.75rem;
           transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
@@ -92,6 +96,11 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
         .item:hover :global(.title-text) {
           color: #f97316;
+        }
+
+        /* 日付とタグはカードの下端に揃える */
+        .meta-row {
+          margin-top: auto;
         }
 
         .excerpt {
