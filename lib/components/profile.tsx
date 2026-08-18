@@ -32,7 +32,7 @@ const Profile: React.FC<unknown> = React.memo(() => {
   const menuLinkTextClass = "text-white hover:text-gray-300 dark:text-white dark:hover:text-gray-500 font-normal"
 
   return (
-    <div className="profile border-b border-gray-200 dark:border-gray-700">
+    <div className="profile">
       <div className="user">
         <div className="flex items-center justify-between w-full gap-4">
           <div className="flex-none">
@@ -99,6 +99,22 @@ const Profile: React.FC<unknown> = React.memo(() => {
         .profile {
           padding: ${theme.layout.gap} 0 0 0;
           margin-bottom: ${theme.layout.gapHalf};
+          position: relative;
+        }
+
+        /* 区切り線の左側だけブランド色にする。最初に目に入る位置に色を置く */
+        .profile::after {
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #fb923c 0%, #f97316 40%, #e5e7eb 40%);
+        }
+
+        :global(html.dark) .profile::after {
+          background: linear-gradient(90deg, #fb923c 0%, #f97316 40%, #374151 40%);
         }
 
         .profile :global(.user) {

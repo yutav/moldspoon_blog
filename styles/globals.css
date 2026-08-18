@@ -12,9 +12,12 @@ p {
 }
 
 /* geist の CssBaseline も body に背景色を敷くが、そちらは themeType 依存で
-   切り替えの反映が一拍遅れる。Tailwind の .dark に一本化する。 */
+   切り替えの反映が一拍遅れる。Tailwind の .dark に一本化する。
+   指定は _document.tsx の body クラスと同じにすること。PC ではグレーを敷いて
+   コンテンツ（container の bg-white + shadow）を紙のように浮かせる設計なので、
+   ここで白一色にすると背景とコンテンツが同化して立体感が消える。 */
 body {
-  @apply !bg-white dark:!bg-black;
+  @apply !bg-white lg:!bg-gray-100 dark:!bg-black lg:dark:!bg-gray-900;
 }
 
 /* geist の CssBaseline は #__next に overflow-x: hidden を入れている。
@@ -30,8 +33,11 @@ body {
   overflow-y: visible !important;
 }
 
+/* サイトのアクセントはオレンジなのに、リンクだけ青で食い違っていた。
+   本文リンクはこの1箇所で全ページに効く（ヘッダー・フッター・カードのタイトルや
+   タグは、それぞれ内側の span 側で色を持っているのでここの影響を受けない）。 */
 body div a {
-  @apply font-bold text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
+  @apply font-bold text-orange-600 hover:text-orange-400 dark:text-orange-400 dark:hover:text-orange-300
 }
 
 .profile .user h1 {

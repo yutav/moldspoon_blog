@@ -72,6 +72,8 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
       <style jsx>{`
         .item {
           max-width: 100%;
+          position: relative;
+          overflow: hidden;
           /* 2列に並べたとき行の高さが揃うよう、カード自身を縦に伸ばす。
              grid item に height:100% を付けるとグリッド全体の高さを参照して
              カードが重なるので、stretch（既定）に任せる */
@@ -96,6 +98,17 @@ const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
         .item:hover :global(.title-text) {
           color: #f97316;
+        }
+
+        /* 左端のブランド色の帯。カードの切れ目も分かりやすくなる */
+        .item::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: #fb923c;
         }
 
         /* 日付とタグはカードの下端に揃える */
