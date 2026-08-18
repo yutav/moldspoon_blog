@@ -55,7 +55,7 @@ const Posts: React.FC<PostsProps> = ({ page, tag, router }) => {
           {title}
         </title>
       </Head>
-      {title !== "" && <h2 className="mb-8">{title}</h2>}
+      {title !== "" && <h2 className="section-heading">{title}</h2>}
       <div className="content">
         {posts.map((post, index) => (
           <PostItem post={post} key={`${post.url}-${index}`} />

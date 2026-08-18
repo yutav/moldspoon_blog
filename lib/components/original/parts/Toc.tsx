@@ -1,4 +1,3 @@
-import { Configs } from "lib/utils";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -70,20 +69,26 @@ const Toc: React.FC<Prop> = ({ body }) => {
     );
   };
 
+  // 以前は画面に position: fixed で貼り付けていたため、幅が足りない画面では
+  // 右端で切れたり本文に迫ったりしていた。サイドバーの中の箱として置く。
   return (
-    <div className={`toc xl:fixed xl:pl-8 xl:top-16 hidden xl:block `}>
+    <div className="toc mb-4">
       <div className="toc-box p-2 rounded-xl break-words">
-        <div className="rounded-xl shadow-xl bg-white dark:bg-black px-4 py-2">
+        <div className="rounded-xl bg-white dark:bg-black px-4 py-3">
           <p className="pt-0 font-bold">< i className="ri-list-unordered mr-1"></i>目次</p>
-          {renderToc(tocObject)}
+          <div className="toc-scroll">
+            {renderToc(tocObject)}
+          </div>
         </div>
       </div>
       <style jsx>{`
         .toc-box {
           background: linear-gradient(0deg, rgb(195,34,175,1) 0%, rgba(253,187,45,1) 100%)
         }
-        .toc {
-          margin-left: ${Configs.layouts.pageWidth};
+        /* 見出しが多い記事だとサイドバーが画面より高くなり、下の広告まで届かなくなる */
+        .toc-scroll {
+          max-height: 45vh;
+          overflow-y: auto;
         }
         .toc-list li {
           padding: 0px;

@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // OS 設定だけを見る 'media' ではなく、html の .dark クラスで切り替える。
+  // 既定値は next-themes が OS 設定から解決し、ユーザーが明示的に選んだ場合のみそれを優先する。
+  darkMode: 'class',
   content: [
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",

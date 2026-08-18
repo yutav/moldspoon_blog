@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import Head from 'next/head'
 import Profile from './profile'
 import Footer from './footer'
@@ -16,7 +16,7 @@ import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
 import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
-import DetailLeftBox from './original/parts/DetailLeftBox'
+import SearchBox from './original/parts/SearchBox'
 import "../../scripts/marker.js";
 import Script from 'next/script'
 export type PostMetadata = {
@@ -164,18 +164,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     slug: router.asPath
   })
 
-  const [composing, setComposition] = useState(false);
-  const startComposition = () => setComposition(true);
-  const endComposition = () => setComposition(false);
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const handleSearch = () => {
-    const googleSearchUrl = `https://www.google.com/search?q=site:moldspoon.jp/blog+${encodeURIComponent(
-      searchQuery
-    )}`;
-    window.open(googleSearchUrl, '_blank')
-  };
-
   // かつてはマウントするまで本文を display:none で隠していたが、プロフィール・
   // タグ・前後記事・フッターごと初期HTMLから消えるため、クローラーからは
   // 内部リンクの無いページに見えていた。ちらつき対策は個々のコンポーネント側で持たせる。
@@ -187,7 +175,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           <Spacer />
           <Profile />
           {inDetailPage ? (
-
             <>
               <Title title={meta.title} date={meta.date} updateDate={meta.updateDate} pageView={pageView} />
               <TagLinks tags={meta.tags} />
@@ -196,40 +183,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 {children}
               </div>
               <ShareButtons url={currentUrl} title={meta.title ? meta.title : ''} />
-
-              <DetailLeftBox detailContents={
-                <div>
-
-                  <div className="bg-white dark:bg-black xl:shadow rounded-lg p-0 xl:p-6 mb-2">
-                    <h3 className="!mt-0 mb-6">検索</h3>
-                    <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
-                      <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
-                      <input
-                        type="text"
-                        name="search"
-                        className={"w-full text-xl bg-transparent "}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          console.log(e.key)
-                          console.log(composing)
-                          switch (e.key) {
-                            case "Enter":
-                              if (composing) break;
-                              handleSearch();
-                              break;
-                          }
-                        }}
-                        onCompositionStart={startComposition}
-                        onCompositionEnd={endComposition}
-                      />
-                    </div>
-                    <p className="text-xs">※Google検索を使用しています。</p>
-                  </div>
-                </div>
-              } />
-              <Toc body={childrenHtml} />
-
             </>
           ) : (
             <div className="dynamic-content">
@@ -238,58 +191,33 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           )}
           <PrevNext routerPathName={router.pathname} />
 
-          <Spacer h={5} />
           <Footer isDetailPage={!!inDetailPage} />
         </div>
 
-        {inDetailPage ? (<></>) : (
-          <div className="mt-2 ml-6 right-container hidden xl:block h-screen">
+        {/* 右サイドバー。以前はトップにしか無く、記事詳細では目次・検索・広告が
+            それぞれ position: fixed で画面に貼り付いているだけだった。
+            CNET のように本文の隣の「列」としてまとめ、両方で同じ骨格にする。 */}
+        <aside className="mt-2 ml-6 right-container hidden xl:block">
+          <div className="sidebar-inner">
+            {inDetailPage && <Toc body={childrenHtml} />}
 
-            <div className="right-container fixed z-2">
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg p-6 mb-2">
-                <h3 className="mb-6">検索</h3>
-                <div className="border-2 border-gray-100 rounded py-2 px-3 flex">
-                  <i className="mt-0.5 mr-2 cursor-pointer ri-search-line" onClick={handleSearch}></i>
-                  <input
-                    type="text"
-                    name="search"
-                    className={"w-full text-xl bg-transparent "}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      console.log(e.key)
-                      console.log(composing)
-                      switch (e.key) {
-                        case "Enter":
-                          if (composing) break;
-                          handleSearch();
-                          break;
-                      }
-                    }}
-                    onCompositionStart={startComposition}
-                    onCompositionEnd={endComposition}
-                  />
-                </div>
-                <p className="text-xs">※Google検索を使用しています。</p>
-              </div>
+            <SearchBox />
 
-              <div className="bg-white dark:bg-black lg:shadow rounded-lg px-6 py-2"
-                style={{ minHeight: '400px', maxHeight: "550px" }}
-              >
-                <p className='text-xs py-1 my-0'>Ads:</p>
-                {/* blog-top-square */}
-                {(process.env.NODE_ENV == 'production') && (
-                  <GoogleAdsense
-                    client="ca-pub-1104475365452915" //
-                    slot="1717621406"
-                    style={{ display: 'block' }}
-                  />
-                )}
-              </div>
-
+            <div className="bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 px-5 py-3"
+              style={{ minHeight: '400px', maxHeight: "550px" }}
+            >
+              <p className='text-xs py-1 my-0 text-gray-600 dark:text-gray-300'>Ads:</p>
+              {/* blog-top-square */}
+              {(process.env.NODE_ENV == 'production') && (
+                <GoogleAdsense
+                  client="ca-pub-1104475365452915" //
+                  slot="1717621406"
+                  style={{ display: 'block' }}
+                />
+              )}
             </div>
           </div>
-        )}
+        </aside>
 
       </div>
 
@@ -306,6 +234,13 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         .dynamic-content {
           width: 100%;
           height: auto;
+        }
+
+        /* サイドバーは本文と一緒にスクロールし、追い越したら止まる。
+           position: fixed と違って本文やフッターと重ならない */
+        .sidebar-inner {
+          position: sticky;
+          top: 1rem;
         }
 
         .container {

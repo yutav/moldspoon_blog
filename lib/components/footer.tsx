@@ -1,114 +1,100 @@
 import React from 'react'
-import { useTheme, Spacer, Link, Divider } from '@geist-ui/core'
+import { useTheme } from '@geist-ui/core'
+import NextLink from 'next/link'
 import { Configs } from '../utils'
 
 export interface FooterProps {
   isDetailPage?: boolean
 }
 
-const Footer: React.FC<React.PropsWithChildren<FooterProps>> = ({
-  isDetailPage = false,
-}) => {
+const Footer: React.FC<React.PropsWithChildren<FooterProps>> = () => {
   const theme = useTheme()
-  const linkProps = {
+  const externalProps = {
     rel: 'noreferrer',
     target: '_blank',
   }
 
+  const scrollToTop = (event: React.MouseEvent) => {
+    event.preventDefault()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
-    <>
-      <div className="contacts">
-        {isDetailPage && <Divider h={0.5} />}
-        <div className="between">
-          <div className="socials">
-            <Link aria-label="email" href="#" {...linkProps}>
-              ページトップ
-            </Link>
-            {Configs.email && (
-              <Link aria-label="email" href={Configs.email} {...linkProps}>
-                お問合せ
-              </Link>
-            )}
-            {Configs.github && (
-              <Link aria-label="github" href={Configs.github} {...linkProps}>
-                Github
-              </Link>
-            )}
-            {Configs.twitter && (
-              <Link aria-label="twitter" href={Configs.twitter} {...linkProps}>
-                Twitter
-              </Link>
-            )}
-            <Link aria-label="about" href={process.env.baseUrl + "/about"} {...linkProps}>
-              このブログについて
-            </Link>
-            <Link aria-label="about" href={process.env.baseUrl + "/privacy"} {...linkProps}>
-              プライバシーポリシー
-            </Link>
-          </div>
-        </div>
-
-        <style jsx>{`
-          .contacts {
-            width: ${Configs.layouts.pageWidth};
-            padding: 0 ${theme.layout.gapQuarter};
-            position: absolute;
-            z-index: 1;
-            bottom: 3.5rem;
-            color: ${theme.palette.accents_6};
-          }
-
-          .between {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-
-          .contacts :global(svg) {
-            cursor: pointer;
-            margin: ${theme.layout.gapQuarter} ${theme.layout.gapHalf};
-            position: relative;
-            color: inherit;
-            z-index: 2;
-          }
-
-          .contacts :global(a) {
-            color: inherit;
-          }
-
-          .socials :global(a) {
-            margin-right: 0.5rem;
-            font-size: 0.75rem;
-          }
-
-          .contacts span {
-            color: inherit;
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-          }
-
-          .contacts span:hover {
-            color: ${theme.palette.accents_4};
-          }
-
-          .contacts :global(a:hover) {
-            color: ${theme.palette.accents_4};
-            text-decoration: underline dashed;
-            cursor: ne-resize;
-            transition: all 150ms ease;
-          }
-
-          @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
-            .contacts {
-              position: absolute;
-              width: ${Configs.layouts.pageWidthMobile};
-            }
-          }
-        `}</style>
+    // 以前は position: absolute / bottom: 3.5rem で浮かせていたため、
+    // 本文の高さによって重なったり途中に現れたりしていた。通常フローに戻す。
+    <footer className="contacts border-t border-gray-200 dark:border-gray-700">
+      <div className="links">
+        <a aria-label="page top" href="#" onClick={scrollToTop}>
+          ページトップ
+        </a>
+        {Configs.email && (
+          <a aria-label="email" href={Configs.email} {...externalProps}>
+            お問合せ
+          </a>
+        )}
+        {Configs.github && (
+          <a aria-label="github" href={Configs.github} {...externalProps}>
+            Github
+          </a>
+        )}
+        {Configs.twitter && (
+          <a aria-label="twitter" href={Configs.twitter} {...externalProps}>
+            Twitter
+          </a>
+        )}
+        <NextLink aria-label="about" href="/about">
+          このブログについて
+        </NextLink>
+        <NextLink aria-label="privacy" href="/privacy">
+          プライバシーポリシー
+        </NextLink>
       </div>
-      <Spacer h={3.5} />
-    </>
+
+      <p className="copyright">© MoldSpoon Inc.</p>
+
+      <style jsx>{`
+        .contacts {
+          width: 100%;
+          margin-top: ${theme.layout.gap};
+          padding: ${theme.layout.gap} 0 ${theme.layout.gap} 0;
+        }
+
+        .links {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0.35rem 1.25rem;
+        }
+
+        /* 色は next-themes が html に付ける .dark を基準にする
+           （geist の palette は themeType 依存で、トグルに即応させたいため） */
+        .contacts :global(a) {
+          color: #4b5563;
+          font-size: 0.75rem;
+          font-weight: normal;
+        }
+
+        .contacts :global(a:hover) {
+          color: #f97316;
+          text-decoration: underline;
+          transition: color 150ms ease;
+        }
+
+        .copyright {
+          margin: 1rem 0 0 0;
+          font-size: 0.7rem;
+          color: #6b7280;
+        }
+
+        :global(html.dark) .contacts :global(a) {
+          color: #d1d5db;
+        }
+
+        :global(html.dark) .copyright {
+          color: #9ca3af;
+        }
+      `}</style>
+    </footer>
   )
 }
 

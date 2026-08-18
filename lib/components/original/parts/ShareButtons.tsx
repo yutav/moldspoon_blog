@@ -30,11 +30,11 @@ const ShareButtons: React.FC<Prop> = ({ url, title }) => {
   }, []);
 
   return (
-    <div
-      className="block lg:fixed lg:-ml-32 lg:top-1/2"
-    >
-      <div className="px-2 lg:px-0 py-5 w-full lg:w-12 grid grid-cols-6 md:grid-cols-10 lg:grid-cols-1 md:grid-rows-8 gap-4 justify-items-center lg:bg-white lg:dark:bg-black lg:dark:border lg:dark:border-gray-300 lg:rounded-2xl">
-        <p className="text-lg lg:text-xs font-bold text-center lg:text-orange-500">Share Me!</p>
+    // 本文の左脇に position: fixed で浮かせていたが、本文列を 780px に絞って
+    // 右サイドバーを置いた結果、左に逃がす余地がなくなった。記事の下に置く。
+    <div className="block w-full mt-8">
+      <div className="px-2 py-4 w-full flex flex-wrap items-center gap-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-sm font-bold text-orange-500 my-0">Share Me!</p>
         <TwitterShareButton url={url} title={fullTitle}>
           <TwitterIcon size={30} round={true} />
         </TwitterShareButton>

@@ -1,10 +1,10 @@
 import Head from 'next/head'
 import React, { useMemo } from 'react'
 import { Configs } from 'lib/utils'
-//import NextLink from 'next/link'
 import metadata from 'lib/data/metadata.json'
 import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
+
 const getTags = (data: typeof metadata) => {
 
   const postsNode = data.find(item => item.name === 'posts'); // Find the node with name 'posts'
@@ -37,11 +37,12 @@ const getTitle = (): string => {
 export interface PostsProps {
 }
 
+// 縦一列のリンク一覧だと100個近いタグが延々と続くので、件数付きのバッジを敷き詰める。
+// 同一サイト内なので target="_blank" は付けない。
 const Tags: React.FC<PostsProps> = () => {
   const theme = useTheme()
   const tags = useMemo(() => getTags(metadata), [])
   const title = useMemo(() => getTitle(), [])
-
 
   return (
     <section>
@@ -52,49 +53,33 @@ const Tags: React.FC<PostsProps> = () => {
       </Head>
       <h3>このブログの「{title}」</h3>
       <div className="content">
-        <ul>
-          {Object.entries(tags).map(([tag, count], index) => (
-            <li>
-              <Link key={index} href={`/tags/${tag}`} target="_blank">
-                <span className="text-orange-500 hover:text-orange-300" >
-                  {tag} ({count})
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(tags).map(([tag, count]) => (
+            <Link href={`/tags/${encodeURI(tag)}`} key={tag} className="group">
+              <span className="inline-block text-xs md:text-sm px-3 py-1 rounded-2xl border border-orange-300
+                text-orange-500 dark:text-orange-400 group-hover:bg-orange-400 group-hover:text-white
+                group-hover:border-orange-400 transition-colors">
+                {tag}
+                <span className="text-xs text-gray-600 dark:text-gray-300 group-hover:text-white">
+                  &nbsp;({count})
                 </span>
-              </Link>
-            </li>
+              </span>
+            </Link>
           ))}
-        </ul>
+        </div>
       </div>
       <style jsx>{`
         section {
           margin-top: calc(${theme.layout.gap} * 2);
         }
 
-        section h2 {
-          font-size: 0.8rem;
-          color: ${theme.palette.accents_6};
-          text-transform: uppercase;
-          letter-spacing: 2px;
-          border-bottom: 2px solid ${theme.palette.accents_6};
-          padding: 2px ${theme.layout.gapQuarter} 0 0;
-          display: inline-block;
-          margin: 0;
-        }
-
         .content {
           margin: ${theme.layout.gap} 0;
-        }
-
-        .more {
-          display: block;
         }
 
         @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
           section {
             margin-top: ${theme.layout.gapQuarter};
-          }
-
-          section h2 {
-            margin-top: calc(1.5 * ${theme.layout.gap});
           }
         }
       `}</style>

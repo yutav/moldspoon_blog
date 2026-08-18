@@ -25,12 +25,16 @@ const Title: React.FC<TitleProps> = ({ title, date, updateDate, pageView }) => {
           margin: ${theme.layout.gap} 0;
         }
 
+        .title h1 {
+          line-height: 1.45;
+        }
+
         .date-box {
           display: flex;
           width: fit-content;
           align-items: center;
           height: 30px;
-          margin: -0.5rem 0 0 0;
+          margin: 0;
           position: relative;
         }
 

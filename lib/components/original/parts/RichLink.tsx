@@ -47,12 +47,10 @@ const RichLink: React.FC<Prop> = ({ url, icon, moldspoonIcon, title, subtitle, t
           font-weight: bold;
           font-size: 1.2rem;
         }
-        @media (prefers-color-scheme: dark) {
-          .rich-link-box {
-            border: 1px solid #CCC;
-            padding: 10px;
-            background: #F00;
-          }
+        /* ダーク時の背景が真っ赤(#F00)のまま残っていたので落ち着いた色に直す */
+        :global(html.dark) .rich-link-box {
+          border: 1px solid #444;
+          background: #111827;
         }
       `}</style>
     </>

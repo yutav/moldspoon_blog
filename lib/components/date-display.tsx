@@ -34,7 +34,7 @@ const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView })
   }
 
   return (
-    <p className="text-sm text-gray-900 dark:text-white m-0">
+    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 m-0">
       {updateDate ? (
         <>
           <i className="ri-restart-line"></i>&nbsp; {updateString}

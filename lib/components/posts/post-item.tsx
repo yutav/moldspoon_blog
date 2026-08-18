@@ -1,11 +1,11 @@
 import React from 'react'
 import { useTheme } from '@geist-ui/core'
 import Link from 'next/link'
-// import Image from "next/image"
 import { getTagColor } from 'lib/utils'
 import DateDisplay from 'lib/components/date-display'
-// import { useIsMobile } from 'hooks/useIsMobile'
 
+// 4つだけは「カテゴリ」としてカード上部にバッジで出す。残りは下段のタグ行に回す。
+const CATEGORY_TAGS = ['Tips', 'Blog', '経験者向け', '初級者向け']
 
 export interface PostItemProps {
   post: {
@@ -16,149 +16,103 @@ export interface PostItemProps {
       updateDate?: string
       title?: string
       tags?: Array<string>
+      description?: string
     }
   }
 }
 
 const PostItem: React.FC<PostItemProps> = ({ post }) => {
 
-  // const { isMedium } = useIsMobile()
-
   const theme = useTheme()
 
-  // const postName = encodeURI(post.name)
-  // const postName = ""
+  const tags = post.meta?.tags ?? []
+  const categories = CATEGORY_TAGS.filter(tag => tags.includes(tag))
+  const otherTags = tags.filter(tag => !CATEGORY_TAGS.includes(tag))
+  const description = post.meta?.description
 
   return (
-    <div className="item">
-      <div className="flex">
-        {/* <Link href={post.url} passHref className="flex-none">
-          {isMedium ? (
-            <Image
-              src={process.env.baseUrl + "/api/og?title=" + postName}
-              width="100"
-              height="44"
-              alt={post.name}
-              style={{
-                borderRadius: '5px'
-              }}
-              className='hover:opacity-80'
-            />
-          ) : (
-            <Image
-              src={process.env.baseUrl + "/api/og?title=" + postName}
-              width="320"
-              height="140"
-              alt={post.name}
-              style={{
-                borderRadius: '12.5px'
-              }}
-              className='hover:opacity-80'
-            />
-          )}
-        </Link> */}
-        <div className="p-0 md:p-3">
-          <div className="flex flex-wrap">
-            {post.meta?.tags?.includes('Tips') && (
-              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
-                <Link href={`/tags/Tips`} target="_blank" className={getTagColor('Tips') +
-                  " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"
-                }>
-                  Tips
-                </Link>
-              </div>
-            )}
-            {post.meta?.tags?.includes('Blog') && (
-              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
-                <Link href={`/tags/Blog`} target="_blank"
-                  className={getTagColor('Blog') + " text-xs md:text-base hover:opacity-80 px-4 py-1 rounded-2xl"}>
-                  Blog
-                </Link>
-              </div>
-            )}
-            {post.meta?.tags?.includes('経験者向け') && (
-              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
-                <Link href={`/tags/%E7%B5%8C%E9%A8%93%E8%80%85%E5%90%91%E3%81%91`} target="_blank"
-                  className={getTagColor('経験者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
-                  経験者向け
-                </Link>
-              </div>
-            )}
-            {post.meta?.tags?.includes('初級者向け') && (
-              <div className="px-2 mb-2 md:mb-2 bg-transparent text-center">
-                <Link href={`/tags/%E5%88%9D%E7%B4%9A%E8%80%85%E5%90%91%E3%81%91`} target="_blank"
-                  className={getTagColor('初級者向け') + " text-xs md:text-base  hover:opacity-80 px-4 py-1 rounded-2xl"}>
-                  初級者向け
-                </Link>
-              </div>
-            )}
-          </div>
-          <Link href={post.url} passHref className="hover:opacity-80 ">
-            <span className={"text-black dark:text-white md:text-base lg:text-xl xl:text-2xl font-bold"}>{post.name}</span>
+    // 色は Tailwind の dark: で付ける。geist の palette は themeType（localStorage 由来で
+    // 実質 light 固定）に従うので、OS のダークモードと食い違って白背景＋白文字になる。
+    <article className="item bg-white dark:bg-black border border-gray-200 dark:border-gray-700 hover:border-orange-400">
+      <div className="flex flex-wrap gap-x-2 gap-y-2 mb-3">
+        {categories.map(tag => (
+          <Link href={`/tags/${encodeURI(tag)}`} key={tag}>
+            <span className={getTagColor(tag) + " inline-block text-xs md:text-sm px-3 py-1 rounded-2xl"}>
+              {tag}
+            </span>
           </Link>
-
-          <div className="py-2">
-            <DateDisplay date={post.meta?.date ?? ""} updateDate={post.meta?.updateDate} />
-          </div>
-          <p className="py-0 m-0 mt-0 text-xs text-gray-700 dark:text-white">
-            タグ: &nbsp;
-            {post.meta?.tags?.map((value) => {
-              const excludedTags = ["経験者向け", "初級者向け", "Tips", "Blog"];
-              if (excludedTags.includes(value)) {
-                return
-              }
-              return (
-                <Link href={`/tags/` + encodeURI(value)} key={value} className="underline text-xs mr-2 text-gray-700 dark:text-white">{value}</Link>
-              )
-            })}
-          </p>
-        </div>
+        ))}
       </div>
+
+      <Link href={post.url} passHref className="block">
+        <span className="title-text text-black dark:text-white text-base lg:text-xl xl:text-2xl font-bold">
+          {post.name}
+        </span>
+      </Link>
+
+      {description && (
+        <p className="excerpt mt-2 mb-0 text-xs md:text-sm text-gray-700 dark:text-gray-200">
+          {description}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <DateDisplay date={post.meta?.date ?? ""} updateDate={post.meta?.updateDate} />
+        {otherTags.length > 0 && (
+          <p className="py-0 m-0 text-xs text-gray-600 dark:text-gray-300">
+            {otherTags.map(value => (
+              <Link href={`/tags/` + encodeURI(value)} key={value} className="!font-normal !text-gray-600 dark:!text-gray-300 hover:!text-orange-500 text-xs mr-2">
+                #{value}
+              </Link>
+            ))}
+          </p>
+        )}
+      </div>
+
       <style jsx>{`
-       
         .item {
-          margin-bottom: calc(1.35 * ${theme.layout.gap});
+          max-width: 100%;
+          margin-bottom: ${theme.layout.gap};
+          padding: 1.25rem;
+          border-radius: 0.75rem;
+          transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+        }
+
+        .item:hover {
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+          transform: translateY(-2px);
+        }
+
+        /* 見出しはグローバルの h2/h3 装飾を避けて span のままにしてある。
+           カードのどこにホバーしてもタイトルが反応するよう group で受ける */
+        .item :global(.title-text) {
+          transition: color 150ms ease;
+          line-height: 1.5;
+        }
+
+        .item:hover :global(.title-text) {
+          color: #f97316;
+        }
+
+        .excerpt {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           overflow: hidden;
-          max-width: 100vw;
-        }
-
-        .item :global(.link) {
-          color: ${theme.palette.accents_7};
-          transition: color 120ms ease;
-          font-size: 0.95rem;
-          max-width: 95%;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          overflow: hidden;
-          display: inline-block;
-        }
-
-        .date {
-          color: ${theme.palette.accents_5};
-          font-size: 0.75em;
-          display: block;
-          line-height: 1.5rem;
-        }
-
-        .item :global(.link:hover) {
-          color: ${theme.palette.accents_3};
-        }
-
-        .item :global(.link:hover .date) {
-          color: ${theme.palette.accents_3};
+          line-height: 1.6;
         }
 
         @media only screen and (max-width: ${theme.layout.breakpointMobile}) {
           .item {
-            max-width: 90vw;
+            padding: 1rem;
           }
 
-          .item :global(.link) {
-            font-size: 1.15rem;
+          .item:hover {
+            transform: none;
           }
         }
       `}</style>
-    </div >
+    </article>
   )
 }
 

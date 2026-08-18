@@ -11,6 +11,25 @@ p {
   font-family: var(--stk-base-font-family, "游ゴシック", "Yu Gothic", "游ゴシック体", "YuGothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif) !important;
 }
 
+/* geist の CssBaseline も body に背景色を敷くが、そちらは themeType 依存で
+   切り替えの反映が一拍遅れる。Tailwind の .dark に一本化する。 */
+body {
+  @apply !bg-white dark:!bg-black;
+}
+
+/* geist の CssBaseline は #__next に overflow-x: hidden を入れている。
+   overflow を片方向だけ hidden にすると、ブラウザはもう片方を auto として扱うため、
+   #__next が新たなスクロールコンテナになる。すると中の position: sticky は
+   「ページ」ではなく #__next に対して効くことになり、画面に貼り付かなくなる
+   （サイドバーが本文と一緒に流れていってしまう）。
+   clip は縦を visible のまま残せるので、横のはみ出しガードだけを維持できる。 */
+/* geist のスタイルは styled-jsx として実行時に <head> へ差し込まれ、この CSS より
+   後ろに来る。詳細度が同じ（#__next）だと後勝ちで負けるので !important が要る。 */
+#__next {
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+}
+
 body div a {
   @apply font-bold text-blue-500 hover:text-blue-300 dark:text-blue-300 dark:hover:text-blue-100
 }
@@ -37,10 +56,26 @@ body div a {
   border-top: 15px solid #fb923c;
 }
 
-@media (prefers-color-scheme: dark) {
-  .container h2:before {
-    border-top: 15px solid #C2410C;
-  }
+/* 尻尾の色は吹き出し本体と必ず揃える。
+   本体は .container h2 の bg-orange-400 / dark:bg-orange-500 なので、
+   ライト #fb923c（orange-400）、ダーク #f97316（orange-500）。
+   ダークだけ #C2410C（orange-700）になっていて色が繋がっていなかった。 */
+html.dark .container h2:before {
+  border-top: 15px solid #f97316;
+}
+
+/* 記事本文の h2 はオレンジの吹き出しだが、一覧ページの「新着記事」「〜の記事一覧」
+   のような区切り見出しにそれを使うと本文の見出しと見分けが付かない。
+   同じ h2 のまま、こちらは細いオレンジの縦棒で表す。 */
+.section-heading {
+  @apply !bg-transparent !text-black dark:!text-white !border-l-4 !border-orange-400
+         !px-0 !pl-3 !py-0 !mt-10 !mb-4 !rounded-none !text-xl md:!text-2xl !font-bold;
+}
+
+/* .container h2:before の方が詳細度が高いので、打ち消すには !important が要る */
+.section-heading:before {
+  content: none !important;
+  border: none !important;
 }
 
 .container h3 {
@@ -133,10 +168,8 @@ pre.language-shell
   z-index: 2;
 }
 
-@media (prefers-color-scheme: dark) {
-  .balloon2-left:before {
-    border-right: 12px solid #111727;
-  }
+html.dark .balloon2-left:before {
+  border-right: 12px solid #111727;
 }
 
 
@@ -203,21 +236,19 @@ img.overImage {
   font-weight: bold;
   background:linear-gradient(transparent 20%, #FBB92F 20%);
 }
-@media (prefers-color-scheme: dark) {
-  .hoso {
-    font-weight: bold;
-    background: linear-gradient(transparent 60%, #BD23A7 60%);
-    display: inline;
-    background-repeat: no-repeat;
-    background-size: 0% 100%;
-    transition:background-size 1.5s;
-  }
-  .hoso.on {
-    background-size: 100% 100%;
-  }
-  .futo {
-    background-color: #BD23A7;
-  }
+html.dark .hoso {
+  font-weight: bold;
+  background: linear-gradient(transparent 60%, #BD23A7 60%);
+  display: inline;
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition:background-size 1.5s;
+}
+html.dark .hoso.on {
+  background-size: 100% 100%;
+}
+html.dark .futo {
+  background-color: #BD23A7;
 }
 
 ul.MuiPagination-ul li:before {
@@ -227,10 +258,8 @@ ul.MuiPagination-ul li:before {
 ul.MuiPagination-ul li button {
   cursor: pointer;
 }
-@media (prefers-color-scheme: dark) {
-  ul.MuiPagination-ul li button {
-    background: #333;
-  }
+html.dark ul.MuiPagination-ul li button {
+  background: #333;
 }
 
 /* only in detail page */
@@ -265,4 +294,10 @@ ul.MuiPagination-ul li button {
 
 pre code {
   @apply !text-white
+}
+
+/* 記事本文の段落だけ行間を広げる。全体セレクタ（*）の leading を上げると
+   ヘッダーやカードの詰まった箇所まで間延びするので、本文に限定する。 */
+.detail-body p {
+  line-height: 1.95;
 }

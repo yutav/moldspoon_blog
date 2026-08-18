@@ -24,7 +24,9 @@ const BLOG = {
   enableViews: true,
 
   layouts: {
-    pageWidth: '900px',
+    // 本文の列。CNET のメインカラム（785px）に合わせてある。
+    // 16px フォントで1行49文字で、日本語だと視線が戻りやすい範囲に収まる。
+    pageWidth: '780px',
     pageWidthMobile: '95vw',
   },
 }
