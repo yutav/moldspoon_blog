@@ -1,0 +1,73 @@
+# release-queue ブランチに積まれた「予約コミット」を、指定日時が来たら
+# template（デプロイブランチ）へ cherry-pick して push する。
+#
+# 予約コミットの書式: コミットメッセージ本文に以下のトレーラーを含める
+#   Release-At: 2026-08-21T12:37:00+09:00   (必須。この日時を過ぎたら適用)
+#   Release-Check: https://example.com/...  (任意。このURLが200を返さない限り適用しない)
+#
+# キューは古い順に適用し、期限が来ていないコミットに当たった時点で止まる
+# （順序保証のため、追い越しはしない）。
+# 全リリース完了後は、このファイル自体を削除する予約コミットで後片付けされる。
+name: Auto release queued commits
+
+on:
+  schedule:
+    - cron: '43 * * * *' # 毎時43分(UTC)にチェック
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cherry-pick due commits
+        run: |
+          set -euo pipefail
+          git config user.name "moldspoon-auto-release"
+          git config user.email "tanakayuta2008@gmail.com"
+
+          if ! git fetch origin release-queue 2>/dev/null; then
+            echo "release-queue branch not found; nothing to do"
+            exit 0
+          fi
+
+          now=$(date +%s)
+          applied=0
+
+          # HEADに未適用のキューコミットをpatch-id比較で古い順に列挙
+          for sha in $(git cherry HEAD origin/release-queue | awk '$1=="+" {print $2}'); do
+            body=$(git log -1 --format=%B "$sha")
+            at=$(printf '%s\n' "$body" | sed -n 's/^Release-At: //p' | head -1)
+            if [ -z "$at" ]; then
+              echo "skip $sha (no Release-At trailer)"
+              continue
+            fi
+            ts=$(date -d "$at" +%s)
+            if [ "$now" -lt "$ts" ]; then
+              echo "not due yet: $sha ($at). stop."
+              break
+            fi
+            url=$(printf '%s\n' "$body" | sed -n 's/^Release-Check: //p' | head -1)
+            if [ -n "$url" ]; then
+              code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+              if [ "$code" != "200" ]; then
+                echo "precondition not met: $url returned $code. stop and retry next run."
+                break
+              fi
+            fi
+            echo "releasing: $sha ($at)"
+            git cherry-pick "$sha"
+            applied=1
+          done
+
+          if [ "$applied" = "1" ]; then
+            git push origin HEAD
+          else
+            echo "nothing due."
+          fi
