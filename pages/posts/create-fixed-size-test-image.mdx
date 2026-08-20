@@ -1,0 +1,187 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '2MB・5MBなど容量指定のテスト画像を用意する方法まとめ。アップロード上限の境界値テストに',
+  date: '2026-08-23T00:20:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'テスト',
+    '画像',
+    'Webエンジニア'
+  ],
+  description: 'アップロード機能の境界値テストに必要な「ちょうど2MB」「500KBぴったり」のテスト画像の作り方をまとめました。ブラウザで完結する画像メーカー、ImageMagickやddコマンドで作る方法、1MB=1024KB問題など実務のハマりどころも解説します。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+Webサービスのファイルアップロード機能を作っていると、必ずやってくるのが**境界値テスト**です。
+
+「アップロード上限2MBです」と仕様に書いた以上、
+
+- 2MBちょうどの画像 → アップロードできること
+- 2MBを少し超えた画像 → **ちゃんとエラーメッセージが出る**こと
+
+を確認しなければテストしたことになりません。ところが、いざ確認しようとすると
+<span className="hoso">「ちょうど2MBの画像」「500KBぴったりの画像」って、手元に都合よく転がっていない</span>んですよね...。
+
+手持ちの写真をリサイズして「1.8MB...惜しい...」を繰り返した経験のある方も多いのではないでしょうか。
+
+本記事では、**容量を指定してテスト画像を用意する方法**を、手軽な順にまとめます。
+
+## 方法1: ブラウザで完結する「○○KB画像メーカー」を使う（一番手軽）
+
+手前味噌ですが、弊社のWebツール集 Spoon Tools! に、まさにこの用途のためのツールがあります。
+
+<RichLink
+  url="https://moldspoon.jp/tools/kbimagemaker"
+  icon='ri-image-line'
+  title="○○KB画像メーカー | Spoon Tools!"
+  subtitle="選択肢から選ぶだけで、テスト用の○○KB画像が作れる無料Webツールです。"
+  targetBlank={true}
+/>
+
+使い方は、**画像の容量（10KB〜2MB）と背景色を選んで「生成を開始」を押すだけ**です。
+
+<MdxImage month="202608" image="kbimagemaker01.png" annotation="容量と背景色を選んで「生成を開始」を押すだけ" />
+
+- 10KB〜1000KBは10KB刻み、1000KB〜2000KBは100KB刻みで指定可能
+- 背景色を8色から選べるので、「白い画像はUI上で見えづらい」といった場合にも対応できます
+- インストール不要・無料・ブラウザだけで完結します
+
+実際に「50KB・青」で生成した画像がこちらです。
+
+<MdxImage month="202608" image="kbimagemaker02.png" annotation="生成された50KBのテスト画像（実物）。ファイルサイズは51,200バイト＝50KiBぴったり" isHalf={true} />
+
+見た目はただの青い正方形ですが、ファイルサイズは**51,200バイト（=50KiB）ぴったり**。
+境界値テストでよく使う「512KB」「1000KB」「2000KB（2MB）」あたりがすぐ作れるので、
+まずはこれで済むかどうか試していただくのが早いと思います。
+
+## 方法2: コマンドラインで作る（サイズの自由度が高い）
+
+エンジニアの方なら、コマンドラインで作ってしまう方法もあります。
+
+### ベース画像を作る（ImageMagick）
+
+まず適当な大きさの画像を[ImageMagick](https://imagemagick.org/)で生成します。
+
+```
+magick -size 1920x1080 xc:white test.jpg
+```
+
+ただし、この時点ではファイルサイズは成り行きです。<span className="hoso">「ちょうど◯MB」にするのは実は結構難しい</span>ので、次の水増しテクニックと組み合わせます。
+
+### truncateでちょうどのサイズに水増しする
+
+Linux/Macなら`truncate`コマンドで、ファイルを**指定サイズまでゼロ埋めで拡張**できます。
+
+```
+truncate -s 2M test.jpg
+```
+
+JPEGは画像データの終端マーカー以降のデータを無視するビューアがほとんどのため、
+**末尾にデータを足しても画像としては普通に表示されつつ、ファイルサイズだけ狙った値になります。**
+
+- `-s 2M` は 2MiB（2,097,152バイト）になる点に注意（後述の1MB問題）
+- バイト単位で指定したい場合は `truncate -s 2000000 test.jpg`
+
+<span className="hoso">画像の中身まで厳密に検証するバリデータには弾かれる可能性がある</span>ので、
+その場合は方法1のようにピクセルデータ自体で容量を調整しているツールを使ってください。
+
+### 「画像である必要がない」ならddで一発
+
+アップロード上限のテストで、拡張子チェックがない（またはどんなファイルでもよい）なら、
+`dd`でダミーファイルを作るのが一番速いです。
+
+```
+dd if=/dev/urandom of=test.bin bs=1000000 count=2   # 2,000,000バイト
+dd if=/dev/urandom of=test2.bin bs=1048576 count=2  # 2MiB (2,097,152バイト)
+```
+
+## ハマりどころ：「2MB上限」の2MBはどっち？
+
+境界値テストで一番ハマるのがこれです。**「2MB」には2つの解釈があります。**
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>解釈</th>
+      <th style={thStyle}>バイト数</th>
+      <th style={thStyle}>主な採用例</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>2MB = 100万バイト×2（10進）</td>
+      <td style={tdStyle}>2,000,000</td>
+      <td style={tdStyle}>ストレージメーカー表記、フロント実装でありがちな素朴な計算</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>2MB = 2MiB（2進）</td>
+      <td style={tdStyle}>2,097,152</td>
+      <td style={tdStyle}><code>php.ini</code>の<code>upload_max_filesize=2M</code>など</td>
+    </tr>
+  </tbody>
+</table>
+
+たとえばPHPの`upload_max_filesize = 2M`は**2MiB（2,097,152バイト）**です。
+一方、フロントエンドのバリデーションを`size <= 2 * 1000 * 1000`で書いてしまうと、
+<span className="hoso">「フロントは通るのにサーバで弾かれる」（またはその逆の）帯域が約9万7000バイトぶん生まれます</span>。
+
+境界値テストをするなら、
+
+- 上限ちょうどのファイル
+- 上限+1バイト（または+1刻み単位）のファイル
+- **10進解釈と2進解釈の間のサイズ**（例: 2,050,000バイト）のファイル
+
+の3種類を用意して、フロントとサーバの判定が一致していることまで確認するのがおすすめです。
+
+## よくある質問（FAQ）
+
+### Q. 2MBより大きいテスト画像（5MB、10MBなど）が欲しい
+
+前述の`truncate`での水増しなら任意のサイズにできます。
+また、[○○KB画像メーカー](https://moldspoon.jp/tools/kbimagemaker)のページには、2MB超・大量生成などの
+ご要望を受け付けるリクエストフォームへのご案内もあります。
+
+### Q. スマホしかない環境で作れますか？
+
+[○○KB画像メーカー](https://moldspoon.jp/tools/kbimagemaker)はスマホのブラウザからも利用できます。
+生成した画像はそのまま端末にダウンロードされます。
+
+### Q. PNGやGIFのテスト画像が必要な場合は？
+
+拡張子・MIMEタイプのバリデーションをテストする場合は、`magick test.jpg test.png`のように
+ImageMagickで変換したうえで、`truncate`でサイズを合わせるのが手軽です。
+
+## まとめ
+
+容量指定のテスト画像の作り方を3通りご紹介しました。
+
+- 手軽さ重視 → [○○KB画像メーカー](https://moldspoon.jp/tools/kbimagemaker)（ブラウザ完結・無料）
+- サイズの自由度重視 → ImageMagick + `truncate`
+- 画像でなくてよい → `dd`
+
+アップロード機能は「正常にアップロードできること」より
+**「上限を超えたときに正しく断れること」** の方がバグが出やすい場所です。
+境界値のテスト画像をさっと用意して、リリース前にしっかり潰しておきましょう。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
