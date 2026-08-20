@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage, OL } from 
 export const meta = {
   title: 'ClamAVをAmazon Linux2023サーバに組み込んでウィルスチェックする',
   date: '2024-01-22T15:15:46.000Z',
-  updateDate: '2024-01-26T16:46:49.000Z',
+  updateDate: '2026-08-21T03:40:00.000Z',
   tags: [
     'Blog',
     '経験者向け',
@@ -14,8 +14,12 @@ export const meta = {
     'ウィルスチェック',
     'ClamAV'
   ],
-  description: 'ClamAVをLarvelに組み込む手順を丁寧に解説してまいります。'
+  description: 'Linux用アンチウィルスソフトClamAVをAmazon Linux 2023に導入し、アップロードファイルをスキャンする手順を丁寧に解説します。clamscanでメモリが足りない場合のclamdscan活用法・メモリ削減設定・Laravelからの呼び出し例も追記しました。'
 }
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
 
 図書館で本を予約したら、タイミングが被ってしまい一気に５冊も届いてしまいました...。
 
@@ -228,6 +232,96 @@ clamscan /storage/app/data/upload/xxxx.zip
 ここまでの経緯でご説明した通り、2GBのマシンで動かないのはキツく、気軽に導入するわけには行かなそうでした。
 よって、別の方法でウィルススキャンする方法を考えるようにしました。
 
+（→ その後、**clamdscanを使えばこの問題は解決できる**ことが分かりました。次の【2026年追記】をご覧ください。）
+
+## 【2026年追記】clamdscanを使えば2GBマシンでも実用できる
+
+記事公開後に運用・調査を重ねた結果、**「clamscanが重い」問題への正しい答えはclamdscanだった** ので追記します。
+
+### clamscanとclamdscanの違い
+
+本文で実行した`clamscan`は、<span className="hoso">実行するたびに800万件以上のウィルス定義DBをメモリに読み込む</span>コマンドです。
+1回のスキャンに3GB近いメモリと30秒近い時間がかかったのはこれが原因で、マシンスペックの問題ではありませんでした。
+
+一方`clamdscan`は、**すでに起動している`clamd`デーモンにファイルを渡してスキャンさせる**コマンドです。
+定義DBはclamdが常駐メモリに1回だけ読み込んでおり、スキャンのたびに読み直すことはありません。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>コマンド</th>
+      <th style={thStyle}>定義DBの読み込み</th>
+      <th style={thStyle}>1スキャンあたりの負荷</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}><code>clamscan</code></td>
+      <td style={tdStyle}>実行のたびに読み込む</td>
+      <td style={tdStyle}>メモリ約3GB・数十秒</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}><code>clamdscan</code></td>
+      <td style={tdStyle}>clamdが常駐分を使い回す</td>
+      <td style={tdStyle}>ほぼゼロ・通常は数秒以内</td>
+    </tr>
+  </tbody>
+</table>
+
+本文の構成ではせっかく`clamd`を立ち上げていたのに、スキャンに`clamscan`を使っていたため、
+デーモンの意味がなくなっていた訳です...。
+
+### 使い方
+
+```
+clamdscan --fdpass /path/to/upload/file.zip
+```
+
+`--fdpass`は、ファイルディスクリプタごとclamdに渡すオプションです。
+clamdは`clamscan`ユーザーなど別ユーザーで動くことが多く、<span className="hoso">スキャン対象ファイルへの読み取り権限がなくてエラーになる事故を防げる</span>ので、基本付けておくのがおすすめです。
+
+判定は終了コードで行えます。
+
+- `0` ... ウィルスなし
+- `1` ... ウィルス検出
+- `2` ... スキャン自体のエラー（clamdが起動していない等）
+
+### clamdの常駐メモリも減らせる
+
+clamd自体も定義DBの分（1GB強）のメモリを常駐で使いますが、`/etc/clamd.d/scan.conf`に以下を追加すると
+定義DB更新時のピークメモリを抑えられます。
+
+```
+ConcurrentDatabaseReload no
+```
+
+デフォルトでは定義DBの再読み込み時に**新旧2つのDBを同時にメモリへ持つ**ため、瞬間的に倍のメモリを消費します。
+この設定を入れると再読み込み中のスキャンは待たされますが、<span className="hoso">メモリ2GBのマシンで運用するなら実質必須の設定</span>です。
+
+それでも足りない場合は、スワップを追加しておくと定義DB更新時のOOM killerによるclamd強制終了を防げます。
+
+### Laravelからの呼び出し例
+
+本文で「シェルを経由して叩く」と書いた部分も、Laravel 10以降なら`Process`ファサードでシンプルに書けます。
+
+```php
+use Illuminate\Support\Facades\Process;
+
+$result = Process::run([
+    'clamdscan', '--fdpass', '--no-summary',
+    storage_path('app/data/upload/uploaded.zip'),
+]);
+
+if ($result->exitCode() === 1) {
+    // ウィルス検出。ファイルを削除し、ユーザーにエラーを返す
+} elseif ($result->exitCode() !== 0) {
+    // スキャン自体の失敗（clamdが落ちている等）。fail-close にするのが安全
+}
+```
+
+ポイントは、<span className="hoso">スキャンできなかった場合（終了コード2）を「安全」と扱わないこと</span>です。
+clamdが落ちている間にアップロードされたファイルを素通しにしないよう、エラー時は受け付けない設計（fail-close）をおすすめします。
+
 ### 参考URL
 
 以下のサイト様を参考にさせていただきました。（他にもあるかもです、気づき次第追加させていただきます。）
@@ -246,6 +340,10 @@ https://blog.kamata-net.com/archives/12891.html
 実際に使う機会があればその方向でユーザーを作る形で考えたいと思います。
 
 その場合、パーミッションの設定は残念ながらちょっと面倒そうでしたね。
+（追記の通り`clamdscan --fdpass`を使えば、この権限まわりの面倒もかなり軽減されます。）
+
+当初「2GBのマシンでは実用が厳しい」と結論づけましたが、**clamdを常駐させて`clamdscan`でスキャンする構成に
+すれば、2GBクラスのマシンでも十分実用できます。** これから導入される方は最初からその構成で組んでください。
 
 <br />
 この記事が何かのお役に立てれば幸いです。<br />
