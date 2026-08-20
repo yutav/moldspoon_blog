@@ -2,9 +2,9 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-  title: 'NextAuth+Prisma+Next.jsによるDB認証が実用的でないのでなんとかした件',
+  title: 'Auth.js(NextAuth)+PrismaでNext.jsにDB認証を導入する手順。sessionでtokenが取れない問題の解決法も',
   date: '2023-11-30T01:33:51.000Z',
-  updateDate: '2023-12-01T14:13:18.000Z',
+  updateDate: '2026-08-26T09:45:00.000Z',
   tags: [
     'Tips',
     '経験者向け',
@@ -15,7 +15,7 @@ export const meta = {
     'React',
     'フロントエンド',
   ],
-  description: 'Next.jsプロジェクトに、Auth.js(旧NextAuth)とPrismaを使ってDB認証をなんとか実現した件について解説します。'
+  description: 'Auth.js(旧NextAuth)とPrismaアダプターでNext.js App RouterにGoogle認証+DBセッションを導入する手順を、スキーマ定義から実装コード付きで解説します。database戦略でsessionコールバックのtokenがnullになる問題の原因と回避策、Auth.js v5での書き方の変化も追記しました。'
 }
 
 ## 概要
@@ -403,12 +403,47 @@ export const options: NextAuthOptions = {
 今のところはこの方法で解決できたので、アクセストークンをログに出すことについては（アクセストークンに有効期限があるため致命的ではないにせよ）留意しつつ、
 APIにどんどんリクエストをしたいと思います。
 
+## 【追記】あわせて押さえておきたい2点
+
+### PrismaClientはシングルトンにする
+
+本記事のコードでは説明の簡潔さを優先して`options.ts`で`new PrismaClient()`していますが、
+Next.jsの開発サーバはホットリロードのたびにモジュールを再評価するため、<span className="hoso">この書き方だと接続が増殖して
+「too many connections」でDBに蹴られる</span>ことがあります。実プロジェクトでは定番のシングルトン化をしておきましょう。
+
+    <CodeBlockTitle title="src/lib/prisma.ts" />
+
+```typescript
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+```
+
+### Auth.js v5では設定の書き方が変わる
+
+本記事はNextAuth **v4** ベースですが、v5（パッケージ名も「Auth.js」に統一）では構成が整理されています。
+
+- 設定はプロジェクト直下の`auth.ts`に集約し、`export const { handlers, auth, signIn, signOut } = NextAuth({...})`の形で受け取る
+- `route.ts`は`handlers`を再エクスポートするだけになる
+- 環境変数は`AUTH_SECRET`・`AUTH_GOOGLE_ID`・`AUTH_GOOGLE_SECRET`の命名にすると**Providerへの受け渡しコードすら不要**になる
+- サーバー側でのセッション取得は`getServerSession(options)`ではなく`auth()`を呼ぶだけ
+
+考え方（Prismaアダプター・database戦略・callbacksでの加工）はv4と同じなので、
+本記事の内容はv5でも読み替えて使えます。移行時は[公式のマイグレーションガイド](https://authjs.dev/getting-started/migrating-to-v5)を参照してください。
+
 ## まとめ
 
 いかがでしたでしょうか。<br />
     <br />
 Auth.js(旧NextAuth)はサクッと外部サービスによる認証を実現できる素晴らしい技術ですが、**ドキュメントおよび細かい点でまだ追いついていないところがあるな** と
 残念ながら感じました。このあたりはエコシステムの各位の協力も得て、もっと素晴らしい技術になってくれると個人的に嬉しいと思いました！
+
+DBまわりでは[サーバレスPostgres「Neon」の始め方](https://moldspoon.jp/blog/posts/how-to-start-neon)や
+[PrismaのType拡張Tips](https://moldspoon.jp/blog/posts/add-extra-key-to-prisma-type)も書いていますので、あわせてどうぞ。
 
     <br />
 この記事が何かのお役に立てれば幸いです。<br />
