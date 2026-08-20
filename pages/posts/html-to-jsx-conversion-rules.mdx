@@ -1,0 +1,176 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'HTMLをReactのJSXに変換するときの書き換えルールまとめ。class/for/style/自己閉じタグ',
+  date: '2026-08-29T01:15:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'React',
+    'Next.js',
+    'フロントエンド'
+  ],
+  description: '既存のHTMLをReact/Next.jsのJSXに移植するときに必要な書き換えルールを一覧で解説します。class→className、for→htmlFor、style属性のオブジェクト化、自己閉じタグ、SVG属性のキャメルケース化など、コピペ移植でエラーになるポイントを網羅。一括変換できる無料ツールも紹介します。'
+}
+
+## はじめに
+
+「デザイナーからもらったHTMLをReactコンポーネントにしたい」
+「昔のサイトのパーツをNext.jsに移植したい」
+
+そんなとき、HTMLをそのままJSXにコピペすると**大量のエラーや警告に迎えられます**。
+JSXはHTMLによく似ていますが、実体はJavaScriptの式なので、<span className="hoso">予約語や命名規則の衝突を避けるための書き換えルール</span>がいくつも存在するからです。
+
+本記事では、HTML→JSX移植で必要になる書き換えルールをまとめます。
+
+## 一括変換ならWebツールが手軽
+
+先にお伝えすると、機械的に変換できる部分は手作業でやる必要はありません。
+弊社のWebツール集 Spoon Tools! に変換ツールがあります。
+
+<RichLink
+  url="https://moldspoon.jp/tools/normal-html-to-react-jsx"
+  icon='ri-reactjs-line'
+  title="HTML→JSX変換 | Spoon Tools!"
+  subtitle="通常のHTMLタグを投げ込むと、React/Next.jsで使えるJSX形式に置換する無料Webツールです。"
+  targetBlank={true}
+/>
+
+とはいえ、**なぜその書き換えが必要なのか**を知らないと変換後のコードを保守できないので、
+以下でルールを1つずつ解説していきます。
+
+## 書き換えルール一覧
+
+### class → className
+
+一番有名なやつです。`class`はJavaScriptの予約語（クラス宣言）なので使えません。
+
+```jsx
+{/* HTML */}
+<div class="container">
+
+{/* JSX */}
+<div className="container">
+```
+
+### for → htmlFor
+
+`<label>`の`for`属性も、JavaScriptの`for`文と衝突するため`htmlFor`になります。
+
+```jsx
+<label htmlFor="email">メールアドレス</label>
+```
+
+### style属性は文字列ではなくオブジェクト
+
+ここが一番「手直し」感のあるポイントです。CSSプロパティ名はキャメルケースになり、値は文字列で渡します。
+
+```jsx
+{/* HTML */}
+<p style="font-size: 14px; background-color: #eee;">
+
+{/* JSX */}
+<p style={{ fontSize: '14px', backgroundColor: '#eee' }}>
+```
+
+`{{ }}`が二重なのは、「外側の`{}`=JSXの式埋め込み」+「内側の`{}`=オブジェクトリテラル」だからです。
+
+### 閉じないタグは自己閉じにする
+
+HTMLでは閉じタグを省略できた`<img>`・`<br>`・`<input>`・`<hr>`・`<meta>`などは、
+JSXでは**必ず`/>`で閉じます**。閉じ忘れは構文エラーになります。
+
+```jsx
+<img src="/logo.png" alt="ロゴ" />
+<br />
+<input type="text" name="email" />
+```
+
+### イベント属性はキャメルケース + 関数を渡す
+
+```jsx
+{/* HTML */}
+<button onclick="handleClick()">
+
+{/* JSX */}
+<button onClick={handleClick}>
+```
+
+`onclick`→`onClick`の名前変更に加えて、**文字列ではなく関数そのものを渡す**点が違います。
+`onClick={handleClick()}`と書くと**レンダリング時に即実行**されてしまうのも典型的なハマりどころです。
+
+### コメントの書き方が変わる
+
+```jsx
+{/* HTML */}
+{/* <!-- コメント --> は使えない */}
+
+{/* JSXではこう書く */}
+{/* コメント */}
+```
+
+### フォーム系: value / checked はそのまま使えない
+
+JSXで`value`や`checked`を直接書くと「controlled component」として扱われ、
+onChangeとセットで書かないと**入力できないフォーム**になります。初期値だけ与えたい場合は`default〜`を使います。
+
+```jsx
+<input type="text" defaultValue="初期値" />
+<input type="checkbox" defaultChecked />
+```
+
+### その他のリネーム対象
+
+- `tabindex` → `tabIndex`
+- `readonly` → `readOnly`
+- `maxlength` → `maxLength`
+- `autocomplete` → `autoComplete`
+- `colspan` / `rowspan` → `colSpan` / `rowSpan`
+
+### SVGを埋め込む場合は属性が大量にキャメルケース化する
+
+アイコンのSVGを直接JSXに貼るときに引っかかります。
+
+- `stroke-width` → `strokeWidth`
+- `fill-rule` → `fillRule`
+- `clip-path` → `clipPath`
+- `xlink:href` → `xlinkHref`
+
+数が多いので、<span className="hoso">SVGこそ手作業ではなく変換ツールに通すのがおすすめ</span>です。
+
+### どうしても生HTMLを出したい場合
+
+CMSから返ってくるHTML文字列をそのまま表示したい場合は`dangerouslySetInnerHTML`を使います。
+
+```jsx
+<div dangerouslySetInnerHTML={{ __html: htmlString }} />
+```
+
+名前の通り**XSSの危険がある**ので、信頼できない入力には必ずサニタイズを挟んでください。
+
+## まとめ
+
+HTML→JSXの書き換えは、要するに以下の3系統に整理できます。
+
+1. **JavaScriptの予約語との衝突回避** ... class→className、for→htmlFor
+2. **属性のキャメルケース化** ... onclick→onClick、tabindex→tabIndex、SVG属性ほか
+3. **文字列からJSの値へ** ... style文字列→オブジェクト、イベント文字列→関数
+
+機械的な変換は[HTML→JSX変換ツール](https://moldspoon.jp/tools/normal-html-to-react-jsx)に任せて、
+controlled componentまわりなど「設計が絡む部分」だけ人間が判断する、という分担が効率的です。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
