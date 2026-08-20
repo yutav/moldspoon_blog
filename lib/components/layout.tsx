@@ -258,9 +258,9 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           justify-content: flex-start;
         }
 
-        /* 記事詳細は読み物なので 780px で固定するが、一覧やトップは読み物ではないので
-           広い画面ではもっと幅を使う。1920px だと左右の余白が 35% あり、
-           ファーストビューに記事が2件しか入らなかった。 */
+        /* 一覧やトップは読み物ではないので、広い画面ではもっと幅を使う。
+           1920px だと左右の余白が 35% あり、ファーストビューに記事が
+           2件しか入らなかった。 */
         @media only screen and (min-width: 1400px) {
           .container.is-list {
             max-width: 900px;
@@ -276,6 +276,22 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         @media only screen and (min-width: 1800px) {
           .container.is-list {
             max-width: 1120px;
+          }
+        }
+
+        /* 記事詳細も、かつては読み物として 750px 固定にしていたが、
+           サイドバー(348px)を足しても 1920px では画面の 4 割が余白で
+           スカスカに見えていた。可読性を壊さない範囲で段階的に広げる。
+           （日本語の本文は 40〜45 文字/行程度までは読みやすさを保てる） */
+        @media only screen and (min-width: 1400px) {
+          .container:not(.is-list) {
+            max-width: 860px;
+          }
+        }
+
+        @media only screen and (min-width: 1800px) {
+          .container:not(.is-list) {
+            max-width: 940px;
           }
         }
 
