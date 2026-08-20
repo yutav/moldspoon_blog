@@ -1,0 +1,152 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'WordPressからNext.js(MDX)ブログへ移行する手順。実際に移行して404を35本生やした反省点も',
+  date: '2026-08-27T09:00:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Wordpress',
+    'Next.js',
+    'mdx',
+    'ブログ移行'
+  ],
+  description: 'WordPressで運用していたブログをNext.js + MDXへ移行する手順を、実際にこのブログを移行した経験を元に解説します。記事データのMDX変換・画像の移設・URL設計まで。移行時に301リダイレクトを張り忘れ、Search Consoleに404を35本残してしまった実際の失敗と対処法も紹介します。'
+}
+
+## はじめに
+
+このブログ、実は**もともとWordPressで運用していたものをNext.js + MDXに移行したもの**です。
+
+移行してから、ビルドも表示も速くなり、記事はGitで管理でき、デザインもコードで完全にコントロールできるようになりました。
+おおむね満足しているのですが、<span className="hoso">移行時にやらかした失敗がひとつあり、2年越しにSearch Consoleで請求書が回ってきました</span>（後述します...）。
+
+本記事では、実体験ベースでWordPress→Next.js(MDX)移行の手順と、**私と同じ失敗をしないための注意点**をまとめます。
+
+## 移行の全体像
+
+やることは大きく5つです。
+
+1. WordPressから記事データをエクスポートする
+2. エクスポートしたXMLをMDXファイルに変換する
+3. 画像を移設する
+4. **URL設計を決めて、旧URLから301リダイレクトを張る**（←ここをサボると事故ります）
+5. メタ情報（タイトル・description・タグ）を整える
+
+## 手順1: WordPressから記事をエクスポート
+
+WordPressの管理画面から **ツール > エクスポート > すべてのコンテンツ** を選ぶと、
+記事・固定ページ・コメントを含むXMLファイル（WXR形式）がダウンロードできます。
+
+ここは公式機能なので特に迷うところはありません。プラグインも不要です。
+
+## 手順2: XMLをMDXに変換する
+
+エクスポートされたXMLはそのままではNext.jsで使えないので、記事ごとの`.mdx`ファイルに変換します。
+
+手前味噌ですが、この変換を自動化したWebツールを公開しています。
+（もともと自分たちの移行用に作った処理を、ツール化したものです）
+
+<RichLink
+  url="https://moldspoon.jp/tools/wordpress-to-mdx"
+  icon='ri-wordpress-line'
+  title="Wordpress→mdx変換 | Spoon Tools!"
+  subtitle="WordPressのエクスポートXMLから、Next.jsで使える.mdxファイルへ一括変換できるWebツールです。"
+  targetBlank={true}
+/>
+
+エクスポートXMLを投げ込むと、記事ごとに分割された`.mdx`ファイルが得られます。
+
+自前で変換処理を書く場合は、以下の対応が必要になります（ツールではこの辺りを吸収しています）。
+
+- WXR XMLのパースと`<item>`（記事）ごとの分割
+- 記事本文のHTML→Markdown変換（`<pre>`のコードブロック化が特に面倒）
+- タイトル・投稿日・カテゴリ・タグをfrontmatter（またはメタオブジェクト）に移す
+- 全角記号や`<`を含む本文がMDXの構文と衝突しないようにエスケープ
+
+MDXをNext.jsプロジェクトに組み込む部分は、別記事
+[Next.jsプロジェクトにマークダウンコンテンツを追加する](https://moldspoon.jp/blog/posts/add-markdown-contents-to-nextjs)や
+[mdxのimportを整理した話](https://moldspoon.jp/blog/posts/mdx-import-seiri)で書いていますので、そちらをご覧ください。
+
+## 手順3: 画像を移設する
+
+WordPressの画像は`wp-content/uploads/`配下に年月別で入っています。
+丸ごとダウンロードして、Next.jsの`public/`配下に置き直すのが最短です。
+
+このとき、<span className="hoso">記事本文中の画像URLの書き換えを一括置換で済ませられるよう、
+ディレクトリ構造は年月別のまま維持する</span>のがおすすめです。うちのブログも`/posts/images/202401/`のような
+年月ディレクトリを踏襲しています。
+
+## 手順4: URL設計と301リダイレクト【最重要】
+
+**この記事で一番言いたいのはここです。**
+
+WordPressのパーマリンク（例: `/posts/記事スラッグ`）と、移行後のURL（例: `/blog/posts/記事スラッグ`）が
+1文字でも違うなら、**旧URL→新URLの301リダイレクトが必須**です。
+
+### 実際にやらかした話
+
+うちのブログは移行時にURLのプレフィックスが`/posts/...`から`/blog/posts/...`に変わったのですが、
+**移行作業に満足してリダイレクトを張り忘れました。**
+
+その結果どうなったかというと、
+
+- Googleは移行から**2年以上経っても**旧URLをクロールし続けていた
+- Search Consoleの「見つかりませんでした（404）」に**35本**が溜まりっぱなしになった
+- その中には**過去12ヶ月で最大の流入があった記事の旧URL**も含まれていた
+- 旧URLが検索結果に残っている間、そこからの流入をまるごと取りこぼしていた
+
+Next.jsなら、リダイレクトは`next.config.js`に数行書くだけです。**これをサボった代償としては高すぎました。**
+
+```javascript
+// next.config.js
+async redirects() {
+  return [
+    { source: '/posts/:slug*', destination: '/blog/posts/:slug*', permanent: true },
+    { source: '/tags', destination: '/blog/tags', permanent: true },
+  ]
+},
+```
+
+`permanent: true`で301（恒久的な移転）として返され、旧URLが持っていた評価が新URLに引き継がれます。
+
+### 移行後はSearch Consoleを必ず見る
+
+リダイレクトを張ったら、[Search Console](https://search.google.com/search-console)の
+「ページのインデックス登録」で404が減っていくことを確認しましょう。
+「修正を検証」ボタンを押すと、Googleが優先的に再クロールしてくれます。
+
+## 手順5: メタ情報を整える
+
+WordPressではプラグイン任せだったtitle・description・OGPを、移行後は自分で面倒を見ることになります。
+
+- `description`は**記事ごとに**書く（無いとGoogleが本文から勝手に抜粋し、CTRが下がりがち）
+- OGP画像は`@vercel/og`を使うと記事タイトル入りの画像を動的生成できて楽です
+- canonicalタグの出し忘れ・間違いに注意（これも移行後にSearch Consoleで気づいたやつです）
+
+## まとめ
+
+WordPress→Next.js(MDX)移行の手順を、実体験ベースでまとめました。
+
+- 記事の変換自体は[変換ツール](https://moldspoon.jp/tools/wordpress-to-mdx)なりスクリプトなりで機械的に終わる
+- 本当に大事なのは**URL設計と301リダイレクト**。移行チェックリストの最上位に置いてください
+- 移行後1ヶ月はSearch Consoleの404レポートを監視する
+
+「移行したら検索流入が消えた」という話の多くはコンテンツではなくリダイレクトの問題です。
+これから移行される方は、ぜひ私の屍を越えていってください。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
