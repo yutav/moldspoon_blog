@@ -2,9 +2,9 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-  title: 'Laravelの様々なバリデーションパターンをわかりやすい実例付きで解説',
+  title: 'Laravelバリデーションの書き方パターン集。動くサンプルコード付きでルールをまとめて解説',
   date: '2023-12-13T07:41:20.000Z',
-  updateDate: '2023-12-17T15:14:00.001Z',
+  updateDate: '2026-08-24T12:10:00.000Z',
   tags: [
     'Blog',
     '初級者向け',
@@ -13,7 +13,8 @@ export const meta = {
     'PHP',
     'バックエンド',
     'フレームワーク'
-  ]
+  ],
+  description: 'Laravelのバリデーションルールを、必須チェック・文字数制限・メール・日付範囲・画像・パスワード確認など実際のフォームでよく使うパターン別に、そのまま動くサンプルコード付きで解説します。FormRequestへの切り出しやエラーメッセージの日本語カスタマイズも追記しました。'
 }
 
 お休みにクリスマスツリーの飾り付けを家族でしました。そういえば、クリスマスが来るのがもっと楽しみになったような...。
@@ -24,7 +25,8 @@ Hackerの皆様はいかがお過ごしでしょうか。
 
 ## 本記事の概要
 
-前提として、**2023/12現在最新のLaravel 10.x**を対象に記述いたします。
+前提として、執筆時最新の**Laravel 10.x**を対象に記述しています。
+（2026-08追記: バリデーションまわりのAPIはその後も変わっていないため、<span className="hoso">本記事のパターンはLaravel 11 / 12でもそのまま使えます</span>。）
 
 - Laravelで、ユーザーが入力した入力値をチェックするバリデーション機能がある
 - 公式サイトの記述のみではパッとやりたいこととパターンが一致しない
@@ -553,6 +555,70 @@ php artisan config:cache
 ```
  'term' => ['required', 'boolean']
 ```
+
+## 【追記】実務でセットで使うテクニック
+
+記事公開後によく質問をいただいた3点を追記します。
+
+### 任意項目は nullable を忘れずに
+
+意外とハマるのがこれで、**任意入力の項目にルールだけ付けると、空欄でもルールが評価されてエラーになる**ことがあります。
+任意項目には`nullable`を先頭に付けましょう。
+
+```
+'nickname' => ['nullable', 'string', 'max:20'], // 空欄OK。入力されたら20文字以内の文字列
+'website'  => ['sometimes', 'url'], // そもそもフィールドが送られてきた時だけ検証
+```
+
+`nullable`は「値が空でもよい」、`sometimes`は「キー自体が無ければ検証しない」で、似ているようで用途が違います。
+
+### バリデーションはFormRequestに切り出すのが定石
+
+本記事ではわかりやすさ優先でコントローラに直接書きましたが、実務では**FormRequestクラスへの切り出し**が定石です。
+コントローラが痩せるのと、同じルールを複数箇所で使い回せます。
+
+```
+php artisan make:request StorePostRequest
+```
+
+```
+class StorePostRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'hissu_text' => ['required', 'string'],
+            // 本記事のルールをそのまま移せばOK
+        ];
+    }
+}
+```
+
+```
+// コントローラ側は型を差し替えるだけ。validate()の呼び出しすら不要になる
+public function store(StorePostRequest $request): RedirectResponse
+{
+    $validated = $request->validated();
+    // ...
+}
+```
+
+### エラーメッセージを項目ごとに日本語カスタマイズする
+
+言語ファイルの一括日本語化に加えて、`validate()`の第2引数（FormRequestなら`messages()`メソッド）で
+項目単位の上書きもできます。
+
+```
+$request->validate([
+    'id8_20' => ['required', 'string', 'alpha_num:ascii', 'min:8', 'max:20'],
+], [
+    'id8_20.min' => 'IDは8文字以上で入力してください。',
+    'id8_20.max' => 'IDは20文字以内で入力してください。',
+]);
+```
+
+<span className="hoso">「:min文字以上を指定してください」のような機械的な文言をユーザー向けの文章に直せる</span>ので、
+BtoCのフォームでは特に効きます。
 
 ## まとめ
 
