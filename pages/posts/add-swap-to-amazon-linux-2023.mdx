@@ -1,0 +1,158 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Amazon Linux 2023にスワップ領域を追加する手順。メモリ2GBの小さいインスタンスを延命する',
+  date: '2026-08-30T11:30:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'Amazon Linux 2023',
+    'インフラ',
+    'AWS'
+  ],
+  description: 'Amazon Linux 2023はデフォルトでスワップ領域がありません。メモリ2GBクラスの小さいEC2/LightsailインスタンスでOOM killerにプロセスを落とされないよう、スワップファイルを追加して永続化する手順をコマンド付きで解説します。swappinessの調整やバーストインスタンスでの注意点も。'
+}
+
+## はじめに
+
+Amazon Linux 2023のインスタンスは、**デフォルトではスワップ領域が一切ありません**。
+
+`free -h`で確認すると一目瞭然です。
+
+```
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           1.8Gi       1.2Gi       120Mi        16Mi       500Mi       420Mi
+Swap:             0B          0B          0B    ←ゼロ
+```
+
+物理メモリを使い切った瞬間、**OOM killerがメモリを一番食っているプロセスを問答無用で殺しに来ます。**
+MySQLが落ちる、PHPのバッチが落ちる、ウィルススキャンが落ちる...小さいインスタンスの「よく分からない突然死」はだいたいこれです。
+
+実際、当ブログでも[ClamAVをAmazon Linux 2023に導入した際](https://moldspoon.jp/blog/posts/clamav-to-amazonlinux-2023-server)、
+メモリ2GBのマシンでスキャンが固まる問題に遭遇しました。
+
+本記事では、**スワップファイルを追加して再起動後も維持されるようにする手順**をまとめます。
+
+## 手順
+
+### 1. スワップファイルを作成する
+
+メモリ2GBのインスタンスなら、まずは**2GB**のスワップを作るのが無難です。
+
+```
+sudo dd if=/dev/zero of=/swapfile bs=128M count=16
+```
+
+`128MB × 16 = 2GB`です。`bs=1M count=2048`でも同じですが、ブロックサイズを大きくした方が速く終わります。
+
+### 2. 権限を絞る
+
+スワップファイルにはメモリの中身（=機密情報を含みうる）が書き出されるため、root以外読めないようにします。
+**これをやらないと`mkswap`が警告を出します。**
+
+```
+sudo chmod 600 /swapfile
+```
+
+### 3. スワップ領域として初期化して有効化
+
+```
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+この時点で有効になっています。確認しましょう。
+
+```
+$ swapon --show
+NAME      TYPE SIZE USED PRIO
+/swapfile file   2G   0B   -2
+
+$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           1.8Gi       1.2Gi       120Mi        16Mi       500Mi       420Mi
+Swap:          2.0Gi          0B       2.0Gi    ←増えた
+```
+
+### 4. 再起動後も有効になるよう永続化する
+
+`swapon`は**その場限り**で、再起動すると消えます。`/etc/fstab`に1行追加して永続化します。
+
+```
+echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+```
+
+<span className="hoso">fstabの書き間違いは起動不能の原因になる</span>ので、追記後に必ず検証コマンドを通しておきましょう。
+
+```
+sudo mount -a   # エラーが出なければOK
+```
+
+## チューニング: swappiness
+
+`swappiness`は「どれくらい積極的にスワップを使うか」（0〜100）の設定です。
+
+```
+cat /proc/sys/vm/swappiness   # デフォルトは60
+```
+
+スワップはディスクなのでメモリよりずっと遅く、**常用するものではなく保険**です。
+Webサーバ/DB用途なら、値を下げて「本当に苦しいときだけ使う」寄りにするのが定石です。
+
+```
+# その場で変更
+sudo sysctl vm.swappiness=10
+
+# 永続化
+echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swappiness.conf
+```
+
+## 注意点
+
+### スワップは「遅くなるが死なない」ための保険
+
+スワップに乗った処理は体感できるレベルで遅くなります。
+<span className="hoso">「スワップを使い始めたら、本来はスケールアップのサイン」</span>と捉えてください。
+恒常的にスワップが数百MB使われている状態なら、素直に上のインスタンスタイプへ。
+
+### t系（バースト）インスタンスではディスクI/Oにも注意
+
+スワップの実体はEBSへのI/Oです。スワップが激しく使われる状況では
+EBSのバーストバランスも削っていくため、**最悪「メモリ不足 + ディスクも遅い」の二重苦**になります。
+繰り返しになりますが、あくまでOOM killer対策の保険として使いましょう。
+
+### インスタンスストアがあるなら、そちらに置く手も
+
+エフェメラルディスク（インスタンスストア）付きのインスタンスなら、
+消えてもよいスワップはそちらに置く方がEBSのI/O課金を食いません（再起動時の再作成スクリプトが必要になります）。
+
+## まとめ
+
+```
+sudo dd if=/dev/zero of=/swapfile bs=128M count=16
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+```
+
+この5行で、小さいインスタンスの「突然死」リスクはかなり下げられます。
+[ClamAVのような一時的にメモリを大食いするミドルウェア](https://moldspoon.jp/blog/posts/clamav-to-amazonlinux-2023-server)を
+動かす前には、特に入れておくのがおすすめです。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
