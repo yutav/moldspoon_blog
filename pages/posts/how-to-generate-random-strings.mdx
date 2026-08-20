@@ -1,0 +1,162 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'ランダム文字列の作り方まとめ。パスワード・トークン生成をブラウザ・コマンド・言語別に解説',
+  date: '2026-08-25T03:40:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    'プログラミング',
+    'セキュリティ',
+    'Webエンジニア'
+  ],
+  description: '初期パスワードやAPIトークンに使えるランダム文字列の作り方を、ブラウザで完結するWebツール・opensslなどのコマンド・PHP/JavaScriptのコード別にまとめました。Math.random()を使ってはいけない理由や、紛らわしい文字の扱いなど実務の注意点も解説します。'
+}
+
+## はじめに
+
+開発をしていると、**ランダム文字列が今すぐ欲しい**場面が定期的にやってきます。
+
+- 新規ユーザーの**初期パスワード**を発行したい
+- APIキーや**ワンタイムトークン**の値を決めたい
+- テストデータとして**ダミーの文字列**を大量に用意したい
+
+そのたびに「えーと、opensslのオプションなんだっけ...」となりがちなので、
+本記事では<span className="hoso">ブラウザ・コマンドライン・プログラミング言語別のランダム文字列の作り方</span>を、
+実務での注意点と合わせてまとめておきます。
+
+## 大前提：用途によって「使っていい乱数」が違う
+
+先に一番大事な話をします。ランダム文字列には**2種類の用途**があります。
+
+- **セキュリティ用途**（パスワード・トークン・セッションID）... 予測されたら事故になるもの
+- **非セキュリティ用途**（テストデータ・表示用のID）... 予測されても困らないもの
+
+セキュリティ用途では、<span className="hoso">**暗号論的に安全な乱数生成器（CSPRNG）を使うことが必須**</span>です。
+JavaScriptの`Math.random()`やPHPの`rand()`は内部状態から**出力が予測できてしまう**ため、
+トークンに使うと総当たりより遥かに効率的に破られる可能性があります。
+
+以下で紹介する方法は、いずれもCSPRNGベースのものを選んでいます。
+
+## 方法1: ブラウザで完結するWebツール（一番手軽）
+
+弊社のWebツール集 Spoon Tools! の「ランダム文字列発行」を使うと、インストール不要で作れます。
+
+<RichLink
+  url="https://moldspoon.jp/tools/randomcode"
+  icon='ri-key-2-line'
+  title="ランダム文字列発行 | Spoon Tools!"
+  subtitle="桁数と個数を指定するだけで、ランダム文字列をまとめて発行できる無料Webツールです。"
+  targetBlank={true}
+/>
+
+- **桁数は1〜200文字**、**一度に最大30個**まで一括生成できます
+- **記号を含む/含まない**を切り替えられるので、「記号NGなシステムの初期パスワード」にも対応できます
+
+「メンバー10人分の初期パスワードを一気に用意する」ような場面では、コマンドより速いと思います。
+
+## 方法2: コマンドラインで作る
+
+### openssl（大抵の環境に入っている）
+
+```
+# base64で32文字前後（記号 + / = を含む）
+openssl rand -base64 24
+
+# 16進数で32文字（0-9a-fのみ。記号なしで扱いやすい）
+openssl rand -hex 16
+```
+
+<span className="hoso">URLやシェルに貼っても事故らない文字列が欲しいときは`-hex`が無難</span>です。
+`-base64`は`+`や`/`が入るため、コピペ先によってはエスケープ問題を起こします。
+
+### /dev/urandom + tr（文字種を自由に決めたい）
+
+```
+# 英大小文字+数字で20文字
+head -c 100 /dev/urandom | tr -dc 'A-Za-z0-9' | head -c 20; echo
+
+# 記号も含める場合
+head -c 100 /dev/urandom | tr -dc 'A-Za-z0-9!#$%&()*+,-./' | head -c 20; echo
+```
+
+### macOSなら uuidgen も
+
+「一意でありさえすればいい」識別子なら、UUIDで済むことも多いです。
+
+```
+uuidgen   # 例: 1B9D6BCD-BBFD-4B2D-9B5D-AB8DFBBD4BED
+```
+
+## 方法3: プログラムから作る
+
+### JavaScript / TypeScript
+
+```javascript
+// トークン用途: Web Crypto APIを使う（Node.js 19+ / ブラウザ共通）
+const token = crypto.randomUUID(); // UUID v4
+
+// 文字種を指定したい場合
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const randomString = (len) =>
+  Array.from(crypto.getRandomValues(new Uint32Array(len)))
+    .map((n) => chars[n % chars.length])
+    .join('');
+
+console.log(randomString(20));
+```
+
+**`Math.random()`はここでは使いません。** テストデータ生成ならOKですが、癖として`crypto`側を使っておくと安全です。
+
+### PHP (Laravel含む)
+
+```php
+// 素のPHP: random_bytes()がCSPRNG
+$token = bin2hex(random_bytes(16)); // 32文字の16進数
+
+// Laravelならヘルパ一発
+$token = Str::random(32);
+```
+
+LaravelのStr::randomは内部で`random_bytes()`を使っているため、そのままトークン用途に使えます。
+
+## 実務での注意点
+
+### 紛らわしい文字を除外するか決めておく
+
+初期パスワードを**人間が手入力する**場合、`l`（小文字エル）と`1`と`I`、`O`と`0`の混在は
+問い合わせ事故のもとです。手入力される文字列では、これらを文字種から抜いておくのがおすすめです。
+
+### 記号は「入れられるか」ではなく「渡せるか」で決める
+
+記号入りは強度が上がりますが、メール・チャット・CSV経由で渡す途中で
+壊れたりエスケープされたりしがちです。<span className="hoso">運用フロー全体で安全に渡せる文字種にしておく方が、
+結果的にトラブルが少ない</span>です。
+
+### 長さの目安
+
+- 人間が手入力する初期パスワード: **12〜16文字**（初回ログインで変更を強制する前提）
+- 機械だけが扱うAPIトークン: **32文字以上**（`openssl rand -hex 16`で32文字）
+
+## まとめ
+
+- 今すぐ何個か欲しい → [ランダム文字列発行ツール](https://moldspoon.jp/tools/randomcode)（桁数・個数・記号有無を指定できる）
+- ターミナルが手元にある → `openssl rand -hex 16`
+- コードから発行する → JSは`crypto.getRandomValues`、PHPは`random_bytes()`
+
+いずれの場合も、**セキュリティ用途にMath.random()やrand()を使わない**。これだけは徹底しましょう。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
