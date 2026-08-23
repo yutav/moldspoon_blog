@@ -35,3 +35,10 @@ yarn-error.log*
 
 # env
 env/local.json
+
+# sitemap（next-sitemap がビルド時に生成する）
+# 以前は生成物をコミットしていたが、ローカルビルドの結果が混ざると
+# localhost の URL が入ったまま残る。実際 2024-07-31 時点の localhost:3001 の
+# sitemap がコミットされたままになっていた。本番は Vercel のビルドで作られる。
+/public/sitemap.xml
+/public/sitemap-0.xml
