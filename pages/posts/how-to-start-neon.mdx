@@ -2,8 +2,9 @@ import { Layout } from 'lib/components'
 import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
 
 export const meta = {
-    title: 'PostgreSQLのサーバレス環境。Neonの環境を立ち上げまで解説',
+    title: 'サーバレスPostgreSQL「Neon」の使い方。東京リージョンの有無・無料枠・接続まで',
     date: '2024-03-25T16:31:14.000Z',
+    updateDate: '2026-08-23T13:00:00.000Z',
     tags: [
         'Blog',
         '連載記事',
@@ -15,7 +16,7 @@ export const meta = {
         'オンボーディング',
         'バックエンド'
     ],
-    description: 'PostgreSQLのサーバレス環境Neonについて、立ち上げとTablePlusによる接続まで進めてみたので解説します。'
+    description: 'サーバレスPostgreSQLのNeonについて、プロジェクト作成からTablePlusでの接続までを解説します。あわせて2026年8月時点のリージョン（東京リージョンの有無）・無料枠・Databricksによる買収後の状況を追記しました。'
 }
 
 やっと花粉の目のシバシバが取れてきました...。
@@ -25,6 +26,18 @@ export const meta = {
 
 <br />
 そんな春を迎えているこの頃、Hackerの皆様は如何にお過ごしでしょうか。
+
+## 先に結論：2026年8月時点のNeonはこうなっています
+
+この記事の初出は2024年3月です。立ち上げの手順そのものは今も通用しますが、
+**前提となる数字は当時からかなり変わりました。** 先に結論だけ書いておきます。
+
+- **東京リージョンは、2026年8月現在も存在しません。** アジアで選べるのは<span className="hoso">シンガポールとシドニーの2つだけ</span>です（本文で選んだシンガポールは今も現役です）
+- **無料枠は大幅に広がりました。** 当時は「プロジェクト1個・0.25 vCPU / 1GB RAM」でしたが、現在は<span className="hoso">100プロジェクト・最大8GB RAM相当までオートスケール</span>します
+- **運営会社が変わりました。** 2025年5月、<span className="hoso">DatabricksがNeonを約10億ドルで買収</span>しています
+
+数字の詳細と出典は、記事末尾の **【2026年8月追記】** にまとめました。
+まずは当時の手順のまま、立ち上げから接続までを追っていきます。
 
 ## 概要
 
@@ -55,10 +68,20 @@ PostgreSQL版（というよりポスグレの方がサーバレスは広まっ�
 
 あたりがポイントでしょうか。**いかにも心許ない** ですがこちらで試していきます。
 
+> **【2026年8月 追記】** ここに書いた無料枠は、その後大きく拡張されています。
+> プロジェクトは1個ではなく **100個**、コンピュートは **最大2 CU（8GB RAM相当）までオートスケール** します。
+> 「心許ない」という当時の評価は、現在は当てはまりません。詳しくは記事末尾の追記をご覧ください。
+
 ### 立ち上げまで
 
 日本リージョンはないようなので、レイテンシが気になりますが取り敢えず **シンガポール(ap-southeast-1)リージョン** を選択し
 DB、プロジェクト名ともに **「test」** という名称を設定します。
+
+> **【2026年8月 追記】** この判断は今も有効です。**Neonに東京（ap-northeast-1）リージョンは2026年8月現在も追加されていません。**
+> 日本から使う場合、いまでもシンガポールが最も近い選択肢です。選べるリージョンの一覧は記事末尾の追記に載せました。
+>
+> なお以下のスクリーンショットは2024年3月時点のものです。管理画面のデザインは変わっている可能性がありますので、
+> 画面が異なる場合は[公式ドキュメント](https://neon.com/docs/)を参照してください。
 
 <MdxImage month="202403" image="neon2.png" />
 
@@ -111,11 +134,119 @@ postgresql://test_owner:************@ep-rapid-hall-xxxxxxxx.ap-southeast-1.aws.n
 
 こちらの画像のように設定し、「test」を押すと接続ができました！
 
+## 【2026年8月追記】Neonのいま
+
+初出から2年半が経ちました。立ち上げの流れ自体は大きく変わっていませんが、
+**前提となる数字と、Neonという会社そのものが変わっています。**
+2026年8月時点の状況を、公式ドキュメントで確認できる範囲でまとめておきます。
+
+### リージョン：東京はいまも無い
+
+本文で「日本リージョンはないようです」と書きましたが、**この状況は2026年8月現在も変わっていません。**
+
+2026年8月時点でプロジェクトを作成できるAWSリージョンは、以下の8つです。
+
+- US East (N. Virginia) ... `aws-us-east-1`
+- US East (Ohio) ... `aws-us-east-2`
+- US West (Oregon) ... `aws-us-west-2`
+- Europe (Frankfurt) ... `aws-eu-central-1`
+- Europe (London) ... `aws-eu-west-2`
+- **Asia Pacific (Singapore) ... `aws-ap-southeast-1`**
+- Asia Pacific (Sydney) ... `aws-ap-southeast-2`
+- South America (São Paulo) ... `aws-sa-east-1`
+
+<span className="hoso">日本から使うなら、いまでもシンガポール一択</span>ということになります。
+本文でシンガポールを選んだ判断は、結果的に2年半経っても正解でした。
+
+一時期提供されていた **Azureリージョン**（`azure-eastus2` など）は **廃止** され、
+新規プロジェクトの作成はできなくなっています。AWSリージョンから選ぶ形に一本化されました。
+
+参考URL: [Regions - Neon Docs](https://neon.com/docs/introduction/regions)
+
+### 無料枠は「心許ない」どころではなくなった
+
+本文では無料枠を **いかにも心許ない** と書きましたが、**ここが最も大きく変わった点です。**
+
+左が本文を書いた2024年3月時点、右が2026年8月時点の無料枠です。
+
+- **プロジェクト数** ... 1個 → <span className="hoso">100個</span>
+- **ストレージ** ... 0.5 GiB → 0.5 GB / プロジェクト（ここはほぼ据え置き）
+- **ブランチ** ... 10 → 10 / プロジェクト
+- **コンピュート** ... 5 compute hours（0.25 vCPU / 1GB RAM 固定）→ <span className="hoso">100 CU-hours / プロジェクト（最大 2 CU までオートスケール）</span>
+
+Neonは **CU（Compute Unit）** という単位を使っていて、公式の定義では <span className="hoso">1 CU ≒ 4GB RAM + CPU + SSD</span> です。
+つまり無料枠でも **最大 2 CU = 8GB RAM 相当までオートスケールする** ことになります。
+2024年当時の「0.25 vCPU / 1GB RAM 固定」とは、もはや別物と言っていい水準です。
+
+<span className="hoso">昔の情報を見て「無料枠では厳しい」と判断した方は、一度見直す価値があります。</span>
+
+有料プランは **Launch** と **Scale** の2つで、どちらも月額固定ではなく従量課金です。
+コンピュートはLaunchが $0.106/CU-hour、Scaleが $0.222/CU-hour、ストレージはどちらも $0.35/GB-month となっています。
+
+参考URL: [Neon Plans](https://neon.com/docs/introduction/plans) / [Pricing](https://neon.com/pricing)
+
+### DatabricksによるNeon買収
+
+2025年5月14日、**DatabricksがNeonを約10億ドルで買収する**と発表されました。
+
+狙いはNeonのサーバレスPostgreSQLを自社のデータ基盤と組み合わせることで、
+**AIエージェントがデータベースを作って使う**用途に対応することだと説明されています。
+発表によればNeonのプラットフォーム上で作られる新規データベースの **8割以上が人間ではなくAIエージェント由来** とのことで、
+その流れを加速させる意図があるようです。
+
+参考URL: [Databricks Agrees to Acquire Neon（Databricks公式）](https://www.databricks.com/company/newsroom/press-releases/databricks-agrees-acquire-neon-help-developers-deliver-ai-systems)
+
+### ドキュメントのドメインが neon.com へ
+
+本文中では `neon.tech` を参照していますが、**現在の公式サイトとドキュメントは `neon.com` に移っています。**
+`neon.tech` へのアクセスは `neon.com` へリダイレクトされるので古いリンクも動きますが、
+新しく参照するなら `neon.com` 側を見るのが確実です。
+
+## よくある質問（FAQ）
+
+### Q. Neonに東京リージョンはありますか？
+
+**2026年8月現在、ありません。**
+アジア太平洋で選べるのはシンガポール（`aws-ap-southeast-1`）とシドニー（`aws-ap-southeast-2`）の2つで、
+日本から使う場合はシンガポールが最も近い選択肢になります。
+
+レイテンシがシビアな用途では、この物理的な距離が許容できるかを**必ず事前に検証**してください。
+
+### Q. 無料枠だけでどこまで使えますか？
+
+プロジェクト100個・各0.5GBストレージ・月100 CU-hours までです。
+コンピュートは最大 2 CU（8GB RAM相当）までオートスケールします。
+
+ただし **ストレージは1プロジェクトあたり0.5GB** なので、
+データ量が増える用途では早めに有料プランの検討が必要です。逆に、
+検証環境やブランチを大量に作る使い方には向いています。
+
+### Q. Databricksに買収されましたが、そのまま使い続けて大丈夫でしょうか？
+
+2026年8月時点では、Neonは従来どおりサービスとして提供されており、無料プランも維持されています。
+ただし **買収後にプランや提供内容が変わる可能性はゼロではありません。**
+本番採用するなら、公式のChangelogを定期的に確認することをおすすめします。
+
+参考URL: [Changelog - Neon Docs](https://neon.com/docs/changelog)
+
+### Q. SQLiteやPlanetScaleとどう使い分ければいいですか？
+
+用途で切り分けるのが分かりやすいです。
+
+- **単一サーバ・読み取り中心・組み込み** ... SQLite。[SQLiteのメリット・デメリットまとめ](https://moldspoon.jp/blog/posts/sqlite-serverless-idea)で公式ドキュメントをもとに整理しています
+- **PostgreSQLをサーバレスで使いたい・ブランチ機能が欲しい** ... Neon（本記事）
+- **MySQL系をサーバレスで使いたい** ... [PlanetScaleとNext.jsを組み合わせる](https://moldspoon.jp/blog/posts/add-planetscale-to-nextjs-project)
+
 ## まとめ
 
 **本日はあくまでneonに接続するところまで** を解説しました。
 次回以降は公式ドキュメントを読み進めつつ、PHPアプリケーション(Laravel)との接続方法や
 **neonならではの癖** などを探っていきたいと思います。
+
+> **【2026年8月 追記】** ここで予告した「次回」は、恥ずかしながらまだ書けていません。
+> 代わりに本記事へ2026年8月時点の情報を追記する形で更新しました。
+> Laravelとの接続やNeonならではの癖については、**実際に運用して確かめたうえで**改めて書きます。
+> 未検証のまま書くより、確かめてから書きたいためです。
 
 <br />
 
