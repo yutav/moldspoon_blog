@@ -1,0 +1,264 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'GA4にpage_viewが記録されない原因はGTMのGoogleタグ不在。3年間ページ別レポートが空だった話',
+  date: '2026-08-24T15:00:00.000Z',
+  tags: [
+    'Blog',
+    'Tips',
+    '経験者向け',
+    'Google Analytics',
+    'フロントエンド',
+    'Webエンジニア'
+  ],
+  description: 'GTMを導入してGA4にユーザー数は記録されているのに、ページ別の表示回数が全部ゼロ。原因はGTMコンテナに「Googleタグ」が無く、イベント名{{Event}}のGA4イベントタグだけが動いていたことでした。3年間気づかなかった症状の見分け方と、原因の切り分け手順、修正後の確認方法までをまとめます。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+自社サイトのアクセス状況を見ようとして、GA4の**「ページとスクリーン」レポートを開いたら数字が全部ゼロ**でした。
+
+Google Tag Managerは入っています。GA4のリアルタイムにもユーザーは出ています。地域も参照元も取れています。それなのに、どのページが何回見られたのかだけが分からない。
+
+調べた結果、原因は<span className="hoso">GTMのコンテナに「Googleタグ（GA4設定タグ）」が1本も無かった</span>ことでした。しかもこの状態、**3年近く気づかずに運用していました。**
+
+同じハマり方をしている方がいそうなので、症状の見分け方から修正までを残しておきます。
+
+## 症状：一見「動いている」のがタチが悪い
+
+まず、この不具合が厄介なのは**完全に壊れているわけではない**点です。実際に取れていたものと、取れていなかったものを並べるとこうなります。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>指標</th>
+      <th style={thStyle}>状態</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>ユーザー数 / 新規ユーザー数</td>
+      <td style={tdStyle}>取れている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>セッション数</td>
+      <td style={tdStyle}>取れている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>参照元 / メディア、地域、デバイス</td>
+      <td style={tdStyle}>取れている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>リアルタイムのアクティブユーザー</td>
+      <td style={tdStyle}>取れている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}><code>page_view</code> イベント</td>
+      <td style={tdStyle}><strong>1件も無い</strong></td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>表示回数（ページ別）</td>
+      <td style={tdStyle}><strong>ゼロ</strong></td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>エンゲージメント時間</td>
+      <td style={tdStyle}><strong>0秒</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+GA4は<span className="hoso">何かしらイベントが飛んでくればセッションとユーザーをカウントします</span>。だから「アクセス解析が動いているかどうか」だけを見ていると、正常に見えてしまいます。
+
+ダッシュボードを開いて「今日は何人来たな」と眺めるだけの運用だと、まず気づけません。私は気づけませんでした。
+
+## 原因の切り分け：GA4の「イベント」を見る
+
+GA4の管理画面をいくら見ても設定は正常でした。切り分けに使えたのは**イベント名の一覧**です。
+
+**レポート → エンゲージメント → イベント** を開いて、送られてきているイベント名を確認します。
+
+ここに `page_view` が無ければ、**GA4側ではなくタグ側の問題**です。
+
+私の場合、ここに並んでいたのは `page_view` ではなく、見慣れない名前でした。
+
+```
+gtm.dom
+```
+
+これが決定的な手がかりでした。`gtm.dom` はGTMが内部的に使うdataLayerのイベント名で、**本来GA4に送るものではありません。**
+
+## 真犯人：イベント名が組み込み変数のままだったGA4イベントタグ
+
+GTMのコンテナを開いてタグ一覧を見ると、こうなっていました。
+
+- **Googleタグ（GA4設定タグ）が存在しない**
+- 代わりに「GA4イベント」タグが1本だけあり、**イベント名が `{{Event}}`**、トリガーが **DOM Ready**
+
+`{{Event}}` はGTMの組み込み変数で、<span className="hoso">「いま発火の原因になったdataLayerイベントの名前」</span>が入ります。
+
+つまりDOM Readyトリガーで発火させると、`{{Event}}` は `gtm.dom` に解決されます。結果として、
+
+```
+GA4に「gtm.dom」という名前のイベントが延々と送られ続ける
+```
+
+という状態になっていました。3年間、ひたすら `gtm.dom` を送っていたわけです。
+
+### なぜページビューが0になるのか
+
+GA4の「表示回数」は、**`page_view` という名前のイベントの数**をそのまま数えています。名前が違えば別のイベントとして扱われるだけで、エラーにはなりません。
+
+そして`page_view`を送る役目を持つのが、まさに欠けていた**Googleタグ（GA4設定タグ）**です。これが無いので、
+
+- ページを開いても `page_view` は飛ばない
+- でも `gtm.dom` は飛ぶのでセッションとユーザーは立つ
+- ページ別の指標だけが永遠にゼロ
+
+という、中途半端に動いている状態ができあがります。
+
+<span className="hoso">GA4の設定画面を何度見直しても原因は分かりません。</span>GTMのタグ一覧を見て初めて分かります。
+
+## 修正手順
+
+やることは2つだけです。
+
+### 1. Googleタグを追加する
+
+GTMで **タグ → 新規** から、タグの種類に **「Googleタグ」** を選びます。
+
+- **タグID**: GA4の測定ID（`G-` で始まるもの）を入れます
+- **トリガー**: `Initialization - All Pages`（初期化 - All Pages）を選びます
+
+トリガーは「All Pages」ではなく<span className="hoso">**Initialization**（初期化）のほうを選ぶのがポイント</span>です。他のタグより先に動く必要があるためです。
+
+測定IDはGA4の **管理 → データストリーム** から確認できます。
+
+### 2. 壊れたGA4イベントタグを削除する
+
+イベント名が `{{Event}}` になっているGA4イベントタグは削除します。残しておいても`gtm.dom`というゴミイベントが送られ続けるだけです。
+
+あとは**公開**すれば反映されます。
+
+なお、GA4側の設定（拡張計測機能、「ブラウザの履歴イベントに基づくページの変更」など）は元から正しく入っていたため、**一切触っていません。** 原因がGTM側だけの場合、GA4を触る必要はありません。
+
+## 直ったことをどう確認するか
+
+「たぶん直った」で終わらせないために、2段階で確認しました。
+
+### 方法1: リアルタイムレポート
+
+GA4の **レポート → リアルタイム** を開いた状態で、自分のサイトを別タブで開きます。
+
+イベント名に `page_view` が出て、ページタイトルごとの**表示回数**が入れば成功です。
+
+### 方法2: ブラウザの開発者ツールで送信内容を直接見る
+
+より確実なのはこちらです。開発者ツールの**ネットワーク**タブを開いて `collect` で絞り込み、サイトを再読み込みします。
+
+`/g/collect` へのリクエストのクエリ文字列に、次の2つが入っていれば正しく飛んでいます。
+
+```
+en=page_view          ← イベント名
+tid=G-XXXXXXXXXX      ← 測定ID
+```
+
+`en` は event name の略です。ここが `gtm.dom` になっていたら、まだ古いタグが生きています。
+
+<span className="hoso">この確認方法はGA4の反映待ち（数分〜数十分）を待たずに済む</span>ので、修正直後の切り分けに便利です。
+
+## ついでに直したこと：自分の開発アクセスが本番データに混ざっていた
+
+計測を直したら、今度は<span className="hoso">参照元に `localhost:3000` が記録されている</span>ことに気づきました。ローカル開発中のアクセスが本番のGA4に流れ込んでいたわけです。
+
+Next.jsなら、計測タグを本番サイトでのみ読み込むようにすれば防げます。
+
+```jsx
+// pages/_app.js
+const isProductionSite =
+  process.env.NODE_ENV === 'production' &&
+  process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview'
+
+export default function App({ Component, pageProps }) {
+  return (
+    <>
+      {isProductionSite && (
+        <GoogleTagManager googleTagManagerId={googleTagManagerId} />
+      )}
+      <Component {...pageProps} />
+    </>
+  )
+}
+```
+
+`NODE_ENV` だけで判定するとVercelの**プレビューデプロイも本番扱い**になってしまう点に注意してください。プレビューは `NODE_ENV === 'production'` でビルドされるためです。Vercelが自動で入れてくれる `NEXT_PUBLIC_VERCEL_ENV` を併用すると、プレビューも除外できます。
+
+計測データを綺麗にしたいなら、直すのは早いほうがいいです。混ざったデータは後から取り除けません。
+
+## よくある質問（FAQ）
+
+### Q. 過去のデータは復旧できますか？
+
+**できません。** 送られていないデータは存在しないので、遡って埋めることは不可能です。
+
+修正日より前のページ別の指標（表示回数、エンゲージメント時間）は諦めるしかありません。ただし**ユーザー数・セッション数・参照元は正しく記録されている**ので、過去との比較にはそちらを使えます。
+
+ページ単位の過去の実績を知りたい場合は、**Google Search Console**を見てください。GSCはGA4とは独立してGoogle検索経由の表示回数・クリック数をページ別に持っているので、こちらは無傷です。
+
+### Q. GTMを使わずgtag.jsを直接入れている場合も同じことが起きますか？
+
+起きにくいです。GA4のデータストリーム画面からコピーできるgtag.jsのスニペットには、最初から`config`（Googleタグ相当）が含まれていて、これが`page_view`を自動送信するためです。
+
+今回の問題は<span className="hoso">GTM上でタグを手作業で組み立てたときに、設定タグを入れ忘れる</span>ことで起きます。
+
+### Q. SPAでページ遷移したときのページビューは別途設定が必要ですか？
+
+GA4の**拡張計測機能**にある「ブラウザの履歴イベントに基づくページの変更」がオンなら、`history`の変更を検知して自動で`page_view`を送ってくれます。既定でオンです。
+
+まずはGoogleタグを正しく入れて、初回ロードの`page_view`が飛ぶことを確認してからSPA遷移を疑うのが順番としては速いです。
+
+### Q. gtm.dom や gtm.js というイベントがGA4に出ているのですが
+
+**それが今回の症状そのものです。** GTM内部のイベント名がそのままGA4に送られているので、イベント名に`{{Event}}`を指定しているタグが無いか確認してください。
+
+## まとめ
+
+GA4でページ別の数字だけがゼロになる場合、チェックする順番はこうです。
+
+1. GA4の **エンゲージメント → イベント** で `page_view` があるか見る
+2. 無ければGTMのタグ一覧を開き、**Googleタグ（GA4設定タグ）があるか**確認する
+3. イベント名が `{{Event}}` のGA4イベントタグがあれば、それが犯人
+4. Googleタグを `Initialization - All Pages` で追加し、壊れたタグを削除して公開
+5. 開発者ツールのネットワークタブで `en=page_view` が飛ぶことを確認する
+
+一番の教訓は、<span className="hoso">**「グラフに線が出ている＝正しく計測できている」ではない**</span>ということでした。ユーザー数だけを見ていると、3年でも気づけません。
+
+導入したときに一度、**イベント名の一覧を目視する**。これだけで防げます。
+
+同じサイトの計測まわりでは、GTMのタグ読み込みが表示速度を落としていた話も書いています。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/blog-fcp-problem-fix"
+  icon='ri-timer-flash-line'
+  title="ブログのFCPが遅い問題を改善した話"
+  subtitle="PageSpeed InsightsでGoogle系タグが「使用していないJavaScript」に挙がっていた件の対処です。"
+  targetBlank={true}
+/>
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
