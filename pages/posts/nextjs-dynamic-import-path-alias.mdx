@@ -1,0 +1,193 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: "Next.jsで「Cannot find module './undefined'」。動的importにパスエイリアスを渡すとビルドが落ちます",
+  date: '2026-09-08T13:40:00.000Z',
+  tags: [
+    'Blog',
+    'Tips',
+    '経験者向け',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'プログラミング'
+  ],
+  description: "next buildが「Compiled successfully」のあと、Collecting page dataで「Cannot find module './undefined'」と言って落ちる。原因は動的import（await import）にtsconfigのbaseUrl経由のパスを渡していたことでした。エラーメッセージから原因が全く読み取れないタイプの不具合なので、症状と切り分け方、回避方法をまとめます。"
+}
+
+## はじめに
+
+`next build`がこう言って落ちました。
+
+```
+Error: Cannot find module './undefined'
+```
+
+`./undefined`。**そんなモジュールを書いた覚えはありません。**
+
+しかも厄介なことに、その少し上にはこう出ています。
+
+```
+✓ Compiled successfully
+```
+
+<span className="hoso">コンパイルは成功しています。</span>落ちるのはその後の**Collecting page data**の段階です。「型もsyntaxも通っているのに落ちる」という、原因の見当がつきにくい壊れ方でした。
+
+犯人は**動的import（`await import(...)`）にパスエイリアスを渡していたこと**でした。
+
+## 症状
+
+こういうコードを書いていました。
+
+```js
+// tsconfig.json の baseUrl を "." にしているので、
+// 静的 import ではこの書き方ができる
+const { doSomething } = await import('lib/someModule')
+```
+
+`tsconfig.json`（あるいは`jsconfig.json`）で`baseUrl`を設定していると、こう書けます。
+
+<CodeBlockTitle title="tsconfig.json" />
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": "."
+  }
+}
+```
+
+これで`import { x } from 'lib/someModule'`という**静的import**は問題なく動きます。エディタの補完も効きますし、型も通ります。
+
+ところが**同じパスを動的importに渡すと、ビルドの終盤で落ちます。**
+
+## なぜ静的importは動いて動的importは落ちるのか
+
+静的importの場合、webpackはビルド時に解決先を確定できます。`lib/someModule`という文字列を、設定（`baseUrl`や`paths`）に従って実ファイルへ辿れます。
+
+動的importは扱いが違います。`import()`は**実行時に評価される式**なので、webpackは「実行時に何が来るか分からない」ケースに備えます。中身が変数だったりテンプレート文字列だったりすると、**候補になりうるファイルをまとめた「コンテキストモジュール」**を作って、実行時に選ばせる形にします。
+
+パスエイリアスが解決できないまま動的importに渡ると、この「実行時に決める」側の処理へ流れます。そして解決先が決まらないまま`undefined`が入り込み、
+
+```
+Cannot find module './undefined'
+```
+
+という、**元の記述からは何も読み取れないエラー**になります。
+
+<span className="hoso">エラー文に自分が書いたパスが一切出てこない</span>のが、この問題のいちばん厄介なところです。`lib/someModule`で検索しても何も出ません。
+
+## 対処
+
+### 自作モジュールは静的importにする
+
+いちばん簡単で確実です。
+
+```js
+// ✗ 落ちる
+const { doSomething } = await import('lib/someModule')
+
+// ✓ 通る
+import { doSomething } from 'lib/someModule'
+```
+
+そもそも自作の小さなモジュールを動的importする利点は多くありません。バンドルサイズを削りたくてやるものですが、数KBのユーティリティなら効果はほぼ無く、**落ちるリスクだけを買っている**ことになります。
+
+### どうしても動的にしたいなら相対パスで書く
+
+遅延読み込みしたい理由が本当にあるなら、**エイリアスをやめて相対パスにします。**
+
+```js
+// ✓ 相対パスなら動的importでも解決できる
+const { doSomething } = await import('../../lib/someModule')
+```
+
+見た目は美しくありませんが、webpackが迷わずに解決できます。
+
+### node_modulesのパッケージなら気にしなくていい
+
+紛らわしいですが、**外部パッケージの動的importは普通に動きます。**
+
+```js
+// ✓ これは問題ない
+const JSZip = (await import('jszip')).default
+```
+
+うちでもファイル圧縮まわりでこの書き方をしていて、何の問題も起きていません。
+
+つまり<span className="hoso">「動的importが悪い」のではなく、「動的import × 自前のパスエイリアス」の組み合わせだけが危険</span>です。重いライブラリを必要なときだけ読み込む、という本来の使い方は続けて大丈夫です。
+
+## 切り分けのしかた
+
+エラー文が役に立たないので、力技で探します。
+
+```bash
+grep -rn "await import(\|import(" --include=*.ts --include=*.tsx --include=*.js --include=*.jsx pages lib components
+```
+
+出てきた`import()`のうち、**引数が`./`や`../`で始まっておらず、かつnode_modulesのパッケージ名でもないもの**が容疑者です。
+
+`Collecting page data`で落ちている以上、対象は**ページから辿れるコード**です。全部見る必要はありません。
+
+## 実は気づきにくい：ページが公開対象外だと表面化しない
+
+もうひとつハマった点があります。
+
+うちはツールページを**段階的に公開する**仕組みを持っていて、公開対象外のページはビルドの対象から外れることがあります。その結果、
+
+<span className="hoso">**問題のあるコードを書いてから、しばらく経ってビルドが落ち始める**</span>
+
+という現象が起きました。落ちた日に触ったコードとは無関係の場所が原因だったわけです。「今日の変更を巻き戻したのに直らない」となったら、この可能性を疑ってください。
+
+教訓としては、**手元のブランチでビルドが通っても安心しない**こと。公開設定やフィーチャーフラグでビルド対象が変わる作りなら、**本番と同じ条件（main相当）でビルドを通すまでが検証**です。
+
+## よくある質問（FAQ）
+
+### Q. 開発サーバー（next dev）では動いていました
+
+動きます。`next dev`は必要なページを都度コンパイルする作りで、本番ビルドの`Collecting page data`にあたる工程がありません。
+
+<span className="hoso">devで動いたことは、buildが通る証明になりません。</span>この種の不具合は本番ビルドでしか出ないので、pushする前に一度`next build`を通す習慣にしておくと安全です。
+
+### Q. `paths`でエイリアスを明示すれば直りますか？
+
+`baseUrl`だけでなく`paths`で明示すると解決される場合もありますが、**私は追いかけませんでした。**
+
+理由は単純で、静的importに書き換えれば確実に直るからです。ビルドツールの解決順序に依存した書き方を残すより、依存しない書き方にしてしまうほうが後々楽だと判断しました。
+
+### Q. `Compiled successfully`の後に落ちるのはなぜですか？
+
+`next build`は「コードをまとめる工程」と「各ページのデータを集めて事前生成する工程」に分かれています。後者が`Collecting page data`です。
+
+ここでは実際にページのコードが**実行されます。** だから、コンパイルは通るが実行時に解決できない、という今回のようなケースは後半で初めて露見します。
+
+### Q. 似たエラーで`__webpack_require__.a is not a function`が出ました
+
+そちらは別物で、**開発サーバーを起動したまま`.next`ディレクトリを消した**ときによく出ます。webpackのランタイムとチャンクが食い違うのが原因です。
+
+私もビルド検証のために`rm -rf .next`をして、そのままdevサーバーの画面を開いて500に出くわしました。**devサーバーを起動し直せば直ります。**
+
+## まとめ
+
+- `Cannot find module './undefined'`は、**動的importの解決に失敗したサイン**
+- 原因は`await import('lib/xxx')`のような**パスエイリアス付きの動的import**
+- 自作モジュールは**静的import**に。どうしてもなら**相対パス**で
+- **node_modulesのパッケージの動的importは問題ない**（`await import('jszip')`は動く）
+- `Compiled successfully`の後、**Collecting page data**で落ちるのが特徴
+
+エラーメッセージに手がかりが無いタイプなので、「`./undefined`」で検索してここに辿り着いた方の役に立てば嬉しいです。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
