@@ -1,0 +1,221 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '参照ゼロのpuppeteerが毎ビルドChromiumを落としていた。使っていない依存の棚卸しをした話',
+  date: '2026-09-14T11:50:00.000Z',
+  tags: [
+    'Blog',
+    'Tips',
+    '経験者向け',
+    'Next.js',
+    'Vercel',
+    'プログラミング',
+    'デプロイ'
+  ],
+  description: 'package.jsonに残っていたpuppeteerは、コード上の参照がゼロなのにpostinstallで毎ビルドChromium（170MB前後）をダウンロードしていました。使っていない依存を洗い出す手順と、消す前の確認、package-lock.jsonとyarn.lockが併存していた件、ビルド時間の実測値までまとめます。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+ビルドが落ちたのをきっかけに`package.json`を眺めていて、見覚えのないパッケージが目に入りました。
+
+```json
+"puppeteer": "^21.2.1",
+```
+
+**使っている記憶がありません。**
+
+調べたら本当に使っていませんでした。それどころか、この1行のせいで<span className="hoso">毎回のビルドでChromiumがダウンロードされていました。</span>170MB前後です。何にも使われないまま、毎回。
+
+同じような残骸を抱えているプロジェクトは多いと思うので、洗い出し方と、消すときの確認手順を書いておきます。
+
+## なぜ「使っていない依存」が害になるのか
+
+使っていないだけなら、バンドルには入りません。Next.jsはimportされていないコードを出力に含めないからです。**なのに害があります。**
+
+理由は主に3つです。
+
+- **postinstallでバイナリを落とすパッケージがある**（puppeteer、かつてのnode-sassなど）
+- **ネイティブビルドを走らせるパッケージがある**（Nodeを上げた瞬間に壊れる）
+- **依存ツリーが膨らみ、インストールとキャッシュが重くなる**
+
+とくに1つ目と2つ目は、**コードが1行も触れていなくても、インストールの時点で動く**のがポイントです。「使っていないから無害」は成り立ちません。
+
+うちは2つ目でビルドが落ちました。使っていないパッケージが原因で本番のデプロイが止まる、というのはなかなか間抜けな話です。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/node-canvas-vercel-build-error"
+  icon='ri-image-line'
+  title="node-canvasがVercelのビルドで pixman-1 not found になる"
+  subtitle="使っていないネイティブ依存にビルドを止められた話です。"
+  targetBlank={true}
+/>
+
+## 洗い出し方
+
+### 1. 参照をimportの形で検索する
+
+パッケージ名で全文検索すると、**関係ない単語が大量に引っかかります。** importの形で探すのが確実です。
+
+```bash
+PKG=puppeteer
+grep -rn "from '$PKG'\|from \"$PKG\"\|require('$PKG')\|require(\"$PKG\")\|from '$PKG/" \
+  --include=*.ts --include=*.tsx --include=*.js --include=*.jsx --include=*.mjs \
+  . | grep -v node_modules
+```
+
+うちの`canvas`がまさにこれで、単語で検索すると`BusinessModelCanvas`や`html2canvas`、`<canvas>`要素が山ほど出て「使っている」と誤認しかけました。
+
+### 2. 設定ファイルからの参照も見る
+
+コードだけでなく、設定ファイルから名前で参照されるものがあります。
+
+- ESLint / Prettier のプラグイン
+- PostCSS / Tailwind のプラグイン
+- Jest / Playwright などの設定
+- `package.json`の`scripts`（CLIとして直接叩いているもの）
+
+```bash
+grep -rn "puppeteer" package.json *.config.* .*rc* 2>/dev/null
+```
+
+<span className="hoso">「importされていない＝使っていない」ではない</span>のはこの層です。ここを見ずに消すと、CIだけが後から壊れます。
+
+### 3. 誰かの依存になっていないか確認する
+
+自分が使っていなくても、他のパッケージが依存していることがあります。yarnならこれで分かります。
+
+```bash
+yarn why puppeteer
+```
+
+「他のパッケージが必要としている」と出たら、`package.json`から消しても`node_modules`には残ります。それでも**直接依存から外す意味はあります。** バージョンを自分で固定しなくなるので、依存元の更新に追随できるようになります。
+
+うちの`canvas`は`yarn.lock`を見ても**依存元が存在しない残骸**でした。おそらく昔なにかを試した名残です。
+
+## 消したあとの確認
+
+消して終わりにせず、**ビルドを通してから**コミットします。
+
+```bash
+rm -rf node_modules
+yarn install
+yarn build
+```
+
+`node_modules`を消してから入れ直すのが大事です。**手元に残っているだけのパッケージ**が動作を支えている場合、消し忘れに気づけません。
+
+`yarn.lock`の差分も見ておきます。うちがpuppeteerを外したときは、
+
+- `puppeteer`の依存ツリー（`chromium-bidi`、`devtools-protocol`、`extract-zip`など）だけが消えた
+- **既存パッケージのバージョン変更は無し**
+
+という差分でした。<span className="hoso">意図しないバージョン変更が混ざっていないか</span>は必ず確認してください。ここに気づかず一緒にコミットすると、後日「なぜか動かない」の原因が特定できなくなります。
+
+## ついでに見つかる：lockファイルの併存
+
+棚卸しの最中に、`package-lock.json`と`yarn.lock`が**両方ある**ことに気づきました。
+
+これは静かに効いてくる問題です。
+
+- Vercelは`yarn.lock`を見てインストールしている
+- `package-lock.json`は**誰も見ていないのに存在する**
+- 中身は乖離していて、`canvas`すら含まれていなかった
+- ビルドログでも混在が警告されていた
+
+つまり<span className="hoso">「lockファイルを見ても実際に何が入るのか分からない」</span>状態でした。手元でnpmを叩いた人と、yarnを叩いた人で、別のツリーができます。
+
+どちらか一方に決めて、**もう片方は削除**してください。うちはyarnに統一しました。
+
+```bash
+git rm package-lock.json
+```
+
+決めたあとは、依存を変えたら**lockファイルを必ずコミットする**のを徹底します。lockを更新しないままpushすると、本番だけ別のバージョンが入る余地が残ります。
+
+## ビルド時間の実測
+
+参考までに、うちの規模（ページ50本以上、ビルドマシンは2コア）での実測値です。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>状況</th>
+      <th style={thStyle}>所要時間</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>キャッシュ無し（初回・依存変更後）</td>
+      <td style={tdStyle}>約12分</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>キャッシュ有り＋依存変更あり</td>
+      <td style={tdStyle}>約1分40秒</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>キャッシュ有り＋コード変更なし</td>
+      <td style={tdStyle}>約42秒</td>
+    </tr>
+  </tbody>
+</table>
+
+念のため書いておくと、これは**依存を消したことによる短縮の数字ではありません。** キャッシュが効くかどうかの差です。
+
+ここで言いたいのは、<span className="hoso">**依存を変えるとキャッシュが無効になる**</span>ということのほうです。つまり不要な依存が残っていると、それが更新されるたびに12分側を引きます。効いてくるのは「毎回のビルドが数秒速くなる」ではなく、**遅いビルドを踏む頻度**のほうです。
+
+## よくある質問（FAQ）
+
+### Q. `depcheck`のようなツールで自動化できませんか？
+
+洗い出しの取っかかりには便利です。ただ**設定ファイル経由の参照や、CLIとして使っているものを誤検出しがち**なので、出力をそのまま信じて消すのは危険です。
+
+「候補を出させて、1つずつ手で確認する」という使い方が現実的だと思います。今回のように十数個ならgrepで十分でした。
+
+### Q. `devDependencies`と`dependencies`の区別は直すべきですか？
+
+気づいたなら直しておくといいです。本番ビルドでdevDependenciesを入れない構成にしたとき、初めて痛い目を見ます。
+
+ただし**Next.jsのビルドはdevDependenciesを必要とする**ので、Vercelでは両方インストールされます。「直さないと壊れる」類の話ではありません。優先度は低めです。
+
+### Q. 消したあとに必要だと分かったらどうしますか？
+
+戻せばいいだけです。gitに履歴が残っているので、バージョンごと復元できます。
+
+**消すのを怖がって残し続けるほうがコストが高い**というのが今回の結論でした。使っていないものが原因で本番が止まった実績があるので、なおさらです。
+
+### Q. Vercelのビルドキャッシュは消したほうがいいですか？
+
+依存を変えたあとの検証では、**「Use existing Build Cache」を外して**ビルドしてください。旧環境の成果物が残っていると、検証になりません。
+
+普段のデプロイでは、もちろん有効のままで構いません。
+
+## まとめ
+
+- 使っていない依存でも、**postinstallやネイティブビルドは動く**
+- 参照は**importの形で検索する**。単語検索は誤認のもと
+- **設定ファイルとscripts**からの参照も見る
+- 消したら`node_modules`ごと入れ直して**ビルドを通してからコミット**
+- `yarn.lock`の差分に**意図しないバージョン変更が混ざっていないか**確認する
+- `package-lock.json`と`yarn.lock`の**併存は解消する**
+
+`package.json`は、放っておくと**過去に試したことの墓場**になります。年に一度でも棚卸しすると、こういう地雷が減ります。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
