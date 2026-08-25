@@ -1,0 +1,237 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'canonicalとog:urlが初期HTMLで空だった。window.location.hrefで現在URLを組み立てる罠',
+  date: '2026-09-10T09:30:00.000Z',
+  tags: [
+    'Blog',
+    'Tips',
+    '経験者向け',
+    'Next.js',
+    'React',
+    'フロントエンド',
+    'SEO'
+  ],
+  description: 'Next.jsで canonical や og:url を window.location.href から組み立てていると、サーバー側では必ず空文字になります。クローラーが読むのは初期HTMLなので「空のタグが出ているだけ」の状態でした。Search Consoleでインデックス未登録が積み上がっていた原因と、asPathから組み立てるhookでの直し方、動的セグメントの扱いまでまとめます。'
+}
+
+## はじめに
+
+Search Consoleを眺めていて、共有用の動的ページが**8本ずっと「検出 - インデックス未登録」**のまま止まっていることに気づきました。
+
+ページは表示されます。中身もあります。ブラウザで開発者ツールを開いて`<head>`を見ても、`canonical`はちゃんと入っています。
+
+**ところが、クローラーはそれを見ていませんでした。**
+
+原因は、現在URLの組み立て方がこうなっていたことです。
+
+```jsx
+const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+```
+
+<span className="hoso">サーバー側では`window`が存在しないので、必ず空文字になります。</span>そしてクローラーが読むのは、そのサーバーが返した初期HTMLです。
+
+## 症状：ブラウザで見ると正常に見える
+
+この不具合が見つけにくいのは、**開発者ツールでは正しく見えてしまう**ことです。
+
+開発者ツールの「要素」タブが見せているのは、**JavaScriptが実行されたあとのDOM**です。マウント後に`window.location.href`が入るので、そこには正しいURLが入っています。
+
+実際に配信されているHTMLを見るには、**ソースを直接取ります。**
+
+```bash
+curl -s https://example.com/some-page | grep -E 'canonical|og:url'
+```
+
+うちで実行した結果はこうでした。
+
+```html
+<link rel="canonical" href=""/>
+<meta property="og:url" content=""/>
+```
+
+<span className="hoso">タグは出ているのに、中身が空。</span>「canonicalを入れ忘れた」ならまだ気づけますが、「入っているが空」は目視で見落とします。
+
+さらに悪いことに、`canonical`を明示的に渡しているページだけは正しく埋まっていました。だから**一部のページは正常**で、全体を眺めても異常に見えません。うちの場合、
+
+- `canonicalUrl`を明示指定しているページ → canonicalは正常、**og:urlは空**
+- 動的URLのページ（`/tools/xxx/[id]`） → **canonicalもog:urlも空**
+
+という状態でした。og:urlに至っては**全ページ空**です。
+
+## なぜ`window`を見てはいけないのか
+
+Next.jsのページは、リクエスト時（またはビルド時）に**サーバー側でHTMLへレンダリングされます。** Node.js上での実行なので、ブラウザのグローバル変数である`window`はありません。
+
+`typeof window !== 'undefined'`というガードは、まさにこの環境差を吸収するための定石です。**クラッシュは防げます。** ただし今回のように「タグの中身」に使うと、サーバー側では常にフォールバック値（空文字）が採用されます。
+
+<span className="hoso">クローラーが最初に受け取るのはこのHTMLです。</span>
+
+Googleは後からJavaScriptを実行してレンダリングもしますが、その工程は初回のクロールとは別で、必ず期待通りに扱われるとは限りません。**meta情報のような「最初に読ませたいもの」を、実行後のDOMに委ねるのは筋が悪い**という話です。
+
+## 対処：`asPath`から組み立てる
+
+`useRouter`の`asPath`は**サーバー側でも値を持ちます。** ここを起点にすれば、サーバーとクライアントで同じURLを組み立てられます。
+
+<CodeBlockTitle title="hooks/useCurrentUrl.ts" />
+
+```ts
+import { useRouter } from 'next/router'
+
+const SITE_ORIGIN = 'https://example.com'
+
+/**
+ * 現在ページの絶対URLを返す。
+ * window ではなく asPath を使うことで、サーバー側でも同じ値になる。
+ */
+export default function useCurrentUrl(): string {
+  const { asPath } = useRouter()
+
+  // クエリとハッシュは正規化のため落とす
+  const path = asPath.split(/[?#]/)[0]
+
+  // 未解決の動的セグメントが残っている場合は URL を主張しない
+  if (path.includes('[') || path.includes(']')) return ''
+
+  // トップは末尾スラッシュを付けない
+  if (path === '/') return SITE_ORIGIN
+
+  return `${SITE_ORIGIN}${path}`
+}
+```
+
+呼び出し側では、**空のときはタグごと出さない**ようにします。
+
+```jsx
+{currentUrl && <meta property="og:url" content={currentUrl} />}
+{(canonicalUrl || currentUrl) && (
+  <link rel="canonical" href={canonicalUrl || currentUrl} />
+)}
+```
+
+`href=""`のような空タグを出し続けるより、**出さないほうがマシ**です。空のcanonicalは「このページの正規URLはこのページ自身（相対解決）」とも読めてしまい、意図しない解釈を招きます。
+
+### 動的セグメントが残るケース
+
+ここが今回いちばん悩んだ点です。
+
+静的最適化されたページでは、**初期HTMLの時点で`asPath`が`/tools/urlencode/[charset]`のように未解決**のことがあります。ルーターがブラウザ側で初期化されて初めて実際の値が入るためです。
+
+このとき選択肢は2つあります。
+
+1. `[charset]`を含んだURLをそのまま出す
+2. **何も出さない**
+
+うちは**2**にしました。<span className="hoso">存在しないURLを「これが正規URLです」と主張するくらいなら、黙っていたほうが害が少ない</span>と判断したからです。
+
+## 直ったことをどう確認するか
+
+ブラウザではなく、**本番ビルドの生成物を見ます。**
+
+```bash
+next build
+next start
+curl -s http://localhost:3000/tools/cron | grep -E 'canonical|og:url'
+```
+
+うちで確認した結果です。
+
+- `/` → `canonical https://moldspoon.jp`（末尾スラッシュなし）
+- `/tools/cron` → canonical・og:urlとも自ページ
+- `/tools/compound/result` → canonicalは**明示指定した`/tools/compound`を維持**
+- `/tools/business-model-canvas/{id}` → canonical・og:urlとも自ページ
+- `/tools/urlencode/[charset]` → **og:urlを出さない**
+
+「明示指定したcanonicalが上書きされていないか」も一緒に見てください。全ページ自己参照にしてしまうと、**意図的に正規化していたページの設定を壊します。**
+
+## ついでに見つかった穴：一括リダイレクトが404へ送っていた
+
+同じタイミングでSearch Consoleの404一覧も潰していて、こんな1本が残っていました。
+
+ブログを`/blog`配下へ移設したとき、旧URLに一括ルールで301を張りました。
+
+```js
+{ source: '/posts/:slug*', destination: '/blog/posts/:slug*', permanent: true }
+```
+
+これで33本が救われたのですが、**1本だけ移設先に同名の記事が存在しませんでした。** その記事は連載形式に分割されていて、スラッグが変わっていたのです。
+
+結果どうなったかというと、
+
+```
+旧URL → 308 → 存在しない新URL（404）
+```
+
+<span className="hoso">リダイレクトは成功しているのに、行き先が404。</span>Search Consoleはこれを「見つかりませんでした（404）」として記録し続けていました。
+
+一括ルールは強力ですが、**「移設先が全部実在するか」を確認しないと、404を丁寧にリダイレクトする装置になります。** 例外は個別に書きます。
+
+```js
+// 分割されて同名の移設先が無い1本だけ、主題に対応する回へ個別に送る
+{ source: '/posts/add-db-and-storage-and-custom-domain-to-vapor', destination: '/blog/posts/add-db-to-vapor', permanent: true },
+{ source: '/posts/:slug*', destination: '/blog/posts/:slug*', permanent: true },
+```
+
+個別ルールは**一括ルールより前に置きます。** 上から順に評価されるため、後ろに書くと一括ルールに食われます。
+
+移設そのものの手順は別記事にまとめています。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/wordpress-to-nextjs-mdx-migration"
+  icon='ri-arrow-left-right-line'
+  title="WordPressからNext.js（MDX）へ移行した手順"
+  subtitle="301を張り忘れて404を35本残した失敗談も入っています。"
+  targetBlank={true}
+/>
+
+## よくある質問（FAQ）
+
+### Q. App Routerでも同じ問題は起きますか？
+
+`window`を見て組み立てれば同じことになります。ただしApp Routerには`metadata`（`generateMetadata`）という**サーバー側でメタ情報を組み立てる仕組み**があるので、素直に使っていればこの罠には落ちません。
+
+`metadataBase`と相対パスの組み合わせで絶対URLを作れるので、そちらを使うのが定石です。
+
+### Q. 環境ごとにドメインが違う場合、オリジンはどう持てばいいですか？
+
+環境変数に持たせるのが素直です。Vercelなら`NEXT_PUBLIC_VERCEL_URL`が使えますが、**プレビューデプロイでは毎回違うURLになる**点に注意してください。
+
+canonicalは「正規URL」を宣言するタグなので、プレビュー環境がプレビュー自身のURLを主張すると、それはそれで正しい挙動です。むしろ**プレビューがインデックスされないようにしておく**ほうが大事です。
+
+### Q. 空のcanonicalは実害がありますか？
+
+「絶対に順位が落ちる」と断言できる話ではありません。ただ、うちでは動的ページ8本がインデックス未登録のまま止まっていて、**それを説明できる要因のひとつがこれでした。**
+
+そもそも`href=""`は意図した状態ではないので、直さない理由がありません。
+
+### Q. og:urlが空だとSNSシェアはどうなりますか？
+
+多くのSNSは`og:url`が無ければ実際のURLを使うので、致命傷にはなりません。ただ`content=""`という**空の値が入っている**場合、無い場合と同じ扱いになる保証はありません。
+
+出さないか、正しい値を出すか。どちらかにしてください。
+
+## まとめ
+
+- `typeof window !== 'undefined' ? window.location.href : ''`は、**サーバー側で必ず空**
+- クローラーが読むのは**初期HTML**。開発者ツールの表示は当てにならない
+- 確認は`curl`＋`grep`で。**本番ビルドの生成物**を見る
+- `useRouter`の**`asPath`**から組み立てれば、サーバーとクライアントで一致する
+- 未解決の動的セグメントが残る場合は、**誤ったURLを主張するよりタグを出さない**
+- 一括リダイレクトは**移設先が実在するか**を確認する。例外は個別ルールを前に置く
+
+<span className="hoso">「タグが出ているか」ではなく「中身が入っているか」</span>を見る。この視点があるかどうかだけの話でした。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
