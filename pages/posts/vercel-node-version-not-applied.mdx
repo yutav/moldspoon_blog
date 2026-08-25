@@ -1,0 +1,188 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'VercelのNode.jsバージョンを変えたのに反映されない。Redeployはビルド設定のスナップショットを使い回します',
+  date: '2026-09-04T12:30:00.000Z',
+  tags: [
+    'Blog',
+    'Tips',
+    '経験者向け',
+    'Vercel',
+    'Next.js',
+    'インフラ',
+    'デプロイ'
+  ],
+  description: 'VercelのNode.js 18提供終了でビルドが落ちたので設定画面からバージョンを上げたのに、Redeployすると相変わらず旧バージョンでビルドされる。原因はRedeployがデプロイ作成時のビルド設定スナップショットを再利用することでした。engines.nodeで固定する方法と、設定欄の場所が移動している件をまとめます。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+ある日、Vercelのビルドが**Node.js 18の提供終了**で落ちました。
+
+```
+Error: Node.js Version "18.x" is discontinued and must be upgraded.
+```
+
+やることは明白です。設定画面でNode.jsのバージョンを上げればいい。そう思って設定を変え、落ちたデプロイを**Redeploy**しました。
+
+**同じエラーで落ちました。**
+
+設定画面を見ても、ちゃんと新しいバージョンになっています。それでもRedeployすると18のまま。原因は、<span className="hoso">Redeployが「そのデプロイが作られた時点のビルド設定」を再利用する</span>ことでした。
+
+## 原因：Redeployは過去の設定ごと復元する
+
+Vercelのデプロイは、作成された時点で**ビルド設定のスナップショット**を持ちます。Node.jsのバージョン、ビルドコマンド、環境変数の一部などです。
+
+Redeployは名前の通り「もう一度デプロイする」機能ですが、実際にやっているのは<span className="hoso">**そのスナップショットでのビルドをやり直すこと**</span>です。だから、あとから設定画面を変えても効きません。
+
+つまりこうなります。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>操作</th>
+      <th style={thStyle}>使われるNode.jsバージョン</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>古いデプロイを<strong>Redeploy</strong></td>
+      <td style={tdStyle}>そのデプロイ作成時の設定（<strong>古いまま</strong>）</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>新しいコミットを<strong>push</strong></td>
+      <td style={tdStyle}>現在の設定（新しい）</td>
+    </tr>
+  </tbody>
+</table>
+
+**設定を変えたら、新しいコミットをpushして新規デプロイを起こす。** これが答えです。
+
+変更するものが無ければ空コミットで構いません。
+
+```bash
+git commit --allow-empty -m "Node.jsバージョンの設定変更を反映するため再デプロイする"
+git push
+```
+
+私は実際にこの内容のコミットを打ちました。「設定を変えたのに反映されない」で悩んだ痕跡がリポジトリに残っています。
+
+## 設定欄が見つからない場合
+
+もうひとつハマりどころがあります。**Node.js Versionの設定欄の場所が移動しました。**
+
+- 以前: Settings → **General**
+- 現在: Settings → **Build and Deployment**
+
+Generalを何度スクロールしても見つからず、「このプロジェクトだけ設定欄が無いのでは」と疑いました。移動しただけです。
+
+## より確実な方法：`package.json`の`engines`で固定する
+
+ダッシュボードの設定は、**プロジェクトの外にある状態**です。リポジトリを見てもバージョンが分かりませんし、複数人で触っていると誰がいつ変えたのか追えません。
+
+`package.json`の`engines.node`に書いておけば、**リポジトリ側が情報源**になります。
+
+<CodeBlockTitle title="package.json" />
+
+```json
+{
+  "name": "your-app",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  }
+}
+```
+
+Vercelはこれを読んでビルドに使うNode.jsを決めます。<span className="hoso">設定画面とリポジトリで食い違ったときに、どちらが正なのか迷わなくて済む</span>のが一番の利点です。
+
+うちではこれを「唯一の情報源」と決めて、運用メモにもそう書きました。
+
+### ローカルで`engines`に弾かれるとき
+
+`engines`を書くと、ローカルのNodeがそれより古い場合にインストールやスクリプト実行が止まります。
+
+```bash
+error your-app@0.1.0: The engine "node" is incompatible with this module.
+```
+
+すぐに上げられない事情があるなら、yarnならこう回避できます。
+
+```bash
+yarn install --ignore-engines
+```
+
+`yarn dev`が弾かれる場合は、`npx next dev`のように直接叩けば動きます（環境変数の指定を忘れないでください）。ただし**それはローカルの話**で、本番のビルドは`engines`の通りに動きます。ローカルだけ古いままにしておくと、手元で通ったものが本番で落ちる状況を作りかねないので、あくまで一時しのぎです。
+
+## ネイティブ依存があるならビルドキャッシュも外す
+
+Node.jsのバージョンを上げるとき、ネイティブモジュール（C++でビルドされるパッケージ）を使っているなら、もう1つ注意点があります。
+
+Redeployのダイアログにある<span className="hoso">**「Use existing Build Cache」のチェックを外してください。**</span>
+
+チェックが入ったままだと、**旧バージョンのNodeでコンパイルされた成果物が再利用されます。** 新しいNodeで通るかどうかの検証になりません。
+
+ネイティブモジュールはNodeのメジャーバージョンが変わるとABIが変わり、そのままでは動きません。実際にうちはこれで詰まりました。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/node-canvas-vercel-build-error"
+  icon='ri-image-line'
+  title="node-canvasがVercelのビルドで pixman-1 not found になる"
+  subtitle="Node 24にビルド済みバイナリが無く、ソースビルドに落ちて失敗する話です。"
+  targetBlank={true}
+/>
+
+## いつまで上げ続ければいいのか
+
+Node.jsのバージョンは放っておいても、**EOL（サポート終了）を迎えるとVercel側が新規ビルドを打ち切ります。** 今回の18がまさにそれでした。
+
+つまり「動いているから触らない」は選べません。EOLの日付だけ把握して、余裕をもって上げるのが結局いちばん安く済みます。Node 24のEOLは2028年4月です。
+
+## よくある質問（FAQ）
+
+### Q. 設定画面とengines.nodeが食い違ったらどちらが勝ちますか？
+
+うちは`engines.node`を書いた状態で運用していて、**そちらの通りにビルドされています。**
+
+ただ、どちらが勝つかを覚えるより<span className="hoso">食い違わせないほうが安全</span>です。`engines`を書くと決めたなら、設定画面のほうは「同じ値にしておく」か、以後見ないと決めてしまうのがいいと思います。
+
+### Q. 環境変数を変えたときもRedeployで反映されませんか？
+
+環境変数はスナップショットの扱いが異なり、Redeployでも新しい値が入る場合があります。ただ**確実なのは新しいデプロイを起こすこと**です。
+
+うちでは環境変数を追加したあと「SMTPの環境変数設定を反映するため再デプロイする」という空コミットを打っています。数十秒で終わるので、迷ったらpushするのが早いです。
+
+### Q. Node.jsを上げたらビルド時間が伸びました
+
+バージョンを変えるとビルドキャッシュが効かなくなるため、**1回目は必ず遅くなります。** うちの規模（ページ50本以上）で、キャッシュ無しは約12分、キャッシュ有りだと約1分40秒でした。
+
+2回目以降も遅いままなら、キャッシュではなく依存側の問題を疑ってください。
+
+## まとめ
+
+- VercelのNode.jsバージョンを変えたら、**新しいコミットをpushする**。Redeployでは反映されない
+- Redeployは**デプロイ作成時のビルド設定スナップショット**を再利用する
+- 設定欄はGeneralではなく**Build and Deployment**に移動している
+- 迷わないために`package.json`の**`engines.node`をリポジトリ側の情報源にする**
+- ネイティブ依存があるなら、Redeploy時に**「Use existing Build Cache」を外す**
+
+「設定を変えたのに反映されない」と感じたら、まず<span className="hoso">それが新規デプロイなのかRedeployなのか</span>を確認してみてください。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
