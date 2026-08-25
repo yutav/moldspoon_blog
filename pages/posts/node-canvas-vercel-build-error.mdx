@@ -1,0 +1,194 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: "node-canvasがVercelのビルドで「pixman-1 not found」になる。Node 24で詰んだときの逃げ道",
+  date: '2026-09-06T10:20:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'Vercel',
+    'Next.js',
+    'プログラミング',
+    'インフラ'
+  ],
+  description: "Node.js 24へ上げたらVercelのビルドが node-canvas のところで「Package 'pixman-1' was not found」で落ちるようになりました。ビルド済みバイナリが無くソースビルドに落ち、Vercelのビルドイメージにcairo/pixmanが入っていないためです。原因の説明と、@vercel/ogやhtml2canvasへの逃がし方、そして「そもそも使っていなかった」という結末までまとめます。"
+}
+
+## はじめに
+
+Node.jsのバージョンを24へ上げたところ、Vercelのビルドがこんなエラーで落ちるようになりました。
+
+```
+Package 'pixman-1', required by 'virtual:world', not found
+```
+
+あるいは、`node-gyp`のログの中にこう出ます。
+
+```
+Package pixman-1 was not found in the pkg-config search path.
+No package 'pixman-1' found
+```
+
+犯人は**node-canvas**（npm上の`canvas`パッケージ）でした。しかも最終的な結末は<span className="hoso">「そのパッケージ、うちでは1行も使っていなかった」</span>です。同じ落とし方をする人はそこそこいると思うので、原因と逃げ道を残しておきます。
+
+## 何が起きているのか
+
+node-canvasは**ネイティブモジュール**です。C++で書かれた部分をビルドして使います。
+
+普段この工程が見えないのは、node-canvasが主要な環境向けに**ビルド済みバイナリ（prebuilt binary）**を配布しているからです。インストール時にダウンロードして置くだけなので、一瞬で終わります。
+
+問題は、ここが外れたときです。
+
+1. インストール時、自分の環境に合うビルド済みバイナリを探す
+2. **見つからないと、ソースからのビルドにフォールバックする**
+3. ソースビルドにはcairo・pixmanなどのシステムライブラリが必要
+4. **Vercelのビルドイメージにそれらは入っていない**
+5. `pixman-1 not found`で失敗
+
+つまり<span className="hoso">エラーメッセージはpixmanを指していますが、本当の原因は「ビルド済みバイナリが見つからなかったこと」</span>です。pixmanを入れようとする方向に進むと、Vercel上ではまず行き止まりになります。
+
+### なぜ急に見つからなくなったのか
+
+ビルド済みバイナリは**Nodeのバージョンごと**に用意されています。正確には、Nodeのメジャーバージョンに対応する**ABIバージョン（NODE_MODULE_VERSION）**ごとです。
+
+- Node 22 → ABI 127
+- Node 24 → **ABI 137**
+
+node-canvas 2.x は、**Node 24（ABI 137）向けのビルド済みバイナリを配布していません。** そのため24へ上げた瞬間に「見つからない」側へ落ち、ソースビルドが始まり、そして失敗します。
+
+Node 18や20で動いていたものが、バージョンを上げただけで壊れる理由はここにあります。**コードは1行も変えていないのに落ちます。**
+
+### ローカルでは再現しないことがある
+
+紛らわしいのは、**macOSのローカルでは通ってしまう場合がある**ことです。Homebrewでcairoやpixmanを入れていれば、ソースビルドが成功してしまうからです。
+
+「手元では動くのにVercelで落ちる」となったら、<span className="hoso">システムライブラリの有無を疑ってください。</span>Vercelのビルドイメージには画像処理系のシステムライブラリは基本的に入っていません。
+
+## 逃げ道1: そもそも使っているか確認する
+
+先にこれをやってください。うちの結末はこれでした。
+
+```bash
+grep -rn "from 'canvas'\|require('canvas')" --include=*.ts --include=*.tsx --include=*.js --include=*.jsx .
+```
+
+**1件も出ませんでした。**
+
+紛らわしかったのは、`canvas`という単語だけならプロジェクト中にいくらでもあったことです。
+
+- `BusinessModelCanvas` … 自作コンポーネントの名前
+- `canvasType` … 自前の型
+- `html2canvas` … **別のパッケージ**（ブラウザ側で動く。node-canvasとは無関係）
+- `<canvas>` … HTML要素
+
+<span className="hoso">「canvasで検索したら山ほど出たので使っているはず」と判断すると間違えます。</span>importの形で検索してください。
+
+`package.json`から消したあと、`yarn.lock`側も確認しました。他のパッケージがnode-canvasに依存していれば消せませんが、うちは**依存元が存在しない残骸**でした。おそらく昔なにかを試した名残です。
+
+依存を消して、ビルドは通るようになりました。
+
+## 逃げ道2: サーバー側の画像生成は`@vercel/og`にする
+
+実際に使っている場合の代替です。OGP画像の動的生成が目的なら、**`@vercel/og`**が有力です。
+
+- **ネイティブ依存がありません**（satoriベース。内部はWASM）
+- Vercel上での動作が前提に作られている
+- JSXでレイアウトを書ける
+
+```jsx
+import { ImageResponse } from '@vercel/og'
+
+export const config = { runtime: 'edge' }
+
+export default function handler() {
+  return new ImageResponse(
+    (
+      <div style={{ display: 'flex', fontSize: 64, background: '#fff', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+        こんにちは
+      </div>
+    ),
+    { width: 1200, height: 630 },
+  )
+}
+```
+
+制約もあります。**CSSは一部しかサポートされていません**し、`<canvas>`のようにピクセル単位で描くAPIではありません。「テキストと画像を組み合わせたカードを作る」用途なら十分ですが、**画像処理そのもの**（フィルタ、合成、変形）をしたい場合は用途が違います。
+
+その場合は、ビルド済みバイナリを配布している別実装（`@napi-rs/canvas`など）を検討することになります。ただし**採用前に、使いたいNodeバージョン向けのバイナリが実際に配布されているか必ず確認してください。** 今回踏んだ穴と同じものが待っています。
+
+## 逃げ道3: ブラウザ側で描く
+
+そもそもサーバーで描く必要があるのか、という話もあります。
+
+うちのビジネスモデルキャンバスは、**画面のスクリーンショットを`html2canvas`で撮って**保存しています。ブラウザ側で完結するので、ビルド環境のシステムライブラリとは無縁です。
+
+「ユーザーが見ている画面をそのまま画像にしたい」なら、こちらのほうが素直で、見た目のズレも起きません。
+
+保存先の設計については別記事にしました。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/private-gcs-bucket-ogp-image"
+  icon='ri-cloud-line'
+  title="非公開のCloud StorageバケットからOGP画像を配信する"
+  subtitle="公開ACLを付けずにクローラーへ画像を見せる構成です。"
+  targetBlank={true}
+/>
+
+## よくある質問（FAQ）
+
+### Q. Vercelのビルドイメージにcairoを入れることはできますか？
+
+`installCommand`でパッケージマネージャを叩く手はありますが、**おすすめしません。** ビルドのたびにシステムライブラリを入れることになり、時間もかかれば、ビルドイメージが更新されたときに壊れます。
+
+<span className="hoso">「動く構成」ではなく「壊れやすい構成」を作ることになります。</span>ネイティブ依存を外す方向に進んだほうが結局は安上がりです。
+
+### Q. Nodeのバージョンを下げれば直りますか？
+
+直りますが、Vercelは**EOLを迎えたNodeでの新規ビルドを打ち切ります。** 一時しのぎにしかならず、期限も自分で決められません。
+
+私は「node-canvasを残すためにNodeを古いままにする」という取引は割に合わないと判断しました。
+
+### Q. ビルドログのどこを見れば犯人が分かりますか？
+
+`node-gyp`が動き始めた行を探してください。その直前に出ているパッケージ名が犯人です。ソースビルドに落ちているパッケージは、ログに**コンパイルの進捗が延々と出る**のですぐ分かります。
+
+インストールが妙に長い場合も同じサインです。ビルド済みバイナリで済んでいるなら一瞬で終わります。
+
+### Q. `package-lock.json`と`yarn.lock`が両方あります
+
+**それも直してください。** うちも両方あって、`package-lock.json`のほうは`canvas`すら含まない乖離した状態でした。ビルドログでも混在が警告されていました。
+
+どちらか一方に決めて、もう片方は消すのが正解です。この話は依存の棚卸しの記事に書きました。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/unused-dependencies-slow-build"
+  icon='ri-delete-bin-line'
+  title="使っていない依存がビルドを重くしていた話"
+  subtitle="参照ゼロのpuppeteerが毎ビルドChromiumを落としていました。"
+  targetBlank={true}
+/>
+
+## まとめ
+
+- `pixman-1 not found`は、**ビルド済みバイナリが見つからずソースビルドに落ちた結果**
+- node-canvas 2.xには**Node 24（ABI 137）向けのバイナリが無い**
+- Vercelのビルドイメージにcairo・pixmanは**入っていない**（入れる方向に進まない）
+- まず<span className="hoso">**本当に使っているかimportで検索する**</span>。うちは使っていなかった
+- OGP画像なら**`@vercel/og`**、画面の画像化なら**`html2canvas`**で足りることが多い
+
+「Nodeを上げたら、触ってもいないパッケージのせいでビルドが落ちた」というのは、ネイティブ依存を抱えているときの典型的な壊れ方です。使っていない依存ほど、こういう形で牙を剥きます。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
