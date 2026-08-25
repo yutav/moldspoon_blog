@@ -1,0 +1,259 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: '非公開のCloud StorageバケットからOGP画像を配信する。公開ACLを付けずにクローラーへ見せる構成',
+  date: '2026-09-12T14:10:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'Next.js',
+    'クラウドストレージ',
+    'インフラ',
+    'セキュリティ',
+    '画像置き場'
+  ],
+  description: 'ユーザーが作った画像をOGPに使いたい。でもバケットを公開すると、URLさえ分かれば誰でも直接取得できてしまう。SNSのクローラーは認証できないという制約の中で、公開ACLを付けずに配信する方法を考えました。Next.jsのAPI Routeを配信口にする構成と、署名付きURLを選ばなかった理由、環境変数まわりの落とし穴をまとめます。'
+}
+
+## はじめに
+
+うちのビジネスモデルキャンバス作成ツールは、作ったキャンバスを**画像にして共有**できます。SNSに貼ったときにOGP画像として出したいので、その画像をどこかに置く必要があります。
+
+もともとは外部に立てたAPIサーバー（EC2上のLaravel）がローカルディスクへ保存し、Apacheが静的配信していました。ところが**証明書が失効して、その仕組みが丸ごと死にました。**
+
+作り直すにあたって決めたのが、<span className="hoso">**バケットは非公開のままにする**</span>という方針です。この記事はそのための構成の話です。
+
+## 何が悩みどころなのか
+
+素直にやるなら、Cloud Storageのバケットに公開読み取りを付けて、そのURLを`og:image`に書けば終わりです。1行で済みます。
+
+問題は、**そこに入っているのがユーザーが作ったコンテンツ**だということです。
+
+バケットを公開すると、<span className="hoso">URLさえ分かれば誰でも直接取得できます。</span>オブジェクト名を推測されれば、共有していないキャンバスまで見られる可能性があります。実際にはFirestoreのドキュメントIDを使っていて推測は困難ですが、「推測しにくい」は「保護されている」とは違います。
+
+一方で、SNSやGoogleの**クローラーは認証できません。** ログインさせることも、トークンを渡すこともできません。
+
+つまり、
+
+- バケットを公開したくない
+- しかしクローラーには見えないといけない
+
+という、一見矛盾する要件になります。
+
+## 構成：配信口をアプリ側に置く
+
+答えは単純で、**バケットは非公開のまま、アプリケーションを配信の入口にします。**
+
+```
+SNSのクローラー
+  ↓ (認証なしのGET)
+https://example.com/api/bmc-image/{id}.png     ← Next.jsのAPI Route
+  ↓ (サービスアカウントで認証)
+gs://your-bucket/upload/bmc_image/{id}.png     ← 非公開バケット
+```
+
+クローラーから見れば、ただの画像URLです。認証は要りません。**バケットへの認証はサーバー側が代わりに行います。**
+
+公開しているのは「このアプリ経由で取得できること」だけで、**バケットそのものは閉じたまま**です。将来「共有していない画像は配信しない」といった条件を足したくなったとき、**判定を挟む場所がすでにある**のも利点です。
+
+### 実装
+
+<CodeBlockTitle title="pages/api/bmc-image/[file].ts" />
+
+```ts
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { BmcStorageError, readBmcImage } from 'lib/bmcStorage'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.setHeader('Allow', 'GET, HEAD')
+    return res.status(405).json({ message: 'GET のみ対応しています。' })
+  }
+
+  const raw = Array.isArray(req.query.file) ? req.query.file[0] : req.query.file
+  if (!raw) return res.status(400).json({ message: 'ファイル名が指定されていません。' })
+
+  const dot = raw.lastIndexOf('.')
+  if (dot <= 0) return res.status(400).json({ message: 'ファイル名の形式が不正です。' })
+
+  const id = raw.slice(0, dot)
+  const imageType = raw.slice(dot + 1)
+
+  try {
+    const image = await readBmcImage(id, imageType)
+    if (!image) return res.status(404).json({ message: '画像が見つかりません。' })
+
+    res.setHeader('Content-Type', image.contentType)
+    res.setHeader('Content-Length', image.data.length)
+    // 作り直されることは稀なので、そこそこ長めにキャッシュさせる
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400')
+    return res.status(200).send(image.data)
+  } catch (error) {
+    if (error instanceof BmcStorageError) {
+      return res.status(400).json({ message: error.message })
+    }
+    console.error('画像の取得に失敗しました:', error)
+    return res.status(500).json({ message: '画像の取得に失敗しました。' })
+  }
+}
+```
+
+**`HEAD`も通しておく**のがポイントです。クローラーによっては、本体を取る前にHEADで存在確認や`Content-Type`の確認をします。
+
+`Cache-Control`も忘れずに。これが無いと、**アクセスのたびにバケットへ取りに行きます。** OGP画像は同じURLが何度も叩かれるので、CDN側（`s-maxage`）で持たせる価値が大きいです。
+
+### 入力の検証は必須
+
+**URLの一部がそのままオブジェクト名になる**構成なので、ここは必ず検証します。
+
+```ts
+/** html2canvas の toDataURL が返しうる形式だけ許可する */
+export const ALLOWED_IMAGE_TYPES = ['png', 'jpeg', 'gif'] as const
+
+export function objectNameFor(id: string, imageType: string): string {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+    throw new BmcStorageError('IDの形式が不正です。')
+  }
+  if (!ALLOWED_IMAGE_TYPES.includes(imageType as BmcImageType)) {
+    throw new BmcStorageError('対応していない画像形式です。')
+  }
+  return `upload/bmc_image/${id}.${imageType}`
+}
+```
+
+- IDは**英数字とハイフン・アンダースコアのみ**にする（`..`や`/`を弾く）
+- 拡張子は**ホワイトリスト**で受ける
+
+<span className="hoso">「非公開バケットにしたから安全」ではありません。</span>配信口を作った時点で、その配信口が何を読めるかは自分で縛る必要があります。パス・トラバーサルを許せば、バケット内の別のオブジェクトを読ませることになりかねません。
+
+## 署名付きURLを選ばなかった理由
+
+非公開バケットの定番といえば**署名付きURL（Signed URL）**です。今回は採用しませんでした。
+
+理由は**有効期限**です。
+
+- 署名付きURLは必ず期限切れになる
+- OGP画像のURLは、**SNSやクローラーのキャッシュに長く残る**
+- 期限が切れると、あとから見た人には画像が出ない
+
+さらに、発行のたびにURLが変わるので、**同じ画像に対して安定したURLを持てません。** OGPの`og:image`は「そのページの画像はこれ」と示すものなので、URLが揺れるのは相性が悪いです。
+
+短命なダウンロードリンク（管理画面からのエクスポートなど）には署名付きURLが最適ですが、**恒久的に公開したい1枚**には向きません。
+
+## 環境変数まわりの落とし穴
+
+### ローカルと本番で認証情報の渡し方が違う
+
+本番（Vercel）は環境変数に入れます。JSONそのままだと改行の扱いで壊れやすいので、**base64も受け付ける**ようにしておくと事故が減ります。
+
+```ts
+const raw = process.env.GCP_SERVICE_ACCOUNT_JSON
+if (raw) {
+  const json = raw.trim().startsWith('{')
+    ? raw
+    : Buffer.from(raw, 'base64').toString('utf8')
+  return JSON.parse(json)
+}
+```
+
+貼り付ける値はこう作ります。
+
+```bash
+base64 -i service-account.json | tr -d '\n' | pbcopy
+```
+
+ローカルは鍵ファイルのパスを`.env.local`に置いて読みます。
+
+### `require(変数)`はwebpackに潰される
+
+ここでハマりました。ローカル用に鍵ファイルを読もうとして、こう書くと動きません。
+
+```ts
+// ✗ webpack が解決できない
+const serviceAccount = require(process.env.GCP_SERVICE_ACCOUNT_FILE)
+```
+
+`require`の引数が変数だと、webpackはビルド時に対象を決められず、バンドルの過程で壊れます。**実行時に読むなら`fs`を使います。**
+
+```ts
+// ✓
+import { readFileSync } from 'fs'
+return JSON.parse(readFileSync(localPath, 'utf8'))
+```
+
+同じ「動的に解決できない」問題は、動的importでも起きます。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/nextjs-dynamic-import-path-alias"
+  icon='ri-error-warning-line'
+  title="Next.jsで Cannot find module './undefined'"
+  subtitle="動的importにパスエイリアスを渡すとビルドが落ちる話です。"
+  targetBlank={true}
+/>
+
+### プレビュー環境にも環境変数を入れる
+
+**Production / Preview / Development の全部に設定してください。**
+
+うちはこれを忘れて、プレビューデプロイで画像まわりが軒並み500になりました。「本番では動くのにプレビューだと壊れている」という状態は、レビューのときに一番いらない混乱を招きます。
+
+## よくある質問（FAQ）
+
+### Q. API Routeを挟むと遅くなりませんか？
+
+1回目は確かに遅くなります。バケットから取ってから返すためです。
+
+ただ`s-maxage`を効かせておけば、**2回目以降はCDNが返します。** OGP画像は同じURLに繰り返しアクセスが来る性質なので、キャッシュがよく効きます。実測でも体感できる遅さにはなりませんでした。
+
+### Q. 均一アクセス制御（Uniform bucket-level access）はオンでいいですか？
+
+オンにしています。オブジェクト単位のACLを使わない構成なので、**むしろオンのほうが事故りません。**
+
+オフにしていると、うっかり1オブジェクトだけ公開してしまう操作ができてしまいます。「公開しない」と決めたなら、公開する手段自体を塞いでおくほうが安全です。
+
+### Q. バケットのリージョンはどこにしましたか？
+
+`ASIA-NORTHEAST1`（東京）です。読み出すのはVercel上の関数なので、**関数の実行リージョンと合わせる**のが基本になります。
+
+関数の実行リージョンについては別記事に書きました。
+
+<RichLink
+  url="https://moldspoon.jp/blog/posts/vercel-changed-region-to-tokyo"
+  icon='ri-earth-line'
+  title="Vercelのデプロイリージョンを東京に変更した話"
+  subtitle="レスポンスがどれくらい変わるかを実測しています。"
+  targetBlank={true}
+/>
+
+### Q. あとから公開バケットに変えたくなったら？
+
+戻すのは簡単ですが、**一度公開したら取り消せません。** 公開中に取得されたURLは、非公開に戻したあとも「誰かの手元にある」状態です。
+
+だから最初の設計で閉じておくほうが安いと考えました。開けるのはいつでもできます。
+
+## まとめ
+
+- **バケットは非公開のまま**、アプリのAPI Routeを配信口にする
+- クローラーは認証できないが、**サーバーが代わりに認証すれば済む**
+- 配信口では**IDの形式検証と拡張子のホワイトリスト**を必ず入れる
+- `HEAD`を通し、**`Cache-Control`でCDNに持たせる**
+- OGPに**署名付きURLは向かない**（有効期限とURLの不安定さ）
+- 認証情報は**base64も受け付ける**。`require(変数)`ではなく`fs`で読む
+- 環境変数は**Preview環境にも入れる**
+
+<span className="hoso">「公開ACLを付ける」以外の選択肢を最初に検討しておく</span>と、後から締め直す作業をせずに済みます。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
