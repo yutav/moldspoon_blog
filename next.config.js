@@ -36,26 +36,15 @@ const nextConfig = {
   },
   basePath: '/blog', // basePathを空に設定
   assetPrefix: '/blog',
-  async rewrites() {
-    return [
-      {
-        source: "/blog",
-        destination: "/blog/blog",
-      },
-      {
-        source: "/blog/api/:path*",
-        destination: "/api/:path*",
-      },
-      {
-        source: "/blog/images/:query*",
-        destination: '/_next/image/:query*'
-      },
-      {
-        source: "/blog/_next/:path*",
-        destination: "/_next/:path*",
-      },
-    ]
-  },
+  // rewrites は置いていない。basePath: '/blog' を設定すると source / destination に
+  // 自動で basePath が付くため、かつてここにあった 4 本は全て /blog/blog/... 宛に
+  // なっており 1 本も効いていなかった（ビルドマニフェスト上も /blog/blog →
+  // /blog/blog/blog と展開されていた）。
+  // そもそも basePath が同じ役割を果たしている:
+  //   API      /blog/api/*        → pages/api/*
+  //   アセット  /blog/_next/*      → .next/*
+  //   画像最適化 /blog/_next/image  → next/image
+  // 追加するときは basePath が二重に付くことを前提に書くか、basePath: false を使う。
 
   pageExtensions: ['jsx', 'js', 'mdx', 'md', 'ts', 'tsx'],
   generateEtags: false,
