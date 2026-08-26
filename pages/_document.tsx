@@ -72,6 +72,19 @@ class BlogDocument extends Document {
       `,
             }}
           />}
+          {/*
+            自社ヒートマップ「みんヒー」の計測タグ（匿名の座標データのみ・公開前提）。
+            本体サイト（moldspoon.jp）と同じドメインなので、サイトIDも同じ spoontools を使う。
+            ブログ配下のページがそのまま Spoon Tools! のヒートマップに合流する。
+            プライバシーポリシー（/blog/privacy）の「ヒートマップ計測について」が計測対象。
+          */}
+          {isProductionSite && (
+            <Script
+              src="https://heatmap.moldspoon.jp/tag.js"
+              data-site="spoontools"
+              strategy="afterInteractive"
+            />
+          )}
         </body>
       </Html>
     )
