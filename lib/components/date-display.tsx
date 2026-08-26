@@ -9,33 +9,32 @@ export interface DateDisplayProps {
 
 const DateDisplay: React.FC<DateDisplayProps> = ({ date, updateDate, pageView }) => {
 
-  const d = useMemo(() => new Date(date), [])
-  if (`${d}` === 'Invalid Date') return null
-
-  const views = useMemo(() => `${pageView !== undefined && pageView > 0 ? pageView : "-"} ${Configs.isJa() ? 'PV' : 'views'}`, [pageView])
-
-  const publishString = d.getFullYear() + "年"
-    + (d.getMonth() + 1).toString().padStart(2, "0") + "月"
-    + d.getDate().toString().padStart(2, "0") + "日"
-    + " " + d.getHours().toString().padStart(2, "0") + ":"
-    + d.getMinutes().toString().padStart(2, "0")
-
-  let updateString
-  let ud
-  if (updateDate) {
-    ud = useMemo(() => new Date(updateDate), [])
-    if (`${ud}` === 'Invalid Date') return null
-
-    updateString = ud.getFullYear() + "年"
-      + (ud.getMonth() + 1).toString().padStart(2, "0") + "月"
-      + ud.getDate().toString().padStart(2, "0") + "日"
-      + " " + ud.getHours().toString().padStart(2, "0") + ":"
-      + ud.getMinutes().toString().padStart(2, "0")
+  const format = (value: string) => {
+    const t = new Date(value)
+    if (`${t}` === 'Invalid Date') return null
+    return t.getFullYear() + "年"
+      + (t.getMonth() + 1).toString().padStart(2, "0") + "月"
+      + t.getDate().toString().padStart(2, "0") + "日"
+      + " " + t.getHours().toString().padStart(2, "0") + ":"
+      + t.getMinutes().toString().padStart(2, "0")
   }
+
+  // updateDate 側の useMemo を if の中で呼んでいたためフックの規則に反していた。
+  // updateDate の有無が違う記事で同じ位置のコンポーネントが再利用されると、
+  // レンダーごとにフックの数が変わる。早期 return も useMemo より前にあった。
+  // 呼び出しを条件分岐の外へ出し、常に同じ数・同じ順で呼ぶ形にする。
+  const publishString = useMemo(() => format(date), [date])
+  const updateString = useMemo(() => (updateDate ? format(updateDate) : null), [updateDate])
+  const views = useMemo(
+    () => `${pageView !== undefined && pageView > 0 ? pageView : "-"} ${Configs.isJa() ? 'PV' : 'views'}`,
+    [pageView],
+  )
+
+  if (!publishString) return null
 
   return (
     <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 m-0">
-      {updateDate ? (
+      {updateString ? (
         <>
           <i className="ri-restart-line"></i>&nbsp; {updateString}
         </>

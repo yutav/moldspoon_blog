@@ -142,7 +142,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
     childrenHtml = renderToString(children);
   }
 
-  const inDetailPage = useMemo(() => meta && meta.title, [])
+  // 依存配列が空の useMemo にしていたため、同じ Layout が使い回されると
+  // 詳細ページ判定が最初の値のまま固定される（一覧に戻っても詳細用の描画が残る）。
+  // 判定は meta を見るだけで十分に軽いので、毎レンダー求める。
+  const inDetailPage = !!(meta && meta.title)
 
   const router = useRouter()
   // window.location から取るとサーバー側が空になり、og:url が初期HTMLから消えるうえ
