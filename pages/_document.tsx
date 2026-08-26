@@ -4,6 +4,23 @@ import { CssBaseline } from '@geist-ui/core'
 import flush from 'styled-jsx/server'
 import Script from 'next/script'
 
+/*
+  テーマをファーストペイントより前に確定させる。
+
+  next-themes が差し込むスクリプトは ThemeProvider の位置、つまり <body> の先頭に出る。
+  <head> は既に解析済みで、<body> のクラス（dark:bg-black 等）は html.dark が付くまで
+  ライト側で解決されるため、フルリロードのたびに一瞬白く光る（ダークで見ていると顕著）。
+  同じ判定を <head> 内の同期スクリプトで先に済ませ、next-themes には同じ結論を
+  なぞらせる。storageKey / attribute は next-themes の既定値に合わせてある。
+*/
+const THEME_SCRIPT = `(function(){try{
+var e=localStorage.getItem('theme');
+var d=document.documentElement;
+var dark=e==='dark'||((!e||e==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+d.classList[dark?'add':'remove']('dark');
+d.style.colorScheme=dark?'dark':'light';
+}catch(err){}})();`
+
 class BlogDocument extends Document {
   static async getInitialProps(ctx: DocumentContext) {
     const initialProps = await Document.getInitialProps(ctx)
@@ -24,7 +41,10 @@ class BlogDocument extends Document {
   render() {
     return (
       <Html lang={BLOG.language}>
-        <Head />
+        <Head>
+          {/* 描画前にテーマを確定させる。詳細は THEME_SCRIPT のコメント */}
+          <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        </Head>
         <body className="bg-white lg:bg-gray-100 dark:bg-black lg:dark:bg-gray-900 text-black dark:text-white">
           <Main />
           <NextScript />
