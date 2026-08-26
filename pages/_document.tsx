@@ -21,6 +21,16 @@ d.classList[dark?'add':'remove']('dark');
 d.style.colorScheme=dark?'dark':'light';
 }catch(err){}})();`
 
+/*
+  計測タグを読み込んでよい環境か。ローカル開発と Vercel のプレビューでは読み込まない。
+  これまで無条件に読み込んでいたため、ローカルで開いたぶんが本番の GA4 に入っていた。
+  NODE_ENV だけで見ると Vercel のプレビューも production になるので素通りする。
+  本体サイト（moldspoon.jp）側と同じ判定にしてある。
+*/
+const isProductionSite =
+  process.env.NODE_ENV === 'production' &&
+  process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview'
+
 class BlogDocument extends Document {
   static async getInitialProps(ctx: DocumentContext) {
     const initialProps = await Document.getInitialProps(ctx)
@@ -48,7 +58,7 @@ class BlogDocument extends Document {
         <body className="bg-white lg:bg-gray-100 dark:bg-black lg:dark:bg-gray-900 text-black dark:text-white">
           <Main />
           <NextScript />
-          <Script
+          {isProductionSite && <Script
             async={true}
             id="gtm"
             strategy="afterInteractive"
@@ -61,7 +71,7 @@ class BlogDocument extends Document {
       })(window,document,'script','dataLayer','${BLOG.googleAnalytics}');
       `,
             }}
-          />
+          />}
         </body>
       </Html>
     )
