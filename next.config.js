@@ -66,6 +66,10 @@ const nextConfig = {
   },
   experimental: {
     appDir: true,
+    // ブラウザバックでスクロール位置を戻す。Pages Router の既定は「常に先頭」で、
+    // 一覧の下のほうから記事を開いて戻ると毎回いちばん上に飛ばされる。
+    // リンクを踏んだときに先頭へ行くのは従来どおりで、戻るときだけ位置を復元する。
+    scrollRestoration: true,
   },
   redirects() {
     return [];
