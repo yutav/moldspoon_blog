@@ -55,6 +55,27 @@ txtレコードを押して編集画面に行ってみました。
 
 の両方で、サービスが正常に動くかを動作確認して、作業が完了しました。
 
+追加したTXTレコードが実際に引けるようになったかは、下記のツールでブラウザからそのまま確認できます。
+`dig`が使えない環境や、外から見えているかを確かめたいときに便利です。
+
+<RichLink
+  url="https://moldspoon.jp/tools/dns-lookup"
+  icon='ri-global-line'
+  title="DNSレコード一括チェッカー | Spoon Tools!"
+  subtitle="A・CNAME・MX・TXTなどのレコードをまとめて確認できる無料Webツールです。"
+  targetBlank={true}
+/>
+
+SPF・DKIM・DMARCのTXTレコードを追加した場合は、書式まで含めて診断できるツールもあります。
+
+<RichLink
+  url="https://moldspoon.jp/tools/mail-security"
+  icon='ri-mail-check-line'
+  title="メールセキュリティ診断（SPF/DKIM/DMARC） | Spoon Tools!"
+  subtitle="ドメインを入れるだけで、メール認証用のTXTレコードの設定内容を診断できる無料Webツールです。"
+  targetBlank={true}
+/>
+
 ### まとめ
 
 <span className="hoso">ドキュメントに当たるのはとても重要ですが、先に動かしてみた方が答えが出ることもあります。</span>

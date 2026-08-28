@@ -139,6 +139,17 @@ export const options: NextAuthOptions = {
 prisma-adapterは**next-authをインストールするだけではダメで、別途ライブラリをインストールする必要があります。** 
 ご不明の方は前述の参考記事のなかで手順をご確認ください。
 
+上記の`secret`に渡す`NEXTAUTH_SECRET`には、推測できない十分な長さのランダム文字列を入れます。
+`openssl rand -base64 32`で作るのが定番ですが、手元にコマンドが無いときはブラウザでも生成できます。
+
+<RichLink
+  url="https://moldspoon.jp/tools/randomcode"
+  icon='ri-key-2-line'
+  title="ランダム文字列発行 | Spoon Tools!"
+  subtitle="桁数と個数を指定するだけで、ランダム文字列をまとめて発行できる無料Webツールです。"
+  targetBlank={true}
+/>
+
 #### ログイン/ログアウトボタンを実装する
 
 `src/components/Common/LoginLogoutButton.tsx`に
@@ -263,6 +274,18 @@ APIの利用が必要な私のユースケースでは実用性がない**こと
 
 現在日本語で書かれているポストではそこまで実用に突っ込んだ記事がなかったため、今回私の方で
 取り上げてみようと思った次第です。
+
+なお、`token`に値は入っているが中身が期待と違う、というケースもあります。
+その切り分けには、JWTをデコードしてペイロードを直接見るのが手早いです。
+
+<RichLink
+  url="https://moldspoon.jp/tools/jwt"
+  icon='ri-shield-keyhole-line'
+  title="JWTデコーダー | Spoon Tools!"
+  subtitle="JWTを貼り付けるだけで、ヘッダー・ペイロード・有効期限を確認できる無料Webツールです。"
+  targetBlank={true}
+/>
+
 
 #### ここで問題が起きた
 
