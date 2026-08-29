@@ -4,7 +4,7 @@ import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib
 export const meta = {
   title: '【CSSハック】マーカーで引いた装飾をアニメーションで動くようにする',
   date: '2023-12-06T07:10:23.000Z',
-  updateDate: '2023-12-17T15:23:00.000Z',
+  updateDate: '2026-08-29T00:00:00.000Z',
   tags: [
     'Tips',
     '初級者向け',
@@ -76,16 +76,6 @@ export const meta = {
 ```
     <span className="futo">太くしようとすれば、このようにします。</span>
 
-色や角度を変えながら`linear-gradient`の値を作りたいときは、プレビューを見ながら生成できるツールもあります。
-
-<RichLink
-  url="https://moldspoon.jp/tools/gradient"
-  icon='ri-palette-line'
-  title="CSSグラデーションメーカー | Spoon Tools!"
-  subtitle="色と位置を指定して、linear-gradientのCSSをその場で生成できる無料Webツールです。"
-  targetBlank={true}
-/>
-
 ### アニメーションを追加
 
 さて、このような整理の中で、上記の**hoso**というクラスにアニメーションを追加していきます。
@@ -118,6 +108,25 @@ export const meta = {
 
 しかし、上記では**背景画像を元々下のほうの「60%」描画するとしていたものを、0%~100%に変化させる** という指定になり、
 左から右に色をつけるようなグラデーションが描けず中途半端になってしまいました。
+
+## 【2026年8月追記】宣伝: 新ツール「CSSグラデーションメーカー」を作りました！
+
+本記事の公開から2年半、弊社のWebツール集 Spoon Tools! に**CSSグラデーションメーカー**を追加しました。
+
+この記事で扱った`linear-gradient(transparent 60%, #FBB92F 60%)`のような値を、
+色と位置をつまみで動かしながら、プレビューを見て作れます。
+マーカーの太さを変えたい・色を差し替えたいというときに、数値を当てずっぽうで書き換えて
+リロードする手間がなくなります。
+
+<RichLink
+  url="https://moldspoon.jp/tools/gradient"
+  icon='ri-palette-line'
+  title="CSSグラデーションメーカー | Spoon Tools!"
+  subtitle="色と位置を指定して、linear-gradientのCSSをその場で生成できる無料Webツールです。"
+  targetBlank={true}
+/>
+
+よろしければ使ってみてください。
 
 ## まとめ
 
