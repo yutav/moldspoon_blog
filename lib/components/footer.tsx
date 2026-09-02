@@ -48,6 +48,14 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = () => {
         <NextLink aria-label="privacy" href="/privacy">
           プライバシーポリシー
         </NextLink>
+        {/*
+          別サイト（regional-lab.moldspoon.jp）への導線。
+          他社を調べて書く内容なので、自社サービスとしては前に出さず、
+          フッターの末尾に置いている。
+        */}
+        <a aria-label="regional-lab" href="https://regional-lab.moldspoon.jp" {...externalProps}>
+          非上場地方企業の研究室
+        </a>
       </div>
 
       <p className="copyright">© MoldSpoon Inc.</p>
