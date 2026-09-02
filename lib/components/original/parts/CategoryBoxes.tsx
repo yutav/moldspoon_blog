@@ -1,3 +1,4 @@
+import { basePath } from 'lib/utils'
 import CategoryBox from './CategoryBox'
 
 // トップ（/blog）と /blog/top の2ページで同じものを出しているので、
@@ -15,11 +16,16 @@ const CategoryBoxes: React.FC<unknown> = () => {
     // 4つの箱が横に散らばって間延びする
     <div className="mt-2 md:mt-6 mb-8 md:mb-12 px-0 py-4 w-full max-w-3xl mx-auto
       grid grid-cols-4 gap-x-2 md:gap-x-6 lg:gap-x-12 gap-y-6 justify-items-center">
+      {/*
+        画像のパスには baseUrl（ホストを含む絶対URL）ではなく basePath を使う。
+        next/image に絶対URLを渡すと外部画像の扱いになり、images.domains に
+        載っていないホストで配信したとき「Invalid src prop」で500になる。
+      */}
       {CATEGORIES.map(category => (
         <CategoryBox
           key={category.title}
           url={category.url}
-          imageUrl={process.env.baseUrl + category.image}
+          imageUrl={basePath + category.image}
           title={category.title}
         />
       ))}

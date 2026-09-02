@@ -73,3 +73,23 @@ export const getTagColor = (tag: string) => {
 
   return bgText
 }
+/**
+ * ローカル画像のパスに前置する basePath（このブログでは "/blog"）。
+ *
+ * env の baseUrl はホストを含む絶対URL（本番なら https://moldspoon.jp/blog）。
+ * これを next/image の src に前置すると外部画像の扱いになり、
+ * next.config.js の images.domains に載っていないホストで配信したときに
+ * 「Invalid src prop」で500になる（LAN内のIPで開いて確認したときに踏んだ）。
+ *
+ * next/router の useRouter().basePath でも取れるが、このブログは
+ * experimental.appDir が有効で App Router 側では Pages Router が
+ * マウントされておらず「NextRouter was not mounted」で落ちる。
+ * そのため env の値からパス部分だけを切り出して使う。
+ */
+export const basePath = (() => {
+  try {
+    return new URL(process.env.baseUrl || '').pathname.replace(/\/$/, '')
+  } catch {
+    return ''
+  }
+})()

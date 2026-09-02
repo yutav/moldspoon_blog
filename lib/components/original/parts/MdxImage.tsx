@@ -4,6 +4,7 @@ import styles from '../../../../styles/mdximage.module.css';
 import 'react-image-lightbox/style.css'; // Lightboxのスタイルをインポート
 import Lightbox from 'react-image-lightbox';
 import { useIsMobile } from 'hooks/useIsMobile';
+import { basePath } from 'lib/utils';
 
 interface Prop {
   addClass?: string;
@@ -20,13 +21,13 @@ interface Prop {
 const MdxImage: React.FC<Prop> = ({ addClass, month, image, alt, width, height, classStr, annotation, isHalf }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { isMedium } = useIsMobile()
-  const baseUrl = process.env.baseUrl || ''; // ベースURLを適切に設定する必要があります
+
 
   let imageUrl;
   if (month) {
-    imageUrl = `${baseUrl}/posts/images/${month}/${image}`;
+    imageUrl = `${basePath}/posts/images/${month}/${image}`;
   } else {
-    imageUrl = `${baseUrl}/posts/images/${image}`;
+    imageUrl = `${basePath}/posts/images/${image}`;
   }
 
   const openLightbox = () => {

@@ -1,0 +1,241 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'UIの配色で自分が決められるのは、色ではなく「役割の数」だった。既製テーマ165種を並べて分かったこと',
+  date: '2026-09-03T09:00:00.000Z',
+  tags: [
+    'Blog',
+    '初級者向け',
+    '試してみた',
+    'フロントエンド',
+    'CSS',
+    'サイトデザイン'
+  ],
+  description: 'Bootswatch・jQuery UI ThemeRoller・daisyUI・shadcn/ui・GitHub Primer など8つのオープンソースから既製テーマを165種類集めて、役割ごとの色の割り当てを横断で見比べられるツールを作りました。並べてみたら、雰囲気がまるで違うテーマでも成功・注意・エラーの色相は9割方一致していて、逆に「面を何段持つか」はテーマごとにバラバラでした。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+配色を決めるとき、私はいつも既存のデザインシステムのパレットを見に行きます。Tailwind の色一覧を開いて、blue-500 はこれか、600 だと少し暗いな、という具合です。
+
+ただ、これをやっていて毎回引っかかることがありました。<span className="hoso">パレットを見ても「その色をどこに使うのか」は何も書いていない</span>のです。
+
+blue-500 が何色かは分かる。でもそれを画面の背景にするのか、ボタンにするのか、リンクの文字にするのかは、こちらが決めなければならない。素材は手に入るのに、使い方が手に入らない。
+
+そこで思い出したのが、jQuery UI の ThemeRoller でした。
+
+## ThemeRoller は何を決めていたのか
+
+2000年代後半に jQuery UI を触ったことがある方なら、ThemeRoller で作られた既製テーマを覚えているかもしれません。`ui-lightness`、`redmond`、`dark-hive`、`vader`。あのオレンジ色のヘッダーは、当時の管理画面でよく見かけました。
+
+あれはパレットではなく、**完成したテーマ**でした。「ヘッダーの背景はこの色、ボタンの通常時はこの色、マウスを乗せたときはこの色」まで決まっている。つまり、私が欲しかった「使い方」のほうを配っていたわけです。
+
+だとしたら、ああいう既製テーマを集めて横に並べれば、配色の決め方そのものを比べられるのではないか。そう思って作ったのがこのツールです。
+
+<RichLink
+  url="https://moldspoon.jp/tools/ui-themes"
+  icon='ri-palette-line'
+  title="UIテーマの配色カタログ | Spoon Tools!"
+  subtitle="8つのオープンソースの既製テーマ165種類を、実際の画面の形で見比べられます。"
+  targetBlank={true}
+/>
+
+## 集めたもの
+
+オープンソースで、かつ「最初から用意されているテーマ」を配布しているものを集めました。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>プロジェクト</th>
+      <th style={thStyle}>テーマ数</th>
+      <th style={thStyle}>どういうものか</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>Bootswatch</td>
+      <td style={tdStyle}>26</td>
+      <td style={tdStyle}>Bootstrap 用の既製テーマ集。2012年から続いている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>jQuery UI ThemeRoller</td>
+      <td style={tdStyle}>25</td>
+      <td style={tdStyle}>今回の出発点。当時のWebアプリの配色がそのまま残っている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>daisyUI</td>
+      <td style={tdStyle}>35</td>
+      <td style={tdStyle}>Tailwind 用。dracula や nord のような有名配色も入っている</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Pico CSS</td>
+      <td style={tdStyle}>38</td>
+      <td style={tdStyle}>主要色だけを差し替えた色違いが19色ぶん、それぞれ明暗の対つき</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>shadcn/ui</td>
+      <td style={tdStyle}>16</td>
+      <td style={tdStyle}>近年のWebサービスの見た目の標準になりつつあるもの</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>GitHub Primer</td>
+      <td style={tdStyle}>14</td>
+      <td style={tdStyle}>GitHub の画面そのもの。高コントラスト版と色覚配慮版つき</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Fluent UI</td>
+      <td style={tdStyle}>7</td>
+      <td style={tdStyle}>Microsoft のもの。Windows や Teams の配色</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Catppuccin</td>
+      <td style={tdStyle}>4</td>
+      <td style={tdStyle}>エディタから広まって、今はWebのUIにも使われている</td>
+    </tr>
+  </tbody>
+</table>
+
+色の値は公式サイトの表を書き写したのではなく、各プロジェクトが npm で配布しているパッケージから機械的に取り出しています。写し間違いが起きないのと、どのバージョンの色なのかを特定できるからです。
+
+ただ、色を並べただけでは結局「どこに使う色か」が伝わりません。なので<span className="hoso">テーマの色だけでミニ画面を組み立てて、その形で並べる</span>ようにしました。ヘッダー、本文、一段沈めた面、ボタン、状態を表す4色。全部そのテーマの色で塗られています。
+
+## 並べてみたら、予想が外れた
+
+作る前、私はこう思っていました。「テーマごとに配色は自由に決めているのだから、165も並べればさぞかしバラバラだろう」と。
+
+半分外れました。
+
+**バラバラどころか、ある部分はほとんど一致していたのです。**
+
+成功・注意・エラーを表す色。これを集計してみると、雰囲気がまるで違うテーマ同士でも色相がほぼ揃っていました。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>役割</th>
+      <th style={thStyle}>色相の中央値</th>
+      <th style={thStyle}>その帯に収まる割合</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>成功</td>
+      <td style={tdStyle}>160°（緑）</td>
+      <td style={tdStyle}>85%</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>注意</td>
+      <td style={tdStyle}>38°（黄〜橙）</td>
+      <td style={tdStyle}>92%</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>エラー</td>
+      <td style={tdStyle}>345°（赤）</td>
+      <td style={tdStyle}>90%</td>
+    </tr>
+  </tbody>
+</table>
+
+シアン一色で作られた `cyborg` も、パステル調の `cupcake` も、Microsoft の Teams も、エラーは赤いのです。ここは誰も動かしていません。動かすと意味が伝わらなくなるからで、実質的に選択肢がない場所だと言えます。
+
+では、テーマごとに違っていたのはどこか。
+
+**面（サーフェス）を何段持つか**でした。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>プロジェクト</th>
+      <th style={thStyle}>面の段数</th>
+      <th style={thStyle}>持っている役割</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>Bootswatch</td>
+      <td style={tdStyle}>1</td>
+      <td style={tdStyle}>画面の背景だけ</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>shadcn/ui</td>
+      <td style={tdStyle}>3</td>
+      <td style={tdStyle}>背景 / カード / 控えめな面</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>daisyUI</td>
+      <td style={tdStyle}>3</td>
+      <td style={tdStyle}>base-100 / 200 / 300</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Catppuccin</td>
+      <td style={tdStyle}>6</td>
+      <td style={tdStyle}>base / mantle / crust / surface0〜2</td>
+    </tr>
+  </tbody>
+</table>
+
+Bootswatch は画面の背景を1色しか持っていません。カードを浮かせたければ、影や枠線で表現するか、自分で色を作ることになります。一方 Catppuccin は6段持っていて、どの深さの面にどの色を置くかが先に決まっています。
+
+<span className="hoso">同じ「テーマ」と呼ばれているのに、決めている項目の数がまるで違う。</span>これが165種類を並べて一番驚いたことでした。
+
+つまり、配色で本当に自由なのは色ではなく、**役割をいくつ持つか**のほうだったわけです。色相は共通で動かせない。動かせるのは設計の粒度のほう。私は逆だと思っていました。
+
+## 既製テーマは、配色見本ではなく設計図
+
+そう考えると、既製テーマの使い方も変わってきます。
+
+`dracula` の色をそのまま持ってきても、自分のサービスの配色にはなりません。有名なテーマをそのまま使えば見た目が既存のものと似るだけです。参考にすべきなのは色ではなく、<span className="hoso">その色をどの役割に何個割り当てているか</span>のほう。
+
+- 面は何段必要か（カードを浮かせたいなら最低3段）
+- 主要色に対して「その上に置く文字色」を対で持つか（daisyUI と shadcn/ui はこれを徹底しています）
+- 状態色を独自に決めるか、緑・黄・赤のままにするか（後者が無難です）
+
+この3つを先に決めてしまえば、あとは自分の色を流し込むだけになります。冒頭に書いた「パレットを見ても使い方が分からない」という引っかかりは、色を見ていたから解けなかったのだと、165種類を並べてようやく腑に落ちました。
+
+役割の名前を見れば、使い方は書いてあったのです。
+
+<RichLink
+  url="https://moldspoon.jp/tools/ui-themes"
+  icon='ri-palette-line'
+  title="UIテーマの配色カタログ | Spoon Tools!"
+  subtitle="165テーマの役割ごとの色を、ミニ画面の形で見比べられます。明暗の絞り込みとコントラスト比の判定つき。"
+  targetBlank={true}
+/>
+
+素材のほうのカラースケールを探している場合は、こちらに 11種類・1952色をまとめてあります。
+
+<RichLink
+  url="https://moldspoon.jp/tools/ui-colors"
+  icon='ri-color-filter-line'
+  title="デザインシステムのカラーパレット一覧 | Spoon Tools!"
+  subtitle="Tailwind・Material・Bootstrap など11種類のパレットを横断で比較。手元の色に近い階調も探せます。"
+  targetBlank={true}
+/>
+
+<br />
+
+---
+
+<p style={{ fontSize: '0.85rem', opacity: 0.75 }}>
+色相の集計は、各テーマが「成功・注意・エラー」に相当する役割へ割り当てている色をHSLに変換し、彩度の極端に低いものを除いて数えたものです。掲載しているテーマはすべてMITライセンスのオープンソースで、値は各プロジェクトが配布しているパッケージから取得しています。本ツールは各プロジェクトと関係のある公式のものではありません。
+</p>
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
