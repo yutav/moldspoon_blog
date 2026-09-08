@@ -76,20 +76,17 @@ const Toc: React.FC<Prop> = ({ body }) => {
       <div className="toc-box p-2 rounded-xl break-words">
         <div className="rounded-xl bg-white dark:bg-black px-4 py-3">
           <p className="pt-0 font-bold">< i className="ri-list-unordered mr-1"></i>目次</p>
-          <div className="toc-scroll">
-            {renderToc(tocObject)}
-          </div>
+          {renderToc(tocObject)}
         </div>
       </div>
       <style jsx>{`
         .toc-box {
           background: linear-gradient(0deg, rgb(195,34,175,1) 0%, rgba(253,187,45,1) 100%)
         }
-        /* 見出しが多い記事だとサイドバーが画面より高くなり、下の広告まで届かなくなる */
-        .toc-scroll {
-          max-height: 45vh;
-          overflow-y: auto;
-        }
+        /* 目次自体の高さは制限しない。以前は下に置いた広告まで届かなくなるので
+           45vh で切っていたが、広告をサイドバー最上部へ移し、はみ出しは
+           サイドバー側（.sidebar-inner）でまとめてスクロールさせるようにした。
+           ここでも切ると入れ子のスクロール領域になって扱いづらい */
         .toc-list li {
           padding: 0px;
         }

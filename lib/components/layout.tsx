@@ -208,11 +208,11 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
             CNET のように本文の隣の「列」としてまとめ、両方で同じ骨格にする。 */}
         <aside className="mt-2 ml-6 right-container hidden xl:block">
           <div className="sidebar-inner">
-            {inDetailPage && <Toc body={childrenHtml} />}
-
-            <SearchBox />
-
-            <div className="bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 px-5 py-3"
+            {/* 広告はサイドバーの一番上に置く。目次・検索の下に置いていたときは、
+                目次(最大45vh)＋検索＋広告(最低400px)でサイドバーが縦1270px相当を
+                超え、それより低い画面では広告の下側が常に見切れていた。
+                sticky なので中身が伸びても位置が動かない一番上が確実に見える。 */}
+            <div className="bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-gray-700 px-5 py-3 mb-4"
               style={{ minHeight: '400px', maxHeight: "550px" }}
             >
               <p className='text-xs py-1 my-0 text-gray-600 dark:text-gray-300'>Ads:</p>
@@ -225,6 +225,10 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                 />
               )}
             </div>
+
+            {inDetailPage && <Toc body={childrenHtml} />}
+
+            <SearchBox />
           </div>
         </aside>
 
@@ -246,10 +250,14 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
         }
 
         /* サイドバーは本文と一緒にスクロールし、追い越したら止まる。
-           position: fixed と違って本文やフッターと重ならない */
+           position: fixed と違って本文やフッターと重ならない。
+           中身が画面より高くなると sticky ではみ出した分に永久に届かなくなるので、
+           画面の高さで頭打ちにして内側でスクロールさせる */
         .sidebar-inner {
           position: sticky;
           top: 1rem;
+          max-height: calc(100vh - 2rem);
+          overflow-y: auto;
         }
 
         .container {
