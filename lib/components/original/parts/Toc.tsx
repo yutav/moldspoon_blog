@@ -76,24 +76,19 @@ const Toc: React.FC<Prop> = ({ body }) => {
       <div className="toc-box p-2 rounded-xl break-words">
         <div className="rounded-xl bg-white dark:bg-black px-4 py-3">
           <p className="pt-0 font-bold">< i className="ri-list-unordered mr-1"></i>目次</p>
-          <div className="toc-scroll">
-            {renderToc(tocObject)}
-          </div>
+          {renderToc(tocObject)}
         </div>
       </div>
       <style jsx>{`
         .toc-box {
           background: linear-gradient(0deg, rgb(195,34,175,1) 0%, rgba(253,187,45,1) 100%)
         }
-        /* 見出しが多い記事だとサイドバーが画面より高くなる。サイドバー全体に
-           overflow を付けると常にスクロールバーが出てしまうので、高さが可変の
-           目次だけを画面の残り高さに収める。
-           残り = 画面高 - 上余白(16) - 広告(約430) - 検索(約176) - 目次の枠(約80)。
-           画面が低いときに目次が潰れきらないよう 120px を下限にする */
-        .toc-scroll {
-          max-height: max(120px, calc(100vh - 700px));
-          overflow-y: auto;
-        }
+        /* 目次には高さの上限も overflow も付けない。見出しが多い記事では
+           サイドバー（sticky）が画面より高くなり、一番下の検索ボックスは
+           見切れることがあるが、それは許容する。
+           スクロール領域を作ると、サイドバーに付ければ常時スクロールバーが出て、
+           目次に付ければ入れ子のスクロールになる。広告は最上部にあるので、
+           はみ出しても影響を受けるのは検索だけ。 */
         .toc-list li {
           padding: 0px;
         }
