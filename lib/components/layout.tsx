@@ -251,13 +251,12 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
 
         /* サイドバーは本文と一緒にスクロールし、追い越したら止まる。
            position: fixed と違って本文やフッターと重ならない。
-           中身が画面より高くなると sticky ではみ出した分に永久に届かなくなるので、
-           画面の高さで頭打ちにして内側でスクロールさせる */
+           ここに overflow を付けるとサイドバー全体がスクロール領域になり、
+           意図しないスクロールバーが出る。はみ出し得るのは高さが可変の目次だけ
+           なので、抑えるのは目次側（.toc-scroll）でやる */
         .sidebar-inner {
           position: sticky;
           top: 1rem;
-          max-height: calc(100vh - 2rem);
-          overflow-y: auto;
         }
 
         .container {
