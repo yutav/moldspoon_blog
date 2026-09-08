@@ -1,0 +1,387 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Claude Code web からオンラインDB 5つに繋いでみた。サンドボックスで使えるのは「443の上で喋れるDB」だけ',
+  date: '2026-09-18T11:00:00.000Z',
+  tags: [
+    'Blog',
+    '試してみた',
+    '経験者向け',
+    'Claude Code',
+    'Supabase',
+    'Neon',
+    'Turso',
+    'Postgres',
+    'SQLite',
+    'サーバレス',
+    'バックエンド'
+  ],
+  description: 'Supabase・Neon・Turso・Prisma Postgres・Cloudflare D1 に、Claude Code on the web のサンドボックスから接続を試しました。IPv6 が無い、外向き TCP は 443 だけ、WebSocket も通らない。psql が空のエラーを返す罠、同じ接続文字列のまま HTTP ドライバに差し替えると動く話、各サービスの2026年9月時点の無料枠をまとめます。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+「オンラインで完結する DB を比較したい」と思って調べ始めたのですが、料金と無料枠を並べただけの表なら公式ページを見れば済みます。そこで、<span className="hoso">Claude Code on the web（claude.ai/code）のサンドボックスから実際に5つの DB へ繋いでもらい、何が起きたかを記録する</span>という形にしました。
+
+Claude Code web を選んだのは、手元の環境を一切汚さずに済むからです。ブラウザからリポジトリを指定すると Anthropic 側の VM が立ち上がり、そこで作業が進みます。結果は git に push されるので、後から読み返せます。
+
+対象はこの5つです。
+
+<ul>
+  <li><strong>Supabase</strong>（Postgres）</li>
+  <li><strong>Neon</strong>（Postgres）</li>
+  <li><strong>Turso</strong>（SQLite 互換の libSQL）</li>
+  <li><strong>Prisma Postgres</strong>（Postgres）</li>
+  <li><strong>Cloudflare D1</strong>（SQLite）</li>
+</ul>
+
+PlanetScale は 2024 年 4 月に無料枠が消えて最安でも月 5 ドルかかるので、今回は外しました。Xata も無料枠を廃止して 14 日間のクレジットだけになっているので外しています。
+
+結果から言うと、**DB の性能や設定ではなく、サンドボックスのネットワークが全部を決めました。**
+
+## 先に結論
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>サービス</th>
+      <th style={thStyle}>TCP 直結</th>
+      <th style={thStyle}>HTTP ドライバ</th>
+      <th style={thStyle}>テーブル作成→INSERT→SELECT</th>
+      <th style={thStyle}>SELECT 5回の中央値</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>Supabase</td>
+      <td style={tdStyle}>×</td>
+      <td style={tdStyle}>○（到達のみ）</td>
+      <td style={tdStyle}>× DDL を打てない</td>
+      <td style={tdStyle}>513ms（往復のみ）</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Neon</td>
+      <td style={tdStyle}>×</td>
+      <td style={tdStyle}>○</td>
+      <td style={tdStyle}>○ 唯一完走</td>
+      <td style={tdStyle}>62ms</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Turso</td>
+      <td style={tdStyle}>×（WebSocket）</td>
+      <td style={tdStyle}>○</td>
+      <td style={tdStyle}>○</td>
+      <td style={tdStyle}>184ms</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Prisma Postgres</td>
+      <td style={tdStyle}>×</td>
+      <td style={tdStyle}>－（経路が無い）</td>
+      <td style={tdStyle}>×</td>
+      <td style={tdStyle}>全滅</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Cloudflare D1</td>
+      <td style={tdStyle}>－（経路が無い）</td>
+      <td style={tdStyle}>未検証</td>
+      <td style={tdStyle}>未検証</td>
+      <td style={tdStyle}>－</td>
+    </tr>
+  </tbody>
+</table>
+
+サンドボックスの正体は次の3点で、5つの結果はすべてこれで説明がつきます。
+
+<ol>
+  <li><strong>IPv6 スタックが無い。</strong> <code>/proc/net/if_inet6</code> が存在せず、IPv6 アドレスへ connect すると <code>EAFNOSUPPORT</code> で蹴られる</li>
+  <li><strong>外向き TCP は 443 だけ。</strong> 5432 と 6543 は SYN が黙って捨てられる（拒否ではなく無応答）。同じ IP の 443 は 1〜3ms で開く</li>
+  <li><strong>WebSocket の Upgrade が通らない。</strong> 443 は開いているのに <code>wss://</code> は HTTP 400 で返る</li>
+</ol>
+
+つまり<span className="hoso">「HTTPS(443) の上に載っている DB だけが使える」</span>という一言に集約されます。Neon と Turso が動いたのは HTTP ドライバを持っていたからで、Prisma Postgres が全滅したのは TCP しか無いからです。
+
+## 試した環境と手順
+
+### リポジトリと環境変数
+
+実験用に小さなリポジトリを1つ作り、`CLAUDE.md` に手順を書いておきました。Claude Code web はセッション開始時にリポジトリの `CLAUDE.md` を読むので、指示はここに集約できます。
+
+<CodeBlockTitle title="CLAUDE.md（抜粋）" />
+
+```text
+## サービスごとに同じ手順
+
+1. 環境変数が届いているか確認する。値は表示しない
+2. TCP 直結を試す。Postgres 系は psql と pg、SQLite 系は該当プロトコル
+3. HTTP ベースのドライバに切り替えて試す
+4. items(id, body, created_at) テーブルを作り、3 行 INSERT して SELECT する
+5. 接続確立から SELECT 完了までを 5 回計測する
+6. RESULT.md の冒頭に「結論：TCP ○/×、HTTP ○/×、最短〜最長 ms」を書く
+
+## やらないこと
+
+- 秘密情報を echo しない、ファイルに書かない、コミットしない
+- 失敗を隠すために手順を飛ばさない
+```
+
+接続文字列は Claude Code web の**クラウド環境**に入れます。claude.ai/code の入力欄の左にある環境名をクリックすると「クラウド環境を追加」があり、そこで次を設定しました。
+
+<ul>
+  <li><strong>ネットワークアクセス: Full。</strong> 既定の Trusted はパッケージレジストリと GitHub と主要クラウド SDK しか通しません。DB のホストに出るには Full か Custom が必要です</li>
+  <li><strong>環境変数:</strong> .env 形式でそのまま貼れます。ただし画面に平文で表示されるので、実験が終わったら鍵は作り直したほうがよいです</li>
+</ul>
+
+### 最初の詰まり：セットアップスクリプトはリポジトリの外で走る
+
+環境には「セットアップスクリプト」欄があり、`npm install` と書いておきました。すると初回セッションがこれで落ちました。
+
+```
+Setup script failed with exit code 254.
+
+npm error code ENOENT
+npm error path /home/user/package.json
+npm error enoent Could not read package.json
+```
+
+<span className="hoso">セットアップスクリプトの作業ディレクトリは `/home/user` で、クローンされたリポジトリの中ではありません。</span> `cd` を自分で書くか、そもそもスクリプトを空にしてプロンプト側で「まず `npm install` を実行して」と言うほうが確実です。今回は後者にしました。
+
+### 先に手元からのベースラインを取っておいた
+
+サンドボックスで失敗したとき「鍵が悪いのか、環境が悪いのか」を切り分けるため、同じ接続文字列で手元の Mac から先に繋いでおきました。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>接続</th>
+      <th style={thStyle}>手元の Mac</th>
+      <th style={thStyle}>サンドボックス</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style={tdStyle}>Supabase 直結（IPv6）</td><td style={tdStyle}>OK 65ms</td><td style={tdStyle}>到達不能（IPv6 なし）</td></tr>
+    <tr><td style={tdStyle}>Supabase Session pooler（IPv4）</td><td style={tdStyle}>OK 153ms</td><td style={tdStyle}>到達不能（5432 閉）</td></tr>
+    <tr><td style={tdStyle}>Neon TCP</td><td style={tdStyle}>OK 1379ms（初回）</td><td style={tdStyle}>到達不能（5432 閉）</td></tr>
+    <tr><td style={tdStyle}>Neon HTTP</td><td style={tdStyle}>OK 589ms</td><td style={tdStyle}>OK 53〜261ms</td></tr>
+    <tr><td style={tdStyle}>Turso HTTP</td><td style={tdStyle}>OK 211ms</td><td style={tdStyle}>OK 158〜643ms</td></tr>
+    <tr><td style={tdStyle}>Prisma direct</td><td style={tdStyle}>OK 174ms</td><td style={tdStyle}>到達不能（5432 閉）</td></tr>
+    <tr><td style={tdStyle}>Prisma pooled</td><td style={tdStyle}>OK 186ms</td><td style={tdStyle}>到達不能（5432 閉）</td></tr>
+  </tbody>
+</table>
+
+手元では全部成功しているので、**失敗はすべてサンドボックス側の制約**だと言い切れます。この一手間が無いと、あとで「Supabase の設定が悪いのでは」と延々疑うことになります。
+
+## サービスごとの記録
+
+### Supabase：psql のエラーが空文字で返ってくる
+
+いちばん時間を溶かしたのがここです。同梱の psql（16.13）で直結すると、こうなります。
+
+```
+$ psql "$SUPABASE_DB_URL" -c 'select version();'
+psql: error:
+```
+
+`psql: error:` の後ろに**何も無い**。62ms で返っているのでネットワーク待ちもしていません。原因が分からないので、Node の生ソケットで同じアドレスに繋いでエラーコードを取りに行きました。
+
+```
+$ node -e '...net.connect(5432, "2406:da14:311:...")...'
+ERROR code=EAFNOSUPPORT errno=-97 syscall=connect
+```
+
+`EAFNOSUPPORT`（Address family not supported）。Supabase の直結ホスト `db.xxxx.supabase.co` は **AAAA レコードしか持たない IPv6 専用**で、サンドボックスには IPv6 スタックがありません。libpq は候補アドレスを1つも作れず、strerror に載せる errno も持たないまま抜けたので、エラー文が空になったようです。
+
+<span className="hoso">psql が黙ったら、Node の `net.connect` にエラーコードを吐かせる。</span> これが今回いちばんの教訓でした。
+
+IPv4 で繋がる Session pooler（`aws-0-ap-northeast-1.pooler.supabase.com`）に切り替えると、今度は別の理由で落ちます。
+
+```
+$ psql "$SUPABASE_DB_POOLER_URL" -c 'select version();'
+psql: error: connection to server at "aws-0-ap-northeast-1.pooler.supabase.com" (54.64.190.72), port 5432 failed: timeout expired
+```
+
+3アドレスとも 20 秒のタイムアウトを使い切っています。同じ IP の 443 は 2ms で開くので、5432 だけがポート単位で落とされている。直結は IPv6 が無いため、pooler はポートが塞がれているため。**理由が別々なのが厄介**でした。
+
+HTTP 経路（PostgREST）は届きます。
+
+```
+$ node -e '...createClient(SUPABASE_URL, SUPABASE_ANON_KEY).from("items").select()...'
+error={"code":"PGRST205","message":"Could not find the table 'public.items' in the schema cache"}
+```
+
+`PGRST205` は PostgREST が返したアプリケーションエラーで、リクエストが Supabase まで届き、認証を通り、スキーマを引いた上で「そんなテーブルは無い」と答えています。経路は生きている。
+
+ただし、そこから先に進めません。PostgREST は DDL を実行できず、anon key で DDL を代行する RPC も置かれていません。**DDL を打てる TCP は塞がれ、開いている HTTP には DDL の権限が無い。** この噛み合わせで詰みました。
+
+回避策は「テーブルは手元から作る」です。手元の Mac から `CREATE TABLE` して 3 行入れたのですが、直後に anon key で読むとまだ 404 のままでした。
+
+```
+$ psql "$SUPABASE_DB_URL" -c "NOTIFY pgrst, 'reload schema'"
+```
+
+<span className="hoso">PostgREST はスキーマをキャッシュしているので、SQL で作ったテーブルは `NOTIFY pgrst, 'reload schema'` を打つまで REST から見えません。</span> これを打った数秒後に 200 で 3 行返るようになりました。細かい話ですが、知らないと「作ったのに無いと言われる」で止まります。
+
+### Neon：同じ接続文字列を HTTP ドライバに渡すだけで動く
+
+Neon は5つの中で唯一、テーブル作成から SELECT まで完走しました。
+
+TCP はほかと同じく 5432 で無応答です。
+
+```
+$ psql "$NEON_DATABASE_URL" -c 'select version();'
+psql: error: connection to server at "ep-xxxx-pooler.us-east-2.aws.neon.tech" (3.143.47.40), port 5432 failed: timeout expired
+```
+
+ここで `@neondatabase/serverless` に切り替えます。**接続文字列は TCP のときと同じものをそのまま渡します。**
+
+```javascript
+import { neon } from '@neondatabase/serverless'
+const sql = neon(process.env.NEON_DATABASE_URL)
+await sql`select version()`
+// OK 1107ms :: PostgreSQL 18.6 on aarch64-unknown-linux-gnu
+```
+
+同じ文字列、同じホスト、同じ資格情報で、TCP はタイムアウト、HTTP は 1.1 秒で成功。`neon()` は 5432 ではなく HTTPS の SQL-over-HTTP エンドポイントに投げるので、443 しか開いていない環境でも通ります。DDL もそのまま通りました。
+
+```
+CREATE TABLE ok 499ms
+INSERT ok 46ms
+SELECT ok 91ms
+```
+
+5回計測の中央値は **62ms**。リージョンは us-east-2（オハイオ）で、Neon に東京リージョンは今もありません（アジアはシンガポールとシドニーのみ）。それでも一番速かったのは、HTTP 経路が軽いのと、初回以外はスケールゼロからの起動を挟まないためです。手元からの初回 TCP が 1.4 秒かかっているのは、その起動が乗っています。
+
+Neon の始め方は以前まとめています。
+
+<RichLink
+url="https://moldspoon.jp/blog/posts/how-to-start-neon"
+moldspoonIcon={true}
+title="サーバレスPostgreSQL「Neon」の使い方。東京リージョンの有無・無料枠・接続まで"
+subtitle="サーバレスPostgreSQLのNeonについて、プロジェクト作成からTablePlusでの接続までを解説します。"
+targetBlank={true}
+/>
+
+### Turso：「通った」ときこそ何で通ったかを疑う
+
+Turso は Postgres ではないので、TCP 直結に相当するのは Hrana over WebSocket（`wss://`）です。まず環境変数の `libsql://` の URL をそのまま渡すと、あっさり通りました。
+
+```
+OK 987ms :: sqlite 3.47.0
+```
+
+ここで「Turso は素通し」と書きかけたのですが、`libsql://` が実際にどのトランスポートを使ったのかを確認していません。スキームを明示して分けました。
+
+```
+https:// 明示   OK  922ms
+libsql:// 既定  OK  164ms
+wss:// 明示     NG  HRANA_WEBSOCKET_ERROR: Unexpected server response: 400
+```
+
+さらに `createClient(...).constructor.name` を見ると、`libsql://` は `HttpClient` を返していました。<span className="hoso">最初に通ったのは初めから HTTP 経路で、WebSocket は試せていなかった。</span> `wss://` を明示すると 400 です。TLS ハンドシェイク後に HTTP ステータスが返っているので、ポートが閉じているのではなく、手前のプロキシで WebSocket の Upgrade が落ちていると読めます。
+
+HTTP 経路ではテーブル作成まで完走しました。1回目は自分のミスで落ちています。
+
+```
+create table items (... created_at text not null default (datetime("now")))
+SQLITE_UNKNOWN: default value of column [created_at] is not constant
+```
+
+SQLite は二重引用符を**識別子**として解釈するので、`"now"` がカラム名扱いになって DEFAULT が定数でないと拒否されました。シングルクォートに直して通過。5回計測の中央値は **184ms**、リージョンは東京です。近いのに Neon より遅いのは、SQLite の HTTP 経路が1リクエストごとに重いためのようで、ここは深追いしていません。
+
+### Prisma Postgres：逃げ道が一本も無い
+
+Prisma Postgres が配る接続文字列は、pooled も direct も TCP の `postgres://` だけです。
+
+```
+$ psql "$PRISMA_DIRECT_URL" -c 'select version();'
+psql: error: connection to server at "db.prisma.io" (66.135.15.127), port 5432 failed: timeout expired
+```
+
+同じ IP の 443 は 1ms で開くので、ポート制限であることは確定です。Accelerate 経由の HTTP 接続（`prisma+postgres://`）は、単体の Accelerate が 2026 年 12 月 1 日に終了予定で、新しいコンソールでは配られませんでした。
+
+<span className="hoso">TCP が唯一の経路で、それが塞がれた時点で打つ手が無い。</span> 5サービス中、ここだけです。DB として悪いわけではなく、この環境との相性の問題です。
+
+### Cloudflare D1：資格情報が無く未検証
+
+D1 は Workers バインディングと REST API しか無いので、もともと HTTP 専用です。相性は一番よいはずですが、今回はアカウント ID とトークンを用意できず、手順1で止まりました。`api.cloudflare.com` 自体には届いていて、認証ヘッダなしで叩くと 400 が返ります。経路は生きているので、鍵があれば通る見込みが高いのですが、叩いた記録は無いので○とは書きません。
+
+## 詰まったポイントを整理する
+
+<ol>
+  <li><strong>psql が空のエラーを返したら IPv6 を疑う。</strong> Supabase 直結は IPv6 専用。IPv6 の無い環境からは libpq がエラー文すら持てない。Node の <code>net.connect</code> で <code>EAFNOSUPPORT</code> を見るまで分からなかった</li>
+  <li><strong>timeout と ENOTFOUND と HTTP 400 は別物。</strong> timeout はポートが塞がれている。ENOTFOUND はアドレスファミリが無い。400 や 401 や PGRST205 は<strong>サーバまで届いている</strong>。最後を「失敗」と一括りにすると誤診する</li>
+  <li><strong>「通った」ときこそ何で通ったか確認する。</strong> <code>libsql://</code> は黙って HTTP に落ちる。試したつもりの経路を試せていないことがある</li>
+  <li><strong>開いている経路と必要な権限が噛み合わないことがある。</strong> Supabase は HTTP が開いていても anon key では DDL に届かない。テーブルは手元から作り、<code>NOTIFY pgrst, 'reload schema'</code> を忘れない</li>
+  <li><strong>セットアップスクリプトはリポジトリの外で走る。</strong> <code>npm install</code> だけ書くと ENOENT で落ちる</li>
+</ol>
+
+## 各サービスのいま（2026年9月時点）
+
+料金は変わるので、使う前に公式で確かめてください。今回の実験と関係する範囲だけ書きます。
+
+<ul>
+  <li><strong>Supabase:</strong> 無料は 500MB・2プロジェクト。<strong>1週間操作が無いとプロジェクトが一時停止</strong>される。東京リージョンあり。直結は IPv6 専用で、IPv4 からは Session pooler を使う</li>
+  <li><strong>Neon:</strong> Databricks 買収後に値下げ。無料は 0.5GB / 100 CU 時間・プロジェクト 100 個まで。<strong>東京リージョンは無い</strong>。HTTP ドライバが公式にある</li>
+  <li><strong>Turso:</strong> 無料は 100 DB・5GB・月 5 億行読み取り。東京にレプリカあり。HTTP と WebSocket の両経路</li>
+  <li><strong>Prisma Postgres:</strong> 無料枠あり、東京（ap-northeast-1）あり。接続は TCP のみ</li>
+  <li><strong>Cloudflare D1:</strong> 無料は 5GB・日 500 万行読み / 10 万行書き。<strong>2026 年 9 月 1 日から上限超過でクエリがエラーになる</strong>ように変わった</li>
+  <li><strong>PlanetScale:</strong> 無料枠なし。最安の単一ノードで月 5 ドル</li>
+</ul>
+
+SQLite 系をサーバレスで使う話は、こちらにも追記しています。
+
+<RichLink
+url="https://moldspoon.jp/blog/posts/sqlite-serverless-idea"
+moldspoonIcon={true}
+title="SQLiteのメリット・デメリットまとめ。向いている用途・向かない用途を公式ドキュメントから整理する"
+subtitle="SQLiteはサーバーレスで軽量、個人開発や組み込み用途に強いRDBMSです。Cloudflare D1やlibSQLなど2026年現在の動向も追記しました。"
+targetBlank={true}
+/>
+
+## よくある質問（FAQ）
+
+### Q. Claude Code web から普通の Postgres に繋げますか？
+
+TCP の 5432 では繋げません。外向きに開いているのは 443 だけなので、Neon の `@neondatabase/serverless` のような HTTP 経由のドライバを持つサービスに限られます。Supabase なら PostgREST、Turso なら HTTP モードが該当します。
+
+### Q. ネットワークアクセスを Full にしても駄目でしたか？
+
+今回の結果はすべて Full での話です。Full にしても、通るのは HTTPS プロキシを経由する 443 だけで、任意ポートの TCP と WebSocket は通りませんでした。ドメインの制限が外れるだけで、プロトコルの制限は残ります。
+
+### Q. 手元では動くのにサンドボックスで動かないとき、どこから見ればいいですか？
+
+同じ IP の 443 に `net.connect` してみてください。443 が数 ms で開いて目的のポートが無応答なら、ポート制限です。名前解決が `ENOTFOUND` で、Node の `dns.resolve6` では引けるなら、IPv6 の問題です。エラーが HTTP ステータスで返っているなら、ネットワークではなく認証か権限の問題です。
+
+### Q. 一番おすすめはどれですか？
+
+この環境に限れば Neon です。接続文字列を1本持っておけば、TCP でも HTTP でも同じ文字列で繋がるので、環境の制約に振り回されません。東京リージョンが要るなら Turso か Supabase になりますが、Supabase は anon key だけでは DDL が打てない点を先に押さえておく必要があります。
+
+## まとめ
+
+<ul>
+  <li>Claude Code web のサンドボックスは<strong>IPv6 が無く、外向き TCP は 443 のみ、WebSocket も通らない</strong></li>
+  <li>使えるのは <strong>HTTP ドライバを持つ DB</strong> だけ。Neon と Turso は動き、Prisma Postgres は経路が無く全滅</li>
+  <li>Supabase は HTTP が届いても anon key では DDL に届かない。<strong>テーブルは手元から作り、<code>NOTIFY pgrst, 'reload schema'</code> を打つ</strong></li>
+  <li><strong>psql が空のエラーを返したら IPv6</strong>。<strong>libsql:// は黙って HTTP に落ちる</strong>。「通った」ときも何で通ったかを見る</li>
+  <li>手元からのベースラインを先に取っておくと、失敗を環境側に切り分けられる</li>
+</ul>
+
+失敗したコマンドと出力は、すべて実験リポジトリの RESULT.md にそのまま残してあります。1週間放置したあとに同じ手順をもう一度流して、Supabase の一時停止と D1 の日次上限がどう出るかは追記する予定です。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
