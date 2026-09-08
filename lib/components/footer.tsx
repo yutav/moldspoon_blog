@@ -54,7 +54,7 @@ const Footer: React.FC<React.PropsWithChildren<FooterProps>> = () => {
           フッターの末尾に置いている。
         */}
         <a aria-label="regional-lab" href="https://regional-lab.moldspoon.jp" {...externalProps}>
-          非上場地方企業の研究室
+          非上場地方企業研究室
         </a>
       </div>
 
