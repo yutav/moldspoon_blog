@@ -1,0 +1,246 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'Claude Code のトークン使用量をブラウザだけで集計するツールを作った。~/.claude のログを素朴に足すと2〜3倍に膨らむ',
+  date: '2026-09-22T03:00:00.000Z',
+  tags: [
+    'Blog',
+    '試してみた',
+    '経験者向け',
+    'AI',
+    'Claude',
+    'Claude Code',
+    'Javascript',
+    'フロントエンド',
+    '個人開発'
+  ],
+  description: 'Claude Code が ~/.claude/projects に残す JSON Lines のセッションログを、ブラウザに放り込むだけでトークン使用量・キャッシュ読み出し率・時間帯・モデル構成をグラフにするツールを作りました。1回の応答が複数行に分かれて全行に同じ usage が入る、model が synthetic の疑似行、ユーザー行に混ざるツール結果、thinking は output の内数、といったログ形式の罠と、数百MBを固まらずに読む実装をまとめます。'
+}
+
+## はじめに
+
+Claude Code を定額プランで使っていると、自分がどれだけトークンを消費しているのか、普段は意識しません。請求は月額で固定なので、見る必要がないからです。
+
+ただ、ふと気になるときがあります。1日に何回やり取りしているのか、夜中に使いすぎていないか、プロンプトキャッシュはちゃんと効いているのか。そして「もし API の従量課金でこれをやっていたら、いくらだったのか」。
+
+Claude Code はセッションのログを全部ローカルに残しています。それを読めば分かるはずです。すでに `ccusage` という CLI ツールがあって、ターミナルで集計できます。ただ、私が欲しかったのは少し違いました。
+
+- インストールせずに、その場で見たい
+- ログを外部に送りたくない（プロンプトの本文が丸ごと入っているので）
+- 数字の表ではなく、時間帯や曜日のグラフで眺めたい
+- SNS に貼れる1枚の画像が欲しい
+
+なので、ブラウザにフォルダを放り込むだけで動くツールを作りました。
+
+<RichLink
+url="https://moldspoon.jp/tools/claude-code-usage"
+moldspoonIcon={true}
+title="Claude Code 使用量ビューア｜トークン消費をグラフで可視化（送信なし）"
+subtitle="~/.claude/projects の .jsonl を読み込み、トークン使用量・キャッシュ読み出し率・時間帯・モデル構成・プロジェクト別の内訳をグラフ化します。集計はすべてブラウザ内で完結します。"
+targetBlank={true}
+/>
+
+作るのは半日で済むと思っていたのですが、<span className="hoso">ログ形式の罠を4つ踏んで、素朴に足した数字が全部間違っていました。</span>この記事はその記録です。
+
+## ログはどこに、どんな形で残っているか
+
+場所は macOS と Linux なら `~/.claude/projects`、Windows なら `%USERPROFILE%\.claude\projects` です。作業ディレクトリごとにフォルダが分かれ、セッション1本につき1つの `.jsonl` ファイルが置かれています。
+
+1行が1つの JSON で、ざっくりこういう形です。
+
+```json
+{"type":"assistant","timestamp":"2026-09-10T02:14:31.512Z","sessionId":"...","cwd":"/Users/me/dev/foo",
+ "message":{"id":"msg_01ABC...","model":"claude-opus-4-8","role":"assistant",
+   "content":[{"type":"tool_use","id":"toolu_01XYZ...","name":"Bash","input":{...}}],
+   "usage":{"input_tokens":3,"cache_creation_input_tokens":1204,"cache_read_input_tokens":48812,"output_tokens":95}}}
+```
+
+集計に使うのは `type` / `timestamp` / `sessionId` / `cwd` と、`message` の中の `id` / `model` / `usage` / `content[].type` / `content[].name` / `content[].id` だけです。<span className="hoso">プロンプトの本文、ツールの入出力、ファイルの中身は一切読まない</span>ように、集計ロジックには DOM も fetch も置いていません。読むフィールドを冒頭に列挙して、それ以外に触らない構造にしています。
+
+手元の `~/.claude/projects` は全体で数百 MB、1ファイルで 30MB を超えるものもありました。ここも後で効いてきます。
+
+## 罠1：1回の応答が複数行に分かれ、全行に同じ usage が入っている
+
+最初の実装は、`type` が `assistant` の行の `usage` を全部足すだけでした。出てきた総トークン数を `ccusage` と比べると、2〜3倍ありました。
+
+ログを眺めると理由が分かります。Claude Code は、1回のアシスタント応答を **content block ごとに別々の行** として書き出します。テキストで1行、ツール呼び出しで1行、また別のツール呼び出しで1行。そして、<span className="hoso">そのどの行にも、同じ `message.id` と同じ `usage` が入っています。</span>
+
+つまり3ブロックの応答なら、同じ使用量が3回書かれている。素朴に足せば3倍です。
+
+対処は `message.id` で重複排除するだけです。
+
+<CodeBlockTitle title="lib/claudeCodeUsage.ts（抜粋）" />
+
+```ts
+const key = typeof message.id == "string" && message.id != ""
+  ? message.id
+  : (typeof entry.requestId == "string" ? entry.requestId : "")
+if (key == "") return
+if (seenMessages.has(key)) { duplicates++; return }
+seenMessages.add(key)
+```
+
+`message.id` が無い行には `requestId` があるので、それをフォールバックにしています。捨てた行数は `duplicates` として数えておき、画面の下に「読み込んだ行のうち N 行は重複でした」と出すようにしました。異常ではなくログ形式の都合だと、使う人にも分かるようにするためです。
+
+## 罠2：ツールの使用回数は、メッセージ単位で消すと減る
+
+罠1を直したら、今度は「よく使われたツール」の回数が少なくなりました。
+
+1つの応答で `Read` と `Grep` を同時に呼ぶと、`tool_use` ブロックは2つあります。それが2行に分かれて書かれ、`message.id` は同じ。<span className="hoso">メッセージ単位で重複排除すると、2つ目のブロックが落ちます。</span>
+
+かといって行単位で数えると、今度は罠1で同じブロックが二重に数えられる。
+
+答えは、ツールの回数だけは **content block の `id`**（`toolu_...` で始まる値）で重複排除することでした。トークン使用量は `message.id`、ツール回数は block の `id`。数える単位が違うので、キーも別に持ちます。
+
+```ts
+for (const block of message.content) {
+  if (block.type != "tool_use") continue
+  if (block.id && seenToolUses.has(block.id)) continue
+  if (block.id) seenToolUses.add(block.id)
+  toolCounts.set(block.name, (toolCounts.get(block.name) ?? 0) + 1)
+}
+```
+
+順番にも注意が要ります。この処理は、罠1の `seenMessages` の判定 **より前** に走らせないといけません。後に置くと、重複行にしか現れないブロックが数えられなくなります。
+
+## 罠3：model が `<synthetic>` の行は API 呼び出しではない
+
+集計するとモデル構成の中に `<synthetic>` という名前のモデルが出てきました。当然そんなモデルはありません。
+
+これはエラーなどのときに Claude Code 自身が生成する疑似メッセージで、実際の API 呼び出しではないようです。`usage` はほぼゼロですが、メッセージ数には効いてくるので、`model` が `<synthetic>` か空文字の行は除外しました。
+
+## 罠4：「送ったメッセージ」に、自分が送っていないものが混ざる
+
+「自分が送ったプロンプトの数」を出そうとして、`type` が `user` の行を数えました。すると、打った覚えのない数になりました。
+
+`type: "user"` の行には、人間の入力以外に2種類のものが混ざっています。
+
+- **ツールの実行結果**。`toolUseResult` を持つ行で、Bash の出力などがここに入る
+- **システムが差し込む行**。`isMeta` が立っていて、ログのための挿入
+
+なので、この2つと `sourceToolUseID` を持つ行を外し、残りを `uuid` で重複排除したものを「送ったメッセージ」にしています。
+
+```ts
+if (entry.type == "user") {
+  if (entry.isMeta || entry.toolUseResult || entry.sourceToolUseID) return
+  if (seenPrompts.has(entry.uuid)) return
+  seenPrompts.add(entry.uuid)
+  prompts++
+}
+```
+
+## 細かい落とし穴：thinking は output の内数
+
+`usage` には `output_tokens_details.thinking_tokens` という項目があり、思考に使ったトークン数が入っています。これは **`output_tokens` に含まれている値** です。別枠として足すと二重計上になります。
+
+ツールでは「思考トークン」を表示しつつ、「出力トークンの内数です」と明記しました。総トークンの式は入力 + キャッシュ書き込み + キャッシュ読み出し + 出力で、thinking は足していません。
+
+## グラフにしたら、キャッシュ読み出しが98%で他が消えた
+
+日別の積み上げ棒グラフを描いたら、全部が1色になりました。キャッシュ読み出しが全体の 98% を占めていて、入力と出力が1ピクセルも描かれなかったのです。
+
+Claude Code はプロンプトキャッシュを多用するので、これ自体は正常です。むしろキャッシュ読み出し率が高いほど、従量課金なら安く済んでいることになります。
+
+ただ、日ごとの入力と出力の推移を見たいときには邪魔なので、グラフに「キャッシュ読み出しを含める」のチェックボックスを付けて、外せるようにしました。キャッシュ読み出し率は別途、次の式で1つの数字にしています。
+
+```
+キャッシュ読み出し率 = cacheRead / (input + cacheCreate + cacheRead)
+```
+
+## 数百 MB のログを、ブラウザを固めずに読む
+
+ここは形式の話ではなく実装の話です。
+
+ファイルを丸ごと `text()` で読んで `split("\n")` すると、30MB のファイルなら文字列と配列でその数倍のメモリを一気に使い、その間ブラウザが固まります。フォルダ全体の数百 MB を同時に読めば、タブが落ちることもあります。
+
+なので、`File.slice()` で **4MB ずつ** 読み、改行で切り出して、余りを次のチャンクへ持ち越す形にしました。1チャンク処理するごとに `setTimeout(resolve, 0)` で制御を返して、進捗バーを動かします。
+
+```ts
+const decoder = new TextDecoder("utf-8")
+let carry = ""
+for (let offset = 0; offset < file.size; offset += CHUNK) {
+  const buf = await file.slice(offset, offset + CHUNK).arrayBuffer()
+  const text = carry + decoder.decode(buf, { stream: true })
+  const lines = text.split("\n")
+  carry = lines.pop() ?? ""
+  for (const line of lines) addLine(line)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
+```
+
+`TextDecoder` の `stream: true` は外せません。日本語のプロンプトが多いログでは、<span className="hoso">マルチバイト文字がチャンクの境界でちょうど割れる</span>ことが普通に起き、これを付けないと文字化けした行が JSON として読めなくなります。
+
+フォルダごと放り込む側にも小さな罠がありました。
+
+- ドラッグ＆ドロップで `webkitGetAsEntry()` を使うとき、**`await` より前に呼ぶ**。イベント処理を抜けると取れなくなる
+- `createReader().readEntries()` は **一度に最大100件** しか返さない。空配列が返るまで繰り返す
+- 「フォルダを選択」ボタンは `<input type="file">` に `webkitdirectory` を付ける。React の型定義には無い属性なのでキャストが要る。無いと `.jsonl` を200個手で選ぶことになる
+
+## 金額の目安は「もし従量課金だったら」
+
+「従量課金だった場合の概算」も出しています。2026年9月時点の公開単価で、100万トークンあたり次の値を使いました。
+
+<ul>
+  <li><strong>Opus 系:</strong> 入力 15 ドル / 出力 75 ドル</li>
+  <li><strong>Sonnet 系:</strong> 入力 3 ドル / 出力 15 ドル</li>
+  <li><strong>Haiku 系:</strong> 入力 1 ドル / 出力 5 ドル</li>
+</ul>
+
+キャッシュ書き込みは入力の 1.25 倍、キャッシュ読み出しは入力の 0.1 倍です。Claude Code の使い方だと大半がキャッシュ読み出しなので、素の入力単価で計算するより1桁安い金額になります。
+
+モデル名は `claude-opus-4-8` / `opus` / `claude-opus-5` のように表記が混在しているので、完全一致ではなく小文字化した部分一致で判定しています。単価が分からないモデルは概算から外して、「○○ は概算に含めていません」と画面に出します。
+
+<span className="hoso">この金額は請求額ではありません。</span>定額プランなら実際の支払いは月額のままで、あくまで「同じことを API でやったら」の目安です。ツール上にもそう書いています。
+
+## 共有用の画像に、プロジェクト名は入れない
+
+期間・総トークン・メッセージ数・稼働日数・連続稼働・キャッシュ率・直近30日のスパークライン・モデル構成の帯グラフを 640px 幅のカードにして、`html2canvas` で PNG に書き出せるようにしました。
+
+ここで意図的に外しているのが、**プロジェクト名とツール名** です。`cwd` の末尾はリポジトリ名そのものなので、画像を SNS に貼ると仕事の中身が漏れます。集計画面には出しますが、画像には入れません。
+
+もう1つ、書き出し対象の色は Tailwind のダークモード用クラスを使わず、実値で指定しています。閲覧者のテーマによって画像の見た目が変わるのを避けるためです。
+
+## よくある質問（FAQ）
+
+### Q. `ccusage` と数字が合わないのはなぜですか？
+
+集計対象の範囲と、重複の数え方の差です。特に罠1の `message.id` による重複排除をしているかどうかで、総トークンは2〜3倍変わります。このツールはメッセージ単位で1回だけ数え、`<synthetic>` の疑似メッセージも除外しています。それでも一致しないときは、読み込んだフォルダの範囲が違うことが多いです。
+
+### Q. ログを外部にアップロードしますか？
+
+しません。ファイルの読み込みと集計はブラウザ内の JavaScript で完結していて、サーバーへの送信も保存もありません。集計ロジックのファイルには `fetch` が1つも無い、という形で担保しています。
+
+### Q. 特定のプロジェクトだけ見たいときは？
+
+`~/.claude/projects` の中の、そのプロジェクトのサブフォルダだけを放り込んでください。フォルダ名は作業ディレクトリのパスをつなげたものなので、見れば分かります。フォルダ全体を読むより速く終わります。
+
+### Q. ログの形式が変わったらどうなりますか？
+
+壊れます。Anthropic の公式ツールではなく、ログ形式のドキュメントも公開されていないので、観察して分かった構造に依存しています。JSON として読めない行は読み飛ばして件数を出すようにしているので、急に「読み飛ばした行」が増えたら形式が変わったと思ってください。
+
+## まとめ
+
+- Claude Code のセッションログは `~/.claude/projects` に JSON Lines で残っている。ブラウザだけで読んで集計するツールを作った
+- **1回の応答が content block ごとに複数行に分かれ、全行に同じ `usage` が入る。** `message.id` で重複排除しないと2〜3倍に膨らむ
+- **ツールの使用回数は block の `id` で数える。** メッセージ単位で消すと2つ目以降のツール呼び出しが落ちる
+- `model` が `<synthetic>` の行は API 呼び出しではない。`type: "user"` の行にはツール結果とシステム挿入が混ざる
+- `thinking_tokens` は `output_tokens` の内数。足すと二重計上
+- 数百 MB を読むなら 4MB ずつ `slice` して `TextDecoder` の `stream: true` で境界を守る
+- 共有画像にプロジェクト名を入れない。金額は請求額ではなく「従量課金だったら」の目安
+
+「ログを足すだけ」のつもりで始めて、罠を踏むたびに集計を直すことになりました。形式が公開されていないログを扱うときは、まず既存ツールと突き合わせて、桁が合うまで疑ったほうがいいです。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
