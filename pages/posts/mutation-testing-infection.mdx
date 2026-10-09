@@ -1,0 +1,334 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'テストカバレッジは「通った行」しか数えていない。Mutation Testing（Infection）でテストの品質を測ってみた話',
+  date: '2026-10-09T18:00:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'プログラミング',
+    'PHP',
+    'Laravel',
+    'PHPUnit',
+    'テスト',
+    'Infection',
+    '品質',
+    '試してみた'
+  ],
+  description: 'カバレッジ90%のプロダクトで「このテストは本当にバグを捕まえるのか」が分からなくなり、Mutation Testing を試しました。Infection でコードにわざとバグ（ミュータント）を仕込み、テストが落ちるかを数える仕組み、出てきた「通るのに守っていない」テスト、CI に組み込むときの現実的な落としどころまで。'
+}
+
+意外に暖かい日が続いて、部屋のエアコンと電気代のグラフは高止まりで落ちません。<br />
+テストが通っているのに不安も落ちない[yuku_tas](https://twitter.com/yuku_tas)です。
+
+Hackerの皆様はいかがお過ごしでしょうか。
+
+## 経緯：テストの「量」は分かるのに「質」が分からない
+
+あるプロダクトで、テストの品質をどう測るかに悩んでいました。
+
+カバレッジは出ています。CI も緑です。
+でも、機能を直すたびに<span className="hoso">「このテスト、本当に守ってくれてるんだろうか」</span>という感触が消えない。
+
+カバレッジが示しているのは**「テスト実行中にその行が通ったか」**です。
+通った行の中で何かを確かめたかどうかは、数字に出ません。
+
+極端な一例を挙げてみます。EC サイトのシステムを例にとってみます。
+会員ランクに応じて割引を計算する `DiscountService` があるとして、
+そのテストがこう書かれていたら、カバレッジ100%に貢献すると思います。
+
+<CodeBlockTitle title="tests/Unit/DiscountTest.php（悪い例）" />
+
+```php
+public function test_discount(): void
+{
+    $service = new DiscountService();
+    $service->calculate(1000, 'GOLD');
+
+    $this->assertTrue(true);
+}
+```
+
+`calculate()` の中の行はすべて「通った」ことになります。
+でも計算結果が 0 円でも 1 億円でも、このテストは緑です。
+
+ここまで露骨なものは無くても、**「例外が出ないことだけ確かめている」「返り値の型だけ見ている」**テストは、
+長く育ったコードベースには必ず混ざっています。そしてカバレッジでは見分けられません。
+
+テストの「量」ではなく「質」を測る物差しが欲しい。そこで Mutation Testing を試しました。
+
+## Mutation Testing とは：わざとバグを仕込んで、テストが気づくか数える
+
+発想は単純です。
+
+- ソースコードに**機械的に小さなバグを仕込む**（`>` を `>=` に変える、`return true` を `return false` に変える、など）
+- その状態でテストを走らせる
+- **テストが落ちれば、そのバグはテストに守られている**（ミュータントを殺した＝killed）
+- **テストが通ってしまえば、そのバグは素通りする**（ミュータントが逃げた＝escaped）
+
+仕込んだバグのことを<span className="hoso">ミュータント（mutant）</span>、仕込む操作のことを<span className="hoso">ミューテーター（mutator）</span>と呼びます。
+
+「殺せたミュータントの割合」が **MSI（Mutation Score Indicator）** で、これがテストの質の指標になります。
+
+カバレッジが「テストが通った行の割合」なら、MSI は**「バグを入れたときにテストが落ちた割合」**。
+後者のほうが、私が知りたかったことに近い。
+
+### PHP なら Infection
+
+PHP では [Infection](https://infection.github.io/) がこの用途の定番です。
+PHPUnit・Pest（PHPUnit 互換で動く）・PhpSpec・Codeception に対応していて、PHP 8.3 以上で動きます。
+
+Infection が仕込むミュータントは、たとえばこんなものです（デフォルトで有効なものから抜粋）。
+
+| 種類 | 元のコード | 仕込まれるバグ |
+|---|---|---|
+| 境界条件 | `$a > $b` | `$a >= $b` |
+| 条件の反転 | `$a === $b` | `$a !== $b` |
+| 真偽値 | `return true;` | `return false;` |
+| 論理演算 | `$a && $b` | `$a \|\| $b` |
+| 増減 | `$i++` | `$i--` |
+| 整数リテラル | `7` | `6` と `8` |
+| 呼び出しの削除 | `$this->notify($user);` | （行ごと消える） |
+| 例外 | `throw new NotFound();` | `new NotFound();`（投げない） |
+| ループ | `foreach ($items as $i)` | `foreach ([] as $i)` |
+| 関数の素通し | `trim($value)` | `$value` |
+
+「`>` を `>=` にする」はまさに、人間が一番やらかす種類のバグです。
+それをテストが捕まえられるか、機械的に総当たりで確かめるわけです。
+
+## 入れて回す
+
+インストールは Composer で 1 行。カバレッジを取るので Xdebug か PCOV が必要です。
+
+```bash
+composer require --dev infection/infection
+```
+
+設定ファイルは `infection.json5`。最低限はこれだけです。
+
+<CodeBlockTitle title="infection.json5" />
+
+```json5
+{
+  "$schema": "vendor/infection/infection/resources/schema.json",
+  "source": {
+    "directories": ["app"],
+    "excludes": ["Console", "Providers"]
+  },
+  "logs": {
+    "text": "infection.log",
+    "html": "infection.html",
+    "summary": "infection-summary.log"
+  },
+  "mutators": {
+    "@default": true
+  },
+  "timeout": 20
+}
+```
+
+実行は、まず普通にテストを全部通してから（初期テストが落ちていると Infection は始まりません）、
+ミュータントごとにテストを回します。
+
+```bash
+vendor/bin/infection --threads=max --show-mutations
+```
+
+出力はこういう形で返ってきます（数字は説明用の例です）。
+
+<CodeBlockTitle title="実行結果の形（抜粋）" />
+
+```
+123 mutations were generated:
+      78 mutants were killed
+      31 mutants were not covered by tests
+      12 covered mutants were not detected
+       2 errors were encountered
+       0 time outs were encountered
+
+Metrics:
+         Mutation Score Indicator (MSI): 65%
+         Mutation Code Coverage: 75%
+         Covered Code MSI: 87%
+```
+
+3 つの数字の読み方はこうです。
+
+- **MSI**：全ミュータントのうち殺せた割合。カバーされていない部分は「殺せなかった」側に数える
+- **Mutation Code Coverage**：ミュータントのうち、そもそもテストが通る場所にいた割合。普通のカバレッジとほぼ同じ意味
+- **Covered Code MSI**：テストが通る場所のミュータントだけで見た、殺せた割合。**「書いたテストの質」はここ**
+
+私が見たかったのは最後の Covered Code MSI です。
+上の例なら、カバレッジ 75% のコードベースで、**テストが通っている場所に限っても、仕込んだバグの 13% が素通りしている**ことになります。
+緑の CI の裏で、この割合のバグが素通りする。それがカバレッジには出てこない数字です。
+
+## 出てきたもの：「通っているのに守っていない」テスト
+
+逃げたミュータントは `--show-mutations` と HTML レポートで 1 件ずつ diff が見られます。
+中身を見ていくと、パターンは 3 つに集約されました。
+
+### 1. 境界条件を片側しか試していない
+
+例を1つ作ります。「1回の購入が 1 万円以上なら 10% 引き」という、EC サイトによくある仕様です。
+コードはこれだけ。
+
+<CodeBlockTitle title="app/Services/DiscountService.php" />
+
+```php
+public function rate(int $amount): float
+{
+    if ($amount >= 10000) {
+        return 0.1;
+    }
+    return 0.0;
+}
+```
+
+<CodeBlockTitle title="逃げたミュータント" />
+
+```diff
+- if ($amount >= 10000) {
++ if ($amount > 10000) {
+```
+
+この関数のテストは「20,000 円なら割引あり」「5,000 円なら割引なし」の 2 ケースでした。
+どちらも通ります。カバレッジも 100% です。
+
+ところが**ちょうど 10,000 円のケースが無い**ので、`>=` が `>` に変わっても、どちらのテストも通ってしまいます。
+「1 万円ちょうどは割引されるのか」は仕様上いちばん揉めやすいところなのに、そこがテストに無かった。
+
+直すのは 1 行です。
+
+```php
+$this->assertSame(0.1, $service->rate(10000)); // 境界ちょうど
+```
+
+### 2. 「呼ばれたこと」を確かめていない
+
+次は注文の支払い処理です。注文を「支払い済み」にしたあと、お客さんに完了メールを送る、という流れがあります。
+
+<CodeBlockTitle title="逃げたミュータント" />
+
+```diff
+  $order->markAsPaid();
+- $this->notifier->send($order->customer, new PaidMail($order));
+  return $order;
+```
+
+通知の送信行がまるごと消えてもテストは緑でした。
+テストが見ていたのは「返り値の注文が paid になっているか」だけ。
+通知が飛ぶかどうかは、**モックを用意していたのに expects を書いていなかった**ために確かめられていなかった。
+
+### 3. 返り値の中身を見ていない
+
+最後は商品一覧を返す API です。配列を返す関数に、Infection はこんな変更を仕込みます。
+
+```diff
+- return count($items) > 1 ? array_slice($items, 0, 1) : $items;
+```
+
+これは Infection の `ArrayOneItem` というミューテーターで、配列を返す関数の返り値を**先頭 1 件だけ**にします。
+一覧を返す API のテストが「配列が返る」ことしか見ていなかったので、件数が 1 件に減っても通ってしまった。
+
+3 つとも、**カバレッジ上はその行は 100% 通っています。**
+通ってはいるけれど、守ってはいない。
+これが、カバレッジを眺めていて消えなかった不安の正体でした。
+
+## 運用に乗せるときの現実
+
+ここからは、入れてみて分かった落としどころです。
+
+### 遅い
+
+ミュータント 1 件につきテストを 1 回回すので、素朴にやると**テスト時間 × ミュータント数**です。
+
+計算してみると重さが分かります。テストが 1 周 30 秒、ミュータントが 1,000 件なら、直列で 500 分。
+Infection は該当ファイルを通るテストだけを選んで走らせるのでここまで悪くはなりませんが、
+それでも `--threads=max`（4 コア）で**数十分の桁**になります。
+毎回のプッシュで全部回すのは無理です。
+
+CI では **差分だけ**を回します。
+
+```bash
+vendor/bin/infection \
+  --threads=max \
+  --git-diff-lines \
+  --git-diff-base=origin/main \
+  --min-msi=80 \
+  --logger-github
+```
+
+`--git-diff-lines` を付けると、そのブランチで触った行にだけミュータントを仕込みます。
+`--min-msi` で下回ったら落とし、`--logger-github` で GitHub の PR に「この行のミュータントが逃げた」と注釈が付きます。
+
+全体を回すのは夜間のジョブか、週 1 回で十分でした。
+
+### 「殺せないミュータント」がある
+
+たとえばログ出力の行を消すミュータントは、テストで捕まえる価値がありません。
+`@infection-ignore-all` のアノテーションをクラスやメソッドに付けるか、`infection.json5` の `mutators` で
+`global-ignore` に書いて除外します。
+
+意味的に等価なミュータント（挙動が変わらない変更）も混ざるので、**100% を目指すのは間違い**です。
+（カバレッジというと100%を目指したくなりますけどね）
+
+逃げたミュータントを 1 件ずつ見て、「これは守るべき」「これは捨てる」を決めていくのが現実に即した運用となります。
+
+### 数字より diff を見る
+
+MSI の数字だけを KPI にすると、カバレッジと同じ道をたどります（数字を上げるためのテストが増える）。
+価値があるのは**逃げたミュータントの diff** のほうで、それが「ここにテストが無い」をコード行で指してくれます。
+
+私は最初の 1 週間、逃げたミュータントを毎朝 5 件ずつ見て、守るべきものにだけテストを足しました。
+数字は後からついてきます。
+
+## まとめ
+
+テストの質は、カバレッジでは測れない。カバレッジは「通った行」を数えているだけだから。
+
+これが Mutation テストに興味を持ったとっかかりでした。
+
+Mutation Testing は、**コードにバグを仕込んでテストが落ちるかを数える**ことで、
+「通っているのに守っていない」テストを具体的な行で見せてくれます。
+
+- PHP なら Infection。`composer require --dev infection/infection` と `infection.json5` で始められる
+- 見る数字は **Covered Code MSI**。「書いたテストの質」はここに出る
+- 逃げたミュータントは「境界」「呼ばれたことの確認」「返り値の中身」の 3 パターンに偏る
+- CI には `--git-diff-lines` で差分だけ。全体は夜間に
+- MSI 100% は目指さない。diff を見て、守るべきものにだけテストを足す
+
+テストが通っているのに消えなかった不安は、「何を確かめていないか」が見えた時点で消えました。
+物差しが手に入ると、不安は作業に変わります。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+## 参考リンク
+
+<RichLink
+  url="https://infection.github.io/guide/"
+  icon='ri-links-line'
+  title="Infection - Mutation Testing Framework"
+  subtitle="公式ガイド。MSI の定義、mutator の一覧、コマンドラインオプションはここが正本"
+  targetBlank={true}
+/>
+
+<RichLink
+  url="https://infection.github.io/guide/mutators.html"
+  icon='ri-links-line'
+  title="Mutators | Infection"
+  subtitle="デフォルトで有効な mutator の一覧。何がどう書き換わるかが表になっている"
+  targetBlank={true}
+/>
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
