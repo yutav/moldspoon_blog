@@ -14,7 +14,6 @@ import { useRouter } from "next/router"
 import { usePageCounter } from 'hooks/usePageCounter'
 import PrevNext from './original/parts/PrevNext'
 import Toc from './original/parts/Toc'
-import { renderToString } from 'react-dom/server';
 import GoogleAdsense from './original/parts/GoogleAdsense'
 import SearchBox from './original/parts/SearchBox'
 import DetailAds from './original/parts/DetailAds'
@@ -135,13 +134,6 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
   meta
 }: LayoutProps & typeof defaultProps) => {
 
-  let childrenHtml = '';
-
-  if (React.isValidElement(children)) {
-    // childrenがReact要素である場合のみrenderToStringを呼び出す
-    childrenHtml = renderToString(children);
-  }
-
   // 依存配列が空の useMemo にしていたため、同じ Layout が使い回されると
   // 詳細ページ判定が最初の値のまま固定される（一覧に戻っても詳細用の描画が残る）。
   // 判定は meta を見るだけで十分に軽いので、毎レンダー求める。
@@ -192,6 +184,11 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
                   1280px 未満では広告ゼロになっていた。通常フローで記事末尾に置き、
                   全画面幅で表示されるよう戻す */}
               <DetailAds />
+              {/* サイドバー（xl 以上）が無い幅では、右下のボタンから同じ目次を開く。
+                  目次は本文の見出しをマウント後に DOM から拾うので、ここに置くだけでよい */}
+              <div className="xl:hidden">
+                <Toc variant="mobile" />
+              </div>
             </>
           ) : (
             <div className="dynamic-content">
@@ -226,7 +223,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
               )}
             </div>
 
-            {inDetailPage && <Toc body={childrenHtml} />}
+            {inDetailPage && <Toc />}
 
             <SearchBox />
           </div>
@@ -253,7 +250,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
            position: fixed と違って本文やフッターと重ならない。
            ここに overflow を付けるとサイドバー全体がスクロール領域になり、
            意図しないスクロールバーが出る。はみ出し得るのは高さが可変の目次だけ
-           なので、抑えるのは目次側（.toc-scroll）でやる */
+           なので、抑えるのは目次側（Toc.tsx の .toc-nav が画面の残り高さに合わせる）でやる */
         .sidebar-inner {
           position: sticky;
           top: 1rem;
@@ -303,6 +300,16 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
           .container:not(.is-list) {
             max-width: 940px;
           }
+        }
+
+        /* 目次から飛んだとき・ハッシュ付きで開いたときに見出しが画面の上端に貼り付かないようにする */
+        .container :global(.detail-body h1),
+        .container :global(.detail-body h2),
+        .container :global(.detail-body h3),
+        .container :global(.detail-body h4),
+        .container :global(.detail-body h5),
+        .container :global(.detail-body h6) {
+          scroll-margin-top: 1rem;
         }
 
         .container :global(h1) {
