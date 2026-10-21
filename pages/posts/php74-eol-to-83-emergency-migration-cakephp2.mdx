@@ -1,0 +1,476 @@
+import { Layout } from 'lib/components'
+import { RichLink, RichList, RichListNoBox, CodeBlockTitle, MdxImage } from "lib/components/original/parts";
+
+export const meta = {
+  title: 'PHPの緊急セキュリティリリース当日に、EOLのPHP 7.4 + CakePHP 2の本番を一晩で8.3へ移した記録',
+  date: '2026-10-22T03:00:00.000Z',
+  tags: [
+    'Blog',
+    '経験者向け',
+    'PHP',
+    'CakePHP',
+    'Apache',
+    'インフラ',
+    'セキュリティ',
+  ],
+  description: 'CVSS 9.2の脆弱性2件が「今夜23時に修正版公開」と予告された日、本番はサポート切れのPHP 7.4とCakePHP 2.10.24でした。修正版が来ない7.4から、コミュニティフォークを使って8.3へ、サービスを止めずに移行した手順と、踏んだ落とし穴（remi同梱の設定、コメントアウトされたVirtualHost、WideImage、Notice→Warning格上げ、CentOS 7でのソースビルド）をまとめます。'
+}
+
+export const tableStyle = { borderCollapse: 'collapse', width: '100%', margin: '1.5rem 0', fontSize: '0.95rem' }
+export const thStyle = { border: '1px solid #999', padding: '8px 12px', background: 'rgba(125,125,125,0.15)', textAlign: 'left' }
+export const tdStyle = { border: '1px solid #999', padding: '8px 12px' }
+
+## はじめに
+
+2026年10月21日、PHPのセキュリティチームが「翌日14:00 UTC（日本時間23:00）に重大な脆弱性2件の修正版を出す。両方ともCVSS v4.0で9.2」と予告しました。
+
+そのとき手元の本番環境はこうでした。
+
+- PHP **7.4.14**（2022年11月にサポート終了。公式の修正版は出ない）
+- CakePHP **2.10.24**（2.x系の最終版。PHP 8では起動しない）
+- CentOS 8（これもEOL）、Apache + php-fpm、複数台構成
+- 繁忙期で、夜間も止められない
+
+「7.4に手でパッチを当てる」は、次の脆弱性でまた同じことになるので選びませんでした。<span className="hoso">8.3へ移行して、以後は`dnf update`で修正版を当てられる状態にする</span>のを本線にして、予告から約6時間後の20:00に作業を始め、23:00過ぎに全台が修正版の8.3.36になりました。
+
+この記事は、その一晩でやったことと、踏んだ落とし穴の記録です。案件固有の情報は省いていますが、手順とハマりどころはそのまま書きます。
+
+## 全体の設計：7.4を消さず、Apacheの設定1行で切り替える
+
+最初に決めたのは、**旧PHPを消さない**ことです。php-fpmを7.4と8.3で並行稼働させ、Apacheから見るバックエンドのソケットを切り替えるだけにします。これなら切替も巻き戻しも`systemctl reload httpd`の1回で済みます。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>層</th>
+      <th style={thStyle}>7.4（既存）</th>
+      <th style={thStyle}>8.3（追加）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>パッケージ</td>
+      <td style={tdStyle}>remiの<code>php-fpm</code></td>
+      <td style={tdStyle}>remiの<code>php83-php-fpm</code>（SCL形式、<code>/opt/remi/php83</code>）</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>ソケット</td>
+      <td style={tdStyle}><code>/run/php-fpm/www.sock</code></td>
+      <td style={tdStyle}><code>/var/opt/remi/php83/run/php-fpm/www.sock</code></td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>Apacheの向き先</td>
+      <td style={tdStyle}><code>php.conf</code>のグローバル設定</td>
+      <td style={tdStyle}>切り替えたいVirtualHostにだけ<code>&lt;FilesMatch&gt;</code>で上書き</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>セッション保存先</td>
+      <td style={tdStyle} colSpan={2}>同じディレクトリを共有（切替でログアウトさせない）</td>
+    </tr>
+  </tbody>
+</table>
+
+remiのSCL形式パッケージは、`dnf install php83-php-fpm`で既存の7.4と衝突せずに入ります。あとは8.3側の`php.ini`とプール設定（`pm.*`、`session.save_path`）を7.4に揃えるだけです。
+
+### CakePHP 2はどうするか
+
+CakePHP 2.10.24はPHP 8で起動しません。ローカルのPHP 8.4でコンソールを叩いたら、`lib/Cake/Utility/String.php`が構文エラー、`Shell.php`で致命的エラーでした。
+
+そこで**pieceofcake2/cakephp**というコミュニティフォークを使いました。2.10.24をベースにPHP 8.0〜8.5対応の修正を入れたもので、EOL後の脆弱性修正も継続されています。
+
+<RichLink
+  url="https://github.com/pieceofcake2/cakephp"
+  icon='ri-github-fill'
+  title="pieceofcake2/cakephp"
+  subtitle="CakePHP 2.x fork that keeps working on current PHP versions"
+  targetBlank={true}
+/>
+
+`v2.10.24.8`を選びました。2.10.24との差分がbakeの分離と`String.php`の削除、PHP 8対応の修正だけで、`lib/Cake`のディレクトリ構成がそのままだからです。
+
+### 同じコードを7.4と8.3で同時に動かす仕掛け
+
+ここが今回の肝です。vhostを1つずつ切り替えたいのに、コードは全vhostで共有しています。コードをコピーして`dev8`のようなディレクトリを作る案もありましたが、もっと簡単な方法がありました。
+
+CakePHP 2のアプリ側`webroot/index.php`には、composerでインストールされたコアを自動検出するコードが元から入っています。
+
+<CodeBlockTitle title="app/webroot/index.php（元のコード）" />
+
+```php
+$vendorPath = ROOT . DS . APP_DIR . DS . 'Vendor' . DS . 'cakephp' . DS . 'cakephp' . DS . 'lib';
+$dispatcher = 'Cake' . DS . 'Console' . DS . 'ShellDispatcher.php';
+if (!defined('CAKE_CORE_INCLUDE_PATH') && file_exists($vendorPath . DS . $dispatcher)) {
+	define('CAKE_CORE_INCLUDE_PATH', $vendorPath);
+}
+```
+
+この条件に**PHPのメジャーバージョン判定を1つ足す**だけです。
+
+<CodeBlockTitle title="app/webroot/index.php（変更後）" />
+
+```php
+if (PHP_MAJOR_VERSION >= 8 && !defined('CAKE_CORE_INCLUDE_PATH') && file_exists($vendorPath . DS . $dispatcher)) {
+	define('CAKE_CORE_INCLUDE_PATH', $vendorPath);
+}
+```
+
+そして`app/Vendor/cakephp/cakephp`に、フォークを置いたディレクトリへのシンボリックリンクを張ります。
+
+```bash
+sudo mkdir -p /var/www/app/Vendor/cakephp
+sudo ln -sfn /var/www/cake-fork/cakephp /var/www/app/Vendor/cakephp/cakephp
+```
+
+これで<span className="hoso">7.4で動いているvhostは従来の`lib/Cake`を、8.3のvhostはフォークを読む</span>ようになります。同じコード、同じディレクトリで、PHPの版だけで振り分けられます。コンソール用の`Console/cake.php`にも同じ判定を入れました。
+
+**順序が重要です。** 必ず「index.phpに条件を追加 → リンクを作成」の順にします。逆にすると、リンクができた瞬間から7.4のvhostがPHP 8用のフォークを読みに行きます。
+
+## 作業の流れ
+
+実際の時系列です。開発サーバで検証してから本番、という王道ですが、繁忙期で夜中も負荷が落ちない環境だったので、「対応できる人がいる時間帯に切り替える」ことを優先しました。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>時刻</th>
+      <th style={thStyle}>やったこと</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style={tdStyle}>15:00〜19:00</td><td style={tdStyle}>調査、バックアップ、手順書、フォークのローカル起動テスト</td></tr>
+    <tr><td style={tdStyle}>20:00</td><td style={tdStyle}>開発サーバに8.3を並行インストール、判定とリンクを配置（無影響）</td></tr>
+    <tr><td style={tdStyle}>20:30</td><td style={tdStyle}>開発サーバのvhost 1つだけ8.3へ。画面を踏んで問題を洗い出す</td></tr>
+    <tr><td style={tdStyle}>21:00〜21:30</td><td style={tdStyle}>本番サーバで同じ準備（無影響）。切替・巻き戻し・smokeスクリプトを配置</td></tr>
+    <tr><td style={tdStyle}>21:36〜21:53</td><td style={tdStyle}>本番の切替。1台ずつsmokeで確認しながら</td></tr>
+    <tr><td style={tdStyle}>22:00</td><td style={tdStyle}>別アプリまで8.3になっていた問題の調査と修正（後述）</td></tr>
+    <tr><td style={tdStyle}>22:30</td><td style={tdStyle}>CentOS 7の1台だけソースビルドで8.3を用意（後述）</td></tr>
+    <tr><td style={tdStyle}>22:45</td><td style={tdStyle}>PHP公式が前倒しで公開。公式の緩和策を全台に投入</td></tr>
+    <tr><td style={tdStyle}>23:11〜23:35</td><td style={tdStyle}>修正版8.3.36へ更新（remi経由3台、ソースビルド1台）</td></tr>
+  </tbody>
+</table>
+
+事前に用意しておいてよかったのは、各サーバの`/root`に置いた4本のスクリプトです。
+
+<RichListNoBox
+  list={[
+    '<strong>switch</strong>：対象vhostにFilesMatchを挿入 → configtest → reload → モデルキャッシュ削除',
+    '<strong>rollback</strong>：切替前のバックアップを復元 → configtest → reload',
+    '<strong>smoke</strong>：主要ホストのステータスと<code>X-Powered-By</code>、エラーログ末尾を表示',
+    '<strong>update</strong>：<code>dnf update php83-php*</code> → 同梱confの退避 → fpm再起動 → smoke',
+  ]}
+/>
+
+切替の本番は「smoke → switch → smoke」の3行を打つだけになり、判断に集中できました。
+
+## 踏んだ落とし穴
+
+ここからが本題です。手順そのものより、こちらのほうが役に立つと思います。
+
+### 1. remiのphp83-php-fpmは、Apacheの設定を同梱している
+
+`php83-php-fpm`をインストールすると、`/etc/httpd/conf.d/php83-php.conf`が一緒に入ります。中身はこうです。
+
+```apacheconf
+<IfModule !mod_php5.c>
+  <IfModule !mod_php7.c>
+    <IfModule !mod_php.c>
+      <FilesMatch \.(php|phar)$>
+          SetHandler "proxy:unix:/var/opt/remi/php83/run/php-fpm/www.sock|fcgi://localhost"
+      </FilesMatch>
+    </IfModule>
+  </IfModule>
+</IfModule>
+```
+
+**グローバルスコープのSetHandler**です。`php.conf`（7.4向け）より後に読まれるので、次に`httpd`をreloadした瞬間、<span className="hoso">全vhostが8.3に切り替わります</span>。
+
+開発サーバで「1つのvhostだけ8.3へ」のつもりでreloadしたら、全部8.3になっていました。原因に気づくまで5分かかりました。
+
+対処は、インストール直後、reloadする前にこのファイルをconf.dの外へ出すことです。
+
+```bash
+sudo mkdir -p /etc/httpd/disabled-conf.d
+sudo mv /etc/httpd/conf.d/php83-php.conf /etc/httpd/disabled-conf.d/
+```
+
+さらに厄介なことに、`dnf update php83-php-fpm`をすると**このファイルは復活します。** 更新スクリプトには「更新後にconf.dを見て、あれば退避する」処理を入れました。
+
+### 2. コメントアウトされたVirtualHostに反応して、グローバルにFilesMatchを挿入した
+
+vhostが数百あるので、切替はawkで「DocumentRootが特定のディレクトリ配下のブロックにFilesMatchを挿入する」スクリプトにしました。最初のバージョンはこうでした。
+
+```bash
+/<VirtualHost/ { inblk=1; n=0 }
+inblk { buf[++n]=$0; if ($0 ~ /<\/VirtualHost>/) { flush(); inblk=0 } ; next }
+```
+
+一見問題なさそうですが、設定ファイルの中にこういう箇所がありました。
+
+```apacheconf
+#<VirtualHost *:80>
+#	ServerName old-site.example
+#	DocumentRoot /var/www/app/prod
+#	...
+#</VirtualHost>
+```
+
+**丸ごとコメントアウトされた旧vhost**です。awkは`#<VirtualHost`にも`#	DocumentRoot`にも反応し、その直後に**コメントではない**FilesMatchを挿入しました。Apacheから見ると、そのFilesMatchはどのVirtualHostにも属していない、つまり**グローバル設定**です。
+
+結果、落とし穴1と同じく全vhostが8.3になりました。切替対象ではなかった別のCakePHPアプリ（こちらは素の2.10.24のまま）まで8.3で動き、画面にWarningが出て発覚しました。
+
+発見に使ったのは`httpd -t -D DUMP_CONFIG`です。Apacheが解釈した設定を出力するので、VirtualHostの外にSetHandlerが出ていないかを機械的に確認できます。
+
+```bash
+sudo httpd -t -D DUMP_CONFIG 2>/dev/null \
+  | awk 'BEGIN{IGNORECASE=1} /^[ \t]*<VirtualHost/{d++} /^[ \t]*<\/VirtualHost>/{d--; next} d==0 && /php83/' \
+  | wc -l     # 0 であること
+```
+
+awkは「行頭がタグの行だけをブロックの開始・終了として扱い、DocumentRootも行頭から始まる有効行だけを見る」ように直しました。
+
+```bash
+tolower($0) ~ /^[ \t]*<virtualhost[ >]/ { inblk=1; n=0 }
+inblk { buf[++n]=$0; if (tolower($0) ~ /^[ \t]*<\/virtualhost>/) { flush(); inblk=0 } ; next }
+# flush() 内の判定も ^[ \t]*DocumentRoot[ \t]+/var/www/app/prod/ のように行頭から
+```
+
+教訓は単純で、<span className="hoso">設定ファイルを機械的に書き換えるときは、コメント行を必ず除外する</span>ことです。長く運用されたApacheの設定には、コメントアウトされた過去が必ず埋まっています。
+
+### 3. WideImageはPHP 8で全滅する
+
+画像処理に古いWideImageライブラリを使っていました。PHP 8では`imagecreatefrom*()`の戻り値がリソースから`GdImage`オブジェクトに変わったのですが、WideImageはこう判定しています。
+
+```php
+return (is_resource($handle) && get_resource_type($handle) == 'gd');
+```
+
+`GdImage`は`is_resource()`で`false`なので、**読み込んだ画像をすべて「不正な画像」として例外にします。** 画像アップロードが全部失敗する状態です。
+
+修正は1行です。
+
+```php
+return (is_resource($handle) && get_resource_type($handle) == 'gd') || (is_object($handle) && $handle instanceof \GdImage);
+```
+
+PHP 7.4では`\GdImage`クラスが存在しないので`instanceof`は単に`false`になり、両方の版で動きます。古いライブラリを抱えている場合は、`is_resource`でgrepしておくと事前に見つかります。
+
+### 4. 「Undefined index」がNoticeからWarningに格上げされ、画面に出る
+
+PHP 8では未定義の配列キー参照などがE_NOTICEからE_WARNINGに変わりました。CakePHP 2の`core.php`はこうなっていることが多いはずです。
+
+```php
+Configure::write('debug', 2);
+Configure::write('Error', array(
+	'handler' => 'ErrorHandler::handleError',
+	'level' => E_ALL & ~E_DEPRECATED & ~E_NOTICE,
+	'trace' => true
+));
+```
+
+7.4ではNoticeが除外されていたので無音でした。8.3ではWarningになるので除外されず、**debugが0より大きいと画面の上部に`Warning (2): Undefined array key ...`が描画されます。** しかも調べてみると、本番の一部アプリが`debug = 2`のまま運用されていました。
+
+切替前に2点直しました。
+
+- `level`に`~E_WARNING & ~E_USER_WARNING`を追加（Warningは表示もログもされなくなる。7.4時代のNoticeと同じ扱い）
+- `debug`をパスで判定して、本番では0にする
+
+```php
+Configure::write('debug', (strpos(__DIR__, '/app/dev') !== false) ? 2 : 0);
+```
+
+ファイルを環境ごとに分けていなかったので、デプロイ（rsync）で開発と本番が同じ`core.php`を共有できるように、パス判定にしました。
+
+`debug = 0`にすると、CakePHP 2はモデルのスキーマをキャッシュし始めます。切替時と、以後DBのカラムを変えるときは`tmp/cache/models`を消す必要があります。
+
+### 5. `dnf update`が「行うべきことはありません」と言う
+
+修正版がremiに来たので更新スクリプトを流したら、1台だけ更新され、残りは「行うべきことはありません」でした。
+
+原因は**dnfのメタデータキャッシュ**です。直前に別の処理でメタデータを取得していたサーバはキャッシュが古く、リポジトリに新版が来ていることに気づきませんでした。
+
+```bash
+sudo dnf -q --refresh check-update php83-php-fpm   # 先にこれで確認する
+sudo dnf update 'php83-php*'
+```
+
+緊急パッチを待っている場面では`--refresh`を付ける癖をつけたほうがいいです。
+
+### 6. CentOS 7の1台だけremiが使えない
+
+複数台のうち1台がCentOS 7で、こちらはPHP 8.0（mod_php）で動いていました。EL7向けのremiは2024年6月のCentOS 7 EOLで凍結されていて、php83は8.3.8が最後です。今夜の修正版も、今後のどの修正版も来ません。
+
+選択肢は「緩和策だけで凌ぐ」「ソースからビルドする」「そのサーバをやめて別サーバに寄せる」の3つでした。中期的には3つ目ですが、今夜の話としては、**ソースからビルドして`/opt`に閉じ込める**を選びました。ソースなら修正版が出た瞬間にその版をビルドできます。
+
+環境はメモリ1GB（swap 4GB）、gcc 4.8.5、OpenSSL 1.0.2です。yumのbaseリポジトリも死んでいたので、先にvaultへ向け直して`-devel`を入れました。
+
+```bash
+sudo sed -i -e 's|^mirrorlist=|#mirrorlist=|' \
+  -e 's|^#baseurl=http://mirror.centos.org/centos/$releasever|baseurl=http://vault.centos.org/7.9.2009|' \
+  /etc/yum.repos.d/CentOS-Base.repo
+sudo yum install libxml2-devel openssl-devel sqlite-devel libcurl-devel libxslt-devel bzip2-devel readline-devel oniguruma-devel libsodium-devel zlib-devel
+```
+
+configureは通りましたが、makeが`ext/openssl/xp_ssl.c`で止まりました。
+
+```
+ext/openssl/xp_ssl.c:506:6: 警告: 関数 ‘ASN1_STRING_get0_data’ の暗黙的な宣言です
+ext/openssl/xp_ssl.c:506:45: エラー: 添字が付けられた値が、配列、ポインタまたはベクトルではありません
+```
+
+`ASN1_STRING_get0_data()`はOpenSSL 1.1.0で追加された関数で、1.0.2にはありません。PHP 8.3は公式にはまだ1.0.2をサポートしているのですが、最近のセキュリティ修正で入ったコードがこの関数を互換マクロ無しで使っていました。他の場所は`php_openssl_backward_compat.h`で吸収されているので、同じことを3行足します。
+
+<CodeBlockTitle title="ext/openssl/xp_ssl.c" />
+
+```c
+#include <openssl/x509v3.h>
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define ASN1_STRING_get0_data ASN1_STRING_data
+#endif
+```
+
+これで通りました。configureのオプションは、既存のPHP 8.0の`php -m`に合わせて拡張を選び、`--enable-fpm --with-fpm-user=apache`を足しています。2CPUで8分ほどでした。
+
+```bash
+./configure --prefix=/opt/php83 \
+  --with-config-file-path=/opt/php83/etc --with-config-file-scan-dir=/opt/php83/etc/php.d \
+  --enable-fpm --with-fpm-user=apache --with-fpm-group=apache \
+  --with-openssl --with-zlib --with-curl --with-bz2 --with-readline --with-gettext \
+  --enable-mbstring --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd \
+  --enable-bcmath --enable-calendar --enable-exif --enable-ftp --enable-sockets --enable-pcntl \
+  --with-sodium --with-xsl --enable-opcache --without-pear
+make -j2 && sudo make install
+```
+
+ここまでを「取得 → 公式sha256で検証 → 互換マクロ → configure → make → install → fpm再起動」のスクリプトにしておいたので、23:00前に8.3.35で通し、公式が公開した直後に同じスクリプトで8.3.36を入れ直せました。
+
+ただし、これは<span className="hoso">EOLのOSの上に最新のPHPを手で積む作業</span>です。OpenSSLやカーネルの穴は残ります。今夜の対処としては正しくても、恒久対応ではありません。
+
+### 7. 緩和策は「2種類」あった
+
+公式のアドバイザリを読むと、2件のCVEで緩和策が違いました。
+
+<table style={tableStyle}>
+  <thead>
+    <tr>
+      <th style={thStyle}>CVE</th>
+      <th style={thStyle}>内容</th>
+      <th style={thStyle}>緩和策</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style={tdStyle}>CVE-2026-109619</td>
+      <td style={tdStyle}>解放済みのリクエスト状態を次のリクエストが使う</td>
+      <td style={tdStyle}><code>session.upload_progress.enabled = 0</code>。<strong>ワーカーを再起動すること</strong>。<code>ini_set()</code>や<code>.user.ini</code>では効かない</td>
+    </tr>
+    <tr>
+      <td style={tdStyle}>CVE-2026-109618</td>
+      <td style={tdStyle}>メモリ不足時の後始末で不正データを扱う</td>
+      <td style={tdStyle}><code>memory_limit = -1</code>と<code>post_max_size</code>の縮小（8Mまたは32M）を<code>php_admin_value</code>で。<code>RLIMIT_AS</code>で代用しない</td>
+    </tr>
+  </tbody>
+</table>
+
+事前のリーク情報では前者しか知られていなかったので、公開前は片方しか入れていませんでした。公開後すぐに全台の全PHP（7.4、8.0、8.3）に両方入れました。
+
+アドバイザリは「緩和策は安全にするものではない」と明記しています。本命はあくまで修正版です。
+
+## 切り替えてみて分かったこと
+
+切替自体は拍子抜けするほど静かでした。アプリ側のコードは、`php -l`と`grep`で事前に洗った限り、PHP 8で削除された関数の使用がゼロだったこともあります。`each()`のgrepが24ファイルにヒットして身構えましたが、全部jQueryの`.each()`でした。
+
+一方で、「PHP本体を替える」より「その周りを替える」ほうに時間を取られました。
+
+- Apacheの設定の構造（同梱conf、コメントアウトされたブロック、ワイルドカードの`ServerAlias`）
+- 古いライブラリの前提（`is_resource`）
+- エラーレベルの意味の変化（Notice→Warning）
+- パッケージ管理の癖（メタデータキャッシュ、凍結されたリポジトリ）
+
+PHPのバージョンアップで一番の敵は、PHPではなく**長年の運用で積もった周辺の状態**でした。
+
+## よくある質問（FAQ）
+
+### Q. 開発サーバで十分に検証してから本番、にしなかったのはなぜですか？
+
+繁忙期で、深夜になっても負荷が3分の1程度にしか下がらない環境でした。「空いている時間に切り替える」より「対応できる人が全員いる時間に、1分で戻せる状態で切り替える」ほうがリスクが低いと判断しました。
+
+実際、切替で問題が出たケースは全部、切替から数分以内にログかsmokeで分かり、巻き戻しではなく修正で済みました。巻き戻しが1分でできる設計にしておいたことが、この判断を可能にしています。
+
+### Q. CakePHP 2のフォークは信用していいのですか？
+
+ローカルのPHP 8.4で全アプリのコンソールを起動し、開発サーバで実トラフィックを1時間以上さばいてから本番に進めました。2.10.24との差分も読める量です。
+
+ただ、根本的には「CakePHP 2から離れる」が正解です。フォークは時間を買うためのもので、終点ではありません。
+
+### Q. 7.4のphp-fpmはいつ止めますか？
+
+1週間ほど様子を見てから止める予定です。切替後も7.4は動いているので、巻き戻しはいつでもできます。緩和策も7.4側に入れてあります。
+
+### Q. 緩和策は修正版を当てたら外しますか？
+
+残しています。`post_max_size`と`upload_max_filesize`を下げたので16MBを超えるアップロードが通らなくなりますが、実運用で必要になったときにその2行だけ戻せば済みます。
+
+## 今回の件で思ったこと
+
+技術的なまとめの前に、一晩やってみての感想を4つだけ書いておきます。
+
+### 攻撃が容易になった時代は、防御も容易になっている
+
+今回の脆弱性では「パッチが出たら攻撃者はAIで差分を解析して、すぐに攻撃を始める」という話が出回りました。実際そういう時代です。
+
+ただ、<span className="hoso">同じ道具は守る側も使えます</span>。この記事に書いた調査、手順書、スクリプト、ログの監視、落とし穴の切り分けは、AIと一緒にやったものです。数百のvhostの設定を安全に書き換えるawkも、CentOS 7でのソースビルドの詰まりも、数年前なら一晩では終わっていません。攻撃側だけが速くなったわけではない、というのが今回の実感です。
+
+### 情報を仕入れて、一刻も早く動くこと
+
+予告が出たのは前日の夜で、SNSで話題になったのは当日の午後でした。そこから「本当か」を一次情報で確かめ、自分の環境が対象かを調べ、動き出すまでに数時間使っています。
+
+もし予告の時点で動いていれば、丸1日余裕がありました。逆に、SNSの情報を「大げさだろう」と流していたら、翌朝には攻撃が始まっていたかもしれません。<span className="hoso">一次情報に当たる速さと、当たったら即座に手を動かす速さ</span>が、そのまま安全マージンになります。
+
+### 総理の注意喚起が、メンテナンスの合意形成を助けてくれた
+
+今回、高市総理がX（旧Twitter）で注意喚起を投稿されました。
+
+<RichLink
+  url="https://x.com/takaichi_sanae/status/2112890642590564386"
+  icon='ri-twitter-x-line'
+  title="高市早苗 総理の投稿（X）"
+  subtitle="PHPの脆弱性についての注意喚起"
+  targetBlank={true}
+/>
+
+これが現場では本当にありがたかったです。繁忙期の夜に「今夜メンテナンスで切替をしたい」と関係者に説明するとき、技術者の説明だけでは「本当に今夜でないとだめなのか」という話になりがちです。<span className="hoso">国のトップが名指しで注意喚起している</span>という事実があるだけで、合意形成にかかる時間がまったく違いました。感謝しています。
+
+### この機会に、みんなで強度を上げましょう
+
+こういう騒ぎは、顧客や関係者に<span className="hoso">セキュリティの強度を上げることの重要性を伝える、またとない機会</span>でもあります。
+
+普段は「動いているものに手を入れたくない」「予算と時間がない」で先送りされがちな、EOLのOSやミドルウェアの更新、バックアップの見直し、緩和策の整備。今回のような日には、それらがなぜ必要かを、抽象論ではなく「今夜の話」として伝えられます。
+
+今回の対応で、うちの環境も課題が全部片付いたわけではありません。EOLのOSは残っていますし、CakePHP 2から離れる計画も必要です。それでも「次に同じことが起きたら、修正版が出た日に当てられる」状態にはなりました。読んでくださった方の環境にも、同じ日が来る前に手を入れるきっかけになれば嬉しいです。
+
+## まとめ
+
+- EOLのPHPは「修正版が来ない」ので、脆弱性の発表はそのまま移行の締切になる
+- CakePHP 2はpieceofcake2のフォークでPHP 8.3まで動く。`lib/Cake`の構成はそのまま
+- `index.php`の自動検出に`PHP_MAJOR_VERSION >= 8`を足すと、同じコードを7.4と8.3で同時に動かせる
+- remiの`php83-php-fpm`は**グローバルなSetHandlerを同梱**している。reload前に退避し、更新後も確認する
+- 設定ファイルを機械的に書き換えるときは、**コメントアウトされたブロック**を除外する。`httpd -t -D DUMP_CONFIG`で検算する
+- WideImageの`is_resource`、Notice→Warningの格上げ、`debug = 2`の本番は、PHP本体より先に片付ける
+- 緊急パッチを待つときの`dnf`は`--refresh`
+- CentOS 7にremiは来ない。ソースビルドなら修正版を即日当てられるが、恒久対応ではない
+
+一晩で終わった理由を1つ挙げるなら、<span className="hoso">切替を「Apacheの設定1行と1回のreload」に落とし込み、巻き戻しも同じコストにしたこと</span>です。判断を迫られる場面で、戻せると分かっていると冷静でいられます。
+
+<br />
+この記事が何かのお役に立てれば幸いです。<br />
+最後までお読みいただきありがとうございました！
+
+export default function Page({ children }) {
+  return (
+    <Layout meta={meta}>
+      <>
+        {children}
+      </>
+    </Layout>
+  )
+}
